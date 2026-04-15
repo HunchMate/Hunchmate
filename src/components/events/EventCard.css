@@ -1,0 +1,205 @@
+/* ── Event Card — HackCulture Style (White + Orange/Indigo) ── */
+
+.hc-card {
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.25, 0.4, 0.25, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  animation: hcFadeUp 0.5s ease forwards;
+  opacity: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.hc-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(234, 122, 50, 0.15), 0 4px 12px rgba(0, 0, 0, 0.06);
+  border-color: rgba(234, 122, 50, 0.2);
+}
+
+@keyframes hcFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Image / Header ── */
+.hc-card__image {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+/* Category badge — top-left */
+.hc-card__category-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Status badge — top-right */
+.hc-card__status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hc-card__status-badge--open {
+  background: #dcfce7;
+  color: #166534;
+}
+.hc-card__status-badge--upcoming {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.hc-card__status-badge--ongoing {
+  background: #fef3c7;
+  color: #92400e;
+}
+.hc-card__status-badge--completed {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Prize — bottom-right of image */
+.hc-card__prize {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Date pill — bottom-left of image */
+.hc-card__date-pill {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: white;
+}
+
+/* ── Body ── */
+.hc-card__body {
+  padding: 18px 18px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hc-card__title {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 0;
+  transition: color 0.2s ease;
+}
+
+.hc-card:hover .hc-card__title {
+  color: #ea7a32;
+}
+
+/* Meta rows */
+.hc-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hc-card__meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.hc-card__meta-row svg {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+/* Footer */
+.hc-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: auto;
+}
+
+.hc-card__participants {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.hc-card__participants svg {
+  color: #94a3b8;
+}
+
+.hc-card__cta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: white;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.hc-card:hover .hc-card__cta {
+  transform: scale(1.04);
+  box-shadow: 0 4px 14px rgba(234, 122, 50, 0.35);
+}

@@ -1,0 +1,126 @@
+.site-footer {
+  background: #050608;
+  color: #d3d7df;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.site-footer__inner {
+  padding-top: 20px;
+  padding-bottom: 22px;
+}
+
+.site-footer__top-line,
+.site-footer__mid-line {
+  width: 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.site-footer__brand-block {
+  padding: 42px 0 36px;
+  text-align: center;
+}
+
+.site-footer__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: #f3f5f9;
+  text-decoration: none;
+}
+
+.site-footer__brand-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f7fb;
+  color: #0b0f1a;
+}
+
+.site-footer__brand-text {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.site-footer__nav {
+  margin-top: 28px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 26px;
+}
+
+.site-footer__nav-link {
+  color: #f1f4fa;
+  text-decoration: none;
+  font-size: 1.32rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: color 160ms ease;
+}
+
+.site-footer__nav-link:hover {
+  color: #ea7a32;
+}
+
+.site-footer__bottom {
+  padding-top: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.site-footer__copyright {
+  margin: 0;
+  color: rgba(217, 224, 238, 0.85);
+  font-size: 1.03rem;
+  font-weight: 500;
+}
+
+.site-footer__socials {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.site-footer__social {
+  color: rgba(236, 241, 251, 0.86);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.site-footer__social:hover {
+  color: #ea7a32;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 900px) {
+  .site-footer__brand-block {
+    padding: 34px 0 28px;
+  }
+
+  .site-footer__brand-text {
+    font-size: 1.6rem;
+  }
+
+  .site-footer__nav {
+    gap: 18px;
+  }
+
+  .site-footer__nav-link {
+    font-size: 1.06rem;
+  }
+
+  .site-footer__bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

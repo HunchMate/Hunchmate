@@ -15,10 +15,13 @@ import {
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useEvents } from '../context/EventContext'
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 
 const NAV_LINKS = [
-  { label: 'Explore', to: '/events' },
-  { label: 'Contact us', to: '/contact' },
+  { label: 'Home', to: '/' },
+  { label: 'Explore Events', to: '/events' },
+  { label: 'Host Event', to: '/signup' },
+  { label: 'Contact Us', to: '/contact' },
 ]
 
 export default function Navbar() {
@@ -97,66 +100,71 @@ export default function Navbar() {
     return 'Profile'
   }
 
+  const navbarMaxWidth = 'min(800px, calc(100vw - 48px))'
+
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-[70] w-full flex justify-center px-6 pt-4 pointer-events-none transition-transform duration-300 ${
         isNavVisible || mobileOpen ? 'translate-y-0' : '-translate-y-[130%]'
       }`}
     >
+      <Link
+        to="/"
+        className="pointer-events-auto absolute left-6 top-4 h-14 flex items-center gap-2 flex-shrink-0"
+      >
+        <img
+          src="/brand-logo.svg"
+          alt="HunchMate"
+          className="h-8 w-auto"
+          onError={(event) => {
+            event.currentTarget.onerror = null
+            event.currentTarget.src = '/favicon.svg'
+          }}
+        />
+        <span
+          className="text-white/95 hidden sm:inline"
+          style={{
+            fontFamily: '"Plus Jakarta Sans", sans-serif',
+            fontWeight: 700,
+            fontSize: '1.08rem',
+            letterSpacing: '0',
+          }}
+        >
+          HunchMate
+        </span>
+      </Link>
+
       {/* Pill-shaped centered navbar */}
       <div
-        className="flex items-center justify-between px-6 py-3 rounded-full relative pointer-events-auto"
+        className="flex h-14 items-center rounded-full relative pointer-events-auto"
         style={{
           background: 'rgba(35,35,40,0.6)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
           border: '1px solid rgba(255,255,255,0.1)',
           minWidth: 'min(420px, 100%)',
-          maxWidth: user ? '800px' : '560px',
+          maxWidth: navbarMaxWidth,
           width: '100%',
         }}
       >
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-1.5 flex-shrink-0">
-          <img
-            src="/brand-logo.svg"
-            alt="Hunchmate"
-            className="h-7 w-auto"
-            onError={(event) => {
-              event.currentTarget.onerror = null
-              event.currentTarget.src = '/favicon.svg'
-            }}
-          />
-          <span
-            className="text-white/95 hidden sm:inline"
-            style={{
-              fontFamily: '"Orbitron", "Adriana", "Plus Jakarta Sans", sans-serif',
-              fontWeight: 700,
-              fontSize: '0.82rem',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-            }}
-          >
-            HUNCHMATE
-          </span>
-        </Link>
-
         {/* Desktop Links */}
-        <div className="hidden sm:flex items-center gap-6">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.label}
-              to={link.to}
-              className="text-white/70 hover:text-white/90 text-sm transition-colors duration-200 font-medium"
-              style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
-            >
-              {link.label}
-            </Link>
-          ))}
+        <div className="absolute inset-0 hidden sm:flex items-center justify-center pointer-events-none">
+          <div className="flex items-center gap-6 pointer-events-auto">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.label}
+                to={link.to}
+                className="text-white/70 hover:text-white/90 text-sm transition-colors duration-200 font-medium"
+                style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
         </div>
 
         {/* Right Side - Profile or Auth Buttons */}
-        <div className="hidden sm:flex items-center gap-4 flex-shrink-0">
+        <div className="hidden sm:flex items-center justify-end gap-4 flex-shrink-0 absolute right-4 top-1/2 -translate-y-1/2 w-[176px]">
           {user ? (
             <div className="relative" ref={profileMenuRef}>
               <button
@@ -172,12 +180,12 @@ export default function Navbar() {
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 ) : null}
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white border border-white/30 shadow-[0_6px_18px_rgba(0,0,0,0.35)]"
-                  style={{ background: user.avatarBackdrop || 'linear-gradient(135deg, #ea7a32 0%, #f5a960 100%)' }}
-                >
-                  {user.name?.charAt(0) || 'U'}
-                </div>
+                <Avatar className="h-9 w-9 border-white/30 shadow-[0_6px_18px_rgba(0,0,0,0.35)]">
+                  <AvatarImage src={user.avatar || ''} alt={user.name || 'Profile avatar'} />
+                  <AvatarFallback style={{ background: user.avatarBackdrop || 'linear-gradient(135deg, #ea7a32 0%, #f5a960 100%)' }}>
+                    {user.name?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
               </button>
 
               {profileOpen && (
@@ -190,12 +198,12 @@ export default function Navbar() {
                   }}
                 >
                   <div className="flex items-center gap-3 px-3 py-3 border-b border-white/10">
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold text-white border border-white/25"
-                      style={{ background: user.avatarBackdrop || 'linear-gradient(135deg, #ea7a32 0%, #f5a960 100%)' }}
-                    >
-                      {user.name?.charAt(0) || 'U'}
-                    </div>
+                    <Avatar className="h-10 w-10 border-white/25">
+                      <AvatarImage src={user.avatar || ''} alt={user.name || 'Profile avatar'} />
+                      <AvatarFallback style={{ background: user.avatarBackdrop || 'linear-gradient(135deg, #ea7a32 0%, #f5a960 100%)' }}>
+                        {user.name?.charAt(0) || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="min-w-0">
                       <p className="text-white font-semibold text-sm truncate">{user.name}</p>
                       <p className="text-white/60 text-xs truncate">{user.email || 'user@hunchmate.com'}</p>
@@ -313,9 +321,9 @@ export default function Navbar() {
           ) : (
             <Link
               to="/signup"
-              className="text-white/70 hover:text-white/90 text-sm transition-colors font-medium px-3 py-1"
+              className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/90 transition-colors hover:bg-white/15 hover:text-white"
             >
-              Sign Up
+              Get Started
             </Link>
           )}
         </div>
@@ -404,7 +412,7 @@ export default function Navbar() {
                     className="text-white/80 hover:text-white text-base transition-colors font-medium"
                     onClick={() => setMobileOpen(false)}
                   >
-                    Sign Up
+                    Get Started
                   </Link>
                 </>
               )}

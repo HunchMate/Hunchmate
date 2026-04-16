@@ -19,9 +19,10 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { label: 'Programs', path: '/events' },
-    { label: 'Offerings', path: '/about' },
-    { label: 'Contact', path: '/contact' },
+    { label: 'Home', path: '/' },
+    { label: 'Explore Events', path: '/events' },
+    { label: 'Host Event', path: '/signup' },
+    { label: 'Contact Us', path: '/contact' },
   ];
 
   const handleLogout = () => {
@@ -38,18 +39,35 @@ export default function Navbar() {
   const isTransparent = !scrolled;
 
   return (
-    <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''} ${isTransparent ? 'navbar--transparent' : ''}`}>
-      <div className="navbar__container container">
-        {/* Logo */}
-        <Link to="/" className="navbar__logo">
+    <nav
+      className={`navbar ${scrolled ? 'navbar--scrolled' : ''} ${isTransparent ? 'navbar--transparent' : ''}`}
+      style={{ paddingTop: '16px' }}
+    >
+      <div
+        className="navbar__container container"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '16px',
+          width: '100%',
+        }}
+      >
+        <Link
+          to="/"
+          className="navbar__logo"
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}
+        >
           <span className="navbar__logo-icon-text">⚡</span>
-          <span className="navbar__logo-text">
-            Hunch<span className="navbar__logo-accent">mate</span>
+          <span className="navbar__logo-text" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 700 }}>
+            HunchMate
           </span>
         </Link>
 
-        {/* Desktop Nav — centered */}
-        <div className="navbar__links">
+        <div
+          className="navbar__links"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', flex: 1 }}
+        >
           {navLinks.map(link => (
             <Link
               key={link.path}
@@ -67,7 +85,7 @@ export default function Navbar() {
         </div>
 
         {/* Right Side */}
-        <div className="navbar__actions">
+        <div className="navbar__actions" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
           {user ? (
             <div className="navbar__profile-wrapper">
               <button className="navbar__profile-btn" onClick={() => setProfileOpen(!profileOpen)}>
@@ -98,7 +116,7 @@ export default function Navbar() {
           ) : (
             <div className="navbar__auth-btns">
               <Link to="/signup" className="navbar__auth-outlined">
-                <Plus size={14} /> Sign Up
+                <Plus size={14} /> Get Started
               </Link>
               <Link to="/login" className="navbar__auth-outlined">
                 Sign In

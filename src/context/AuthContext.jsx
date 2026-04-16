@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
-  GoogleAuthProvider,
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   onAuthStateChanged,
-  signInWithCredential,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   updateProfile as updateFirebaseProfile,
 } from 'firebase/auth';
@@ -17,6 +17,37 @@ import {
 
 const AuthContext = createContext();
 const AUTH_PROVIDER = String(import.meta.env.VITE_AUTH_PROVIDER || 'firebase').trim().toLowerCase();
+const ADMIN_EMAILS = String(import.meta.env.VITE_ADMIN_EMAILS || '')
+  .split(',')
+  .map((value) => String(value || '').trim().toLowerCase())
+  .filter(Boolean);
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+function mapFirebaseLoginError(err, attemptedEmail = '') {
+  const code = String(err?.code || '').toLowerCase();
+  const normalizedEmail = String(attemptedEmail || '').trim().toLowerCase();
+  const isAdminEmail = normalizedEmail && ADMIN_EMAILS.includes(normalizedEmail);
+  if (code.includes('auth/invalid-email')) {
+    return 'Enter a valid email address. Firebase email/password sign-in does not support usernames.';
+  }
+  if (code.includes('auth/user-not-found') || code.includes('auth/invalid-credential')) {
+    if (isAdminEmail) {
+      return 'Invalid admin credentials in Firebase Auth. If this admin was created only in backend seed scripts, create the same admin email in Firebase Auth first (via Sign up or Firebase Console), then sign in.';
+    }
+    return 'Account not found or wrong password. For admin access, sign in with your admin email and password.';
+  }
+  if (code.includes('auth/wrong-password')) {
+    return 'Incorrect password. Please try again.';
+  }
+  if (code.includes('auth/too-many-requests')) {
+    return 'Too many attempts. Please wait a bit and try again.';
+  }
+  if (code.includes('auth/operation-not-allowed')) {
+    return 'Email/password sign-in is disabled in Firebase Auth. Enable it in the Firebase console.';
+  }
+  return err?.message || 'Login failed';
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -151,7 +182,7 @@ export function AuthProvider({ children }) {
       persistSession(idToken, resolvedProfile);
       return { success: true, user: resolvedProfile };
     } catch (err) {
-      const message = err?.message || 'Login failed';
+      const message = mapFirebaseLoginError(err, email);
       setError(message);
       return { success: false, error: message };
     } finally {
@@ -159,7 +190,7 @@ export function AuthProvider({ children }) {
     }
   }, [persistSession]);
 
-  const googleAuth = useCallback(async (credential, role = 'participant', profile = {}, options = {}) => {
+  const googleAuth = useCallback(async (options = {}) => {
     if (!firebaseReady || !firebaseAuth) {
       return { success: false, error: 'Firebase Auth is not configured.' };
     }
@@ -168,29 +199,32 @@ export function AuthProvider({ children }) {
     setError(null);
 
     try {
-      const firebaseCredential = GoogleAuthProvider.credential(String(credential || '').trim());
-      const signed = await signInWithCredential(firebaseAuth, firebaseCredential);
+      const credential = await signInWithPopup(firebaseAuth, googleProvider);
+      const authUser = credential?.user;
 
-      const mergedProfile = await upsertUserProfileFromAuthUser(signed.user, {
-        role,
-        ...profile,
-        termsAccepted: Boolean(options.termsAccepted),
-        termsAcceptedAt: options.termsAcceptedAt || null,
+      const profile = await upsertUserProfileFromAuthUser(authUser, {
+        name: String(options?.name || '').trim() || undefined,
+        role: options?.role,
+        termsAccepted: options?.termsAccepted,
+        termsAcceptedAt: options?.termsAcceptedAt,
         provider: 'google.com',
       });
 
-      if (mergedProfile?.status === 'suspended') {
+      if (profile?.status === 'suspended') {
         await signOut(firebaseAuth);
         throw new Error('Your account is suspended. Please contact support.');
       }
 
-      const idToken = await signed.user.getIdToken();
-      persistSession(idToken, mergedProfile);
-      return { success: true, user: mergedProfile };
+      const idToken = await authUser.getIdToken();
+      persistSession(idToken, profile);
+      return { success: true, user: profile };
     } catch (err) {
-      const friendlyError = err?.message || 'Google sign-in failed';
-      setError(friendlyError);
-      return { success: false, error: friendlyError };
+      const errorCode = String(err?.code || '').toLowerCase();
+      const message = errorCode.includes('popup-closed-by-user')
+        ? 'Google sign-in was cancelled.'
+        : err?.message || 'Google sign-in failed';
+      setError(message);
+      return { success: false, error: message };
     } finally {
       setLoading(false);
     }

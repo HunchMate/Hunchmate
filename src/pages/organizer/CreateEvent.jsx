@@ -10,6 +10,7 @@ import Modal from '../../components/ui/Modal';
 import './CreateEvent.css';
 
 const MAX_IMAGE_BYTES = 1 * 1024 * 1024;
+const MAX_EVENT_DOC_BYTES = 900 * 1024;
 
 export default function CreateEvent() {
   const navigate = useNavigate();
@@ -291,6 +292,16 @@ export default function CreateEvent() {
     return Math.floor((payload.replace(/\s+/g, '').length * 3) / 4);
   };
 
+  const estimateJsonBytes = (value) => {
+    try {
+      return new TextEncoder().encode(JSON.stringify(value)).length;
+    } catch {
+      return Number.POSITIVE_INFINITY;
+    }
+  };
+
+  const isDataImageSrc = (value) => String(value || '').trim().startsWith('data:image/');
+
   const handleMediaUpload = async (event, setTargetValue) => {
     const file = event.target.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
@@ -422,6 +433,9 @@ export default function CreateEvent() {
       return false;
     }
 
+    const includePosterInLegacyCollections = normalizedPosterImage && !isDataImageSrc(normalizedPosterImage);
+    const includeShowcaseInLegacyCollections = normalizedShowcaseImage && !isDataImageSrc(normalizedShowcaseImage);
+
     const organiser = {
       name: user?.organizationName || user?.name,
       logo: '',
@@ -491,14 +505,14 @@ export default function CreateEvent() {
             .filter((milestone) => milestone.title || milestone.date || milestone.description),
         }))
         .filter((subEvent) => subEvent.title || subEvent.startDate || subEvent.endDate || subEvent.description || subEvent.milestones.length > 0),
-      bannerImages: normalizedPosterImage ? [normalizedPosterImage] : [],
-      galleryImages: normalizedShowcaseImage ? [normalizedShowcaseImage] : [],
+      bannerImages: includePosterInLegacyCollections ? [normalizedPosterImage] : [],
+      galleryImages: includeShowcaseInLegacyCollections ? [normalizedShowcaseImage] : [],
       posterImage: normalizedPosterImage,
       showcaseImage: normalizedShowcaseImage,
       media: sections.media
         ? {
-            banners: normalizedPosterImage ? [normalizedPosterImage] : [],
-            gallery: normalizedShowcaseImage ? [normalizedShowcaseImage] : [],
+            banners: includePosterInLegacyCollections ? [normalizedPosterImage] : [],
+            gallery: includeShowcaseInLegacyCollections ? [normalizedShowcaseImage] : [],
           }
         : { banners: [], gallery: [] },
       faqs: [
@@ -518,6 +532,12 @@ export default function CreateEvent() {
         sponsorLogoUrl: form.credentialSponsorLogoUrl,
       },
     };
+
+    const estimatedDocBytes = estimateJsonBytes(eventPayload);
+    if (estimatedDocBytes > MAX_EVENT_DOC_BYTES) {
+      showValidationToast('Event payload is too large for Firestore. Use smaller images or external image URLs.');
+      return false;
+    }
 
     if (isEditMode && targetEvent) {
       updateEvent(targetEvent.id, eventPayload);

@@ -61,7 +61,7 @@ function toTimestamp(value) {
 export default function EventDetail() {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const { getEventById, getEventRegistrationForUser, registerForEvent, createTeamInvitation } = useEvents();
+  const { getEventById, getEventRegistrationForUser, registerForEvent, updateTeamRegistration, createTeamInvitation } = useEvents();
   const { user, findRegisteredUserByEmail } = useAuth();
 
   const [showRegModal, setShowRegModal] = useState(false);
@@ -69,11 +69,13 @@ export default function EventDetail() {
   const [regForm, setRegForm] = useState({
     teamName: '',
     participantType: 'student',
-    teamSize: '',
     teamLeadName: '',
   });
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRows, setInviteRows] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamMembersBaseline, setTeamMembersBaseline] = useState([]);
+  const [isTeamEditMode, setIsTeamEditMode] = useState(false);
   const [inviteNotice, setInviteNotice] = useState(null);
   const [regStatus, setRegStatus] = useState(null);
   const [showSuspendedModal, setShowSuspendedModal] = useState(false);
@@ -81,6 +83,68 @@ export default function EventDetail() {
 
   const event = getEventById(eventId);
   const currentRegistration = user ? getEventRegistrationForUser(eventId, user) : null;
+  const teamLeadId = String(currentRegistration?.teamLeadId || currentRegistration?.userId || '').trim();
+  const canManageTeam = Boolean(
+    currentRegistration && String(user?.id || '').trim() && teamLeadId === String(user?.id || '').trim()
+  );
+
+  const getLeadLabel = () => String(currentRegistration?.teamLeadName || user?.name || user?.email || '').trim();
+
+  const resetRegistrationModal = () => {
+    setShowRegModal(false);
+    setRegStatus(null);
+    setInviteNotice(null);
+    setInviteRows([]);
+    setTeamMembers([]);
+    setTeamMembersBaseline([]);
+    setIsTeamEditMode(false);
+    setInviteEmail('');
+    setRegForm({ teamName: '', participantType: 'student', teamLeadName: '' });
+  };
+
+  const openRegistrationModal = () => {
+    setIsTeamEditMode(false);
+    setRegStatus(null);
+    setInviteNotice(null);
+    setInviteRows([]);
+    setTeamMembers([]);
+    setTeamMembersBaseline([]);
+    setInviteEmail('');
+    setRegForm({ teamName: '', participantType: 'student', teamLeadName: '' });
+    setShowRegModal(true);
+  };
+
+  const openTeamEditor = () => {
+    if (!currentRegistration || !canManageTeam) return;
+
+    const leadLabel = getLeadLabel();
+    const existingMembers = Array.isArray(currentRegistration.members) ? currentRegistration.members : [];
+    const editableMembers = existingMembers.filter((member, index) => {
+      const normalized = String(member || '').trim().toLowerCase();
+      if (!normalized) return false;
+      if (index === 0) return false;
+
+      const leadNormalized = String(leadLabel || '').trim().toLowerCase();
+      const nameNormalized = String(user?.name || '').trim().toLowerCase();
+      const emailNormalized = String(user?.email || '').trim().toLowerCase();
+
+      return normalized !== leadNormalized && normalized !== nameNormalized && normalized !== emailNormalized;
+    });
+
+    setIsTeamEditMode(true);
+    setRegStatus(null);
+    setInviteNotice(null);
+    setRegForm({
+      teamName: currentRegistration.teamName || '',
+      participantType: currentRegistration.participantType || 'student',
+      teamLeadName: leadLabel,
+    });
+    setTeamMembers(editableMembers);
+    setTeamMembersBaseline(editableMembers);
+    setInviteRows([]);
+    setInviteEmail('');
+    setShowRegModal(true);
+  };
 
   if (!event) {
     return (
@@ -140,6 +204,7 @@ export default function EventDetail() {
     : [];
   const subEvents = Array.isArray(event.subEvents) ? event.subEvents : [];
   const mediaBannerImage = firstRenderableImage([
+    event.posterImage,
     event.bannerImages?.[0],
     event.media?.banners?.[0],
   ]);
@@ -520,10 +585,15 @@ export default function EventDetail() {
     }
 
     if (currentRegistration) {
+      if (canManageTeam) {
+        openTeamEditor();
+        return;
+      }
+
       return;
     }
 
-    setShowRegModal(true);
+    openRegistrationModal();
   };
 
   const addInviteEmail = () => {
@@ -538,6 +608,11 @@ export default function EventDetail() {
 
     if (String(user?.email || '').toLowerCase() === normalized) {
       setInviteNotice({ type: 'error', message: 'You are already part of this team.' });
+      return;
+    }
+
+    if (teamMembers.some((member) => String(member || '').trim().toLowerCase() === normalized)) {
+      setInviteNotice({ type: 'error', message: 'This member is already in your current team list.' });
       return;
     }
 
@@ -620,24 +695,32 @@ export default function EventDetail() {
     setInviteRows((current) => current.filter((_, index) => index !== rowIndex));
   };
 
+  const removeTeamMember = (rowIndex) => {
+    setTeamMembers((current) => current.filter((_, index) => index !== rowIndex));
+  };
+
   const submitRegistration = async () => {
-    if (currentRegistration) {
+    if (currentRegistration && !isTeamEditMode) {
       setRegStatus({ success: false, error: 'You are already registered for this event.' });
       return;
     }
+
+    const leadLabel = getLeadLabel();
+    const members = [
+      leadLabel || user?.name || user?.email,
+      ...(isTeamEditMode ? teamMembers : inviteRows.map((entry) => entry.email)),
+    ].filter(Boolean);
 
     const teamData = event.teamSize && regForm.participantType !== 'student'
       ? {
           participantType: regForm.participantType,
           teamName: regForm.teamName,
-          teamSize: regForm.teamSize ? parseInt(regForm.teamSize) : '',
           teamLeadName: regForm.teamLeadName,
-          members: [
-            user?.name || user?.email,
-            ...inviteRows.map((entry) => entry.email),
-          ].filter(Boolean),
+          members,
+          // Team size is derived from actual members instead of manual user input.
+          teamSize: members.length,
         }
-      : { participantType: regForm.participantType, members: [user.name] };
+      : { participantType: regForm.participantType, members: [leadLabel || user.name] };
 
     if (event.teamSize && regForm.participantType !== 'student') {
       if (!regForm.teamName.trim()) {
@@ -647,11 +730,6 @@ export default function EventDetail() {
 
       if (!regForm.teamLeadName.trim()) {
         setRegStatus({ success: false, error: 'Team lead name is required for this event.' });
-        return;
-      }
-
-      if (!regForm.teamSize) {
-        setRegStatus({ success: false, error: 'Team size is required for this event.' });
         return;
       }
 
@@ -665,7 +743,19 @@ export default function EventDetail() {
       }
     }
 
-    const result = await registerForEvent(event.id, user.id, teamData, user);
+    const result = isTeamEditMode && currentRegistration && canManageTeam
+      ? await updateTeamRegistration({
+          registrationId: currentRegistration.id,
+          eventId: event.id,
+          teamName: regForm.teamName,
+          teamLeadName: regForm.teamLeadName,
+          participantType: regForm.participantType,
+          members: members.slice(1),
+          removedMemberLabels: teamMembersBaseline.filter(
+            (member) => !teamMembers.some((currentMember) => String(currentMember || '').trim().toLowerCase() === String(member || '').trim().toLowerCase())
+          ),
+        })
+      : await registerForEvent(event.id, user.id, teamData, user);
 
     if (result?.suspended) {
       setShowRegModal(false);
@@ -679,11 +769,7 @@ export default function EventDetail() {
 
     if (result.success) {
       setTimeout(() => {
-        setShowRegModal(false);
-        setRegStatus(null);
-        setInviteNotice(null);
-        setInviteRows([]);
-        setInviteEmail('');
+        resetRegistrationModal();
       }, 1800);
     }
   };
@@ -787,12 +873,12 @@ export default function EventDetail() {
             <HoverBorderGradient
               as="button"
               onClick={handleRegister}
-              disabled={Boolean(currentRegistration)}
+              disabled={Boolean(currentRegistration) && !canManageTeam}
               containerClassName="event-detail__register-gradient-btn"
               className="event-detail__register-gradient-btn-inner"
             >
               <span className="event-detail__register-gradient-content">
-                <Zap size={16} /> {currentRegistration ? 'Already Registered' : 'Register Now'}
+                <Zap size={16} /> {currentRegistration ? (canManageTeam ? 'Edit Team' : 'Already Registered') : 'Register Now'}
               </span>
             </HoverBorderGradient>
           </div>
@@ -808,7 +894,7 @@ export default function EventDetail() {
           setInviteNotice(null);
           setInviteRows([]);
           setInviteEmail('');
-          setRegForm({ teamName: '', participantType: 'student', teamSize: '', teamLeadName: '' });
+          setRegForm({ teamName: '', participantType: 'student', teamLeadName: '' });
         }}
         title="Claim Your Spot"
         size="md"
@@ -874,26 +960,46 @@ export default function EventDetail() {
                   />
 
                   <Input
-                    label="Team Size"
-                    type="number"
-                    placeholder="Number of team members"
-                    value={regForm.teamSize}
-                    onChange={(e) => setRegForm({ ...regForm, teamSize: e.target.value })}
-                    min="1"
-                  />
-
-                  <Input
                     label="Team Lead Name"
                     placeholder="Enter team lead name"
                     value={regForm.teamLeadName}
                     onChange={(e) => setRegForm({ ...regForm, teamLeadName: e.target.value })}
                   />
+
+                  <div className="reg-form__hint">
+                    Team size is auto-calculated from the lead plus invited members.
+                  </div>
                 </div>
 
                 <div className="reg-form__invite-box">
-                  <p className="reg-form__invite-title">Invite Team Members by Email</p>
+                  <p className="reg-form__invite-title">Team Members</p>
                   <p className="reg-form__invite-hint">
-                    Add member emails. If they are registered, they can accept immediately. If not, they will be redirected to login/signup from the invite link.
+                    Only the team lead can add or remove teammates.
+                  </p>
+
+                  {teamMembers.length > 0 ? (
+                    <div className="reg-form__invite-list">
+                      {teamMembers.map((member, index) => (
+                        <article key={`${member}-${index}`} className="reg-form__invite-row">
+                          <div>
+                            <strong>{member}</strong>
+                            <p>Team member</p>
+                          </div>
+                          <div className="reg-form__invite-actions">
+                            <button type="button" className="reg-form__invite-remove" onClick={() => removeTeamMember(index)}>
+                              Remove
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="reg-form__invite-hint">No teammates added yet.</p>
+                  )}
+
+                  <p className="reg-form__invite-title">Add Team Members by Email</p>
+                  <p className="reg-form__invite-hint">
+                    Add teammate emails. Registered members can accept immediately. Others will be sent to login/signup from the invite link.
                   </p>
 
                   <div className="reg-form__invite-input-row">

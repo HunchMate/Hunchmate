@@ -23,8 +23,9 @@ function nowIso() {
 }
 
 function normalizeRole(role) {
-  if (role === 'admin') return 'admin';
-  if (role === 'organizer') return 'organizer';
+  const value = String(role || '').trim().toLowerCase();
+  if (value === 'admin') return 'admin';
+  if (value === 'organizer' || value === 'organiser') return 'organizer';
   return 'participant';
 }
 
@@ -39,7 +40,40 @@ function normalizeComplaintStatus(status) {
   return 'raised';
 }
 
+function normalizeParticipantProfile(raw = {}) {
+  return {
+    profileType: raw.profileType || '',
+    stream: raw.stream || '',
+    graduationYear: raw.graduationYear || '',
+    institutionName: raw.institutionName || raw.institution || '',
+    skills: Array.isArray(raw.skills) ? raw.skills : [],
+  };
+}
+
+function normalizeOrganizerProfile(raw = {}) {
+  return {
+    hostType: raw.hostType || '',
+    organizationName: raw.organizationName || '',
+    phoneNumber: raw.phoneNumber || '',
+    state: raw.state || '',
+    city: raw.city || '',
+    experience: raw.experience || '',
+    techProficiency: raw.techProficiency || '',
+    workSummary: raw.workSummary || '',
+    currentDesignation: raw.currentDesignation || '',
+  };
+}
+
 function normalizeUserDocument(raw = {}) {
+  const participantProfile = normalizeParticipantProfile({
+    ...raw,
+    ...(raw.participantProfile || {}),
+  });
+  const organizerProfile = normalizeOrganizerProfile({
+    ...raw,
+    ...(raw.organizerProfile || {}),
+  });
+
   return {
     id: raw.id || raw.uid || '',
     email: String(raw.email || '').trim().toLowerCase(),
@@ -78,6 +112,8 @@ function normalizeUserDocument(raw = {}) {
     },
     termsAccepted: Boolean(raw.termsAccepted),
     termsAcceptedAt: raw.termsAcceptedAt || null,
+    participantProfile,
+    organizerProfile,
     createdAt: raw.createdAt || nowIso(),
     updatedAt: raw.updatedAt || nowIso(),
   };
@@ -291,6 +327,47 @@ export async function createRegistrationRecord(eventId, registration) {
   };
 }
 
+export async function updateRegistrationRecord(registrationId, updates = {}) {
+  assertFirebaseReady();
+  const resolvedRegistrationId = String(registrationId || '').trim();
+  if (!resolvedRegistrationId) throw new Error('Registration id is required.');
+
+  const regRef = doc(firebaseDb, 'registrations', resolvedRegistrationId);
+  const snap = await getDoc(regRef);
+  if (!snap.exists()) {
+    throw new Error('Registration not found');
+  }
+
+  const current = snap.data() || {};
+  const payload = {
+    ...current,
+    ...updates,
+    updatedAt: nowIso(),
+  };
+
+  await setDoc(regRef, payload, { merge: true });
+  const updatedSnap = await getDoc(regRef);
+  return { ...updatedSnap.data(), id: resolvedRegistrationId };
+}
+
+export async function deleteRegistrationRecord(registrationId) {
+  assertFirebaseReady();
+  const resolvedRegistrationId = String(registrationId || '').trim();
+  if (!resolvedRegistrationId) throw new Error('Registration id is required.');
+
+  const regRef = doc(firebaseDb, 'registrations', resolvedRegistrationId);
+  const snap = await getDoc(regRef);
+  if (!snap.exists()) {
+    return { deletedRegistrationId: resolvedRegistrationId, existed: false };
+  }
+
+  const batch = writeBatch(firebaseDb);
+  batch.delete(regRef);
+  await batch.commit();
+
+  return { deletedRegistrationId: resolvedRegistrationId, existed: true };
+}
+
 export async function checkInByQrToken(qrToken) {
   assertFirebaseReady();
   const token = String(qrToken || '').trim();
@@ -370,23 +447,27 @@ export async function appendAdminAuditLog({ action, actorId, targetType, targetI
 export async function getAdminOverview() {
   assertFirebaseReady();
 
-  const [usersSnap, eventsSnap, regsSnap, complaintsSnap] = await Promise.all([
+  const [usersSnap, eventsSnap, regsSnap, complaintsSnap, credsSnap] = await Promise.all([
     getDocs(collection(firebaseDb, 'users')),
     getDocs(collection(firebaseDb, 'events')),
     getDocs(collection(firebaseDb, 'registrations')),
     getDocs(collection(firebaseDb, 'complaints')),
+    getDocs(collection(firebaseDb, 'credentials')),
   ]);
 
   const users = usersSnap.docs.map((entry) => normalizeUserDocument(entry.data() || {}));
   const events = eventsSnap.docs.map((entry) => ({ ...entry.data(), id: entry.id }));
   const registrations = regsSnap.docs.map((entry) => ({ ...entry.data(), id: entry.id }));
   const complaints = complaintsSnap.docs.map((entry) => ({ ...entry.data(), id: entry.id }));
+  const credentials = credsSnap.docs.map((entry) => ({ ...entry.data(), id: entry.id }));
 
   const roleCounts = users.reduce((acc, entry) => {
     const role = normalizeRole(entry?.role);
     acc[role] += 1;
     return acc;
   }, { participant: 0, organizer: 0, admin: 0 });
+
+  const uniqueCredentialRecipients = new Set(credentials.map((c) => String(c?.userId || '').trim()).filter(Boolean));
 
   const metrics = {
     totalUsers: users.length,
@@ -395,6 +476,8 @@ export async function getAdminOverview() {
     totalCheckIns: registrations.filter((entry) => Boolean(entry?.checkedIn)).length,
     activeSessions: 0,
     suspendedUsers: users.filter((entry) => entry.status === 'suspended').length,
+    totalCredentials: credentials.length,
+    uniqueCredentialRecipients: uniqueCredentialRecipients.size,
     roleCounts,
     openComplaints: complaints.filter((entry) => normalizeComplaintStatus(entry.status) !== 'resolved').length,
   };

@@ -467,8 +467,9 @@ function normalizeSkills(skills) {
 
 function normalizeRole(role, options = {}) {
   const allowAdmin = Boolean(options.allowAdmin);
-  if (allowAdmin && role === 'admin') return 'admin';
-  return role === 'organizer' ? 'organizer' : 'participant';
+  const value = String(role || '').trim().toLowerCase();
+  if (allowAdmin && value === 'admin') return 'admin';
+  return value === 'organizer' || value === 'organiser' ? 'organizer' : 'participant';
 }
 
 function normalizeUserStatus(status) {

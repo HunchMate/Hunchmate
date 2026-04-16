@@ -1,9 +1,21 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { GoogleLogin } from '@react-oauth/google';
 import { Mail, Lock, AlertCircle, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Auth.css';
+
+const ADMIN_EMAILS = String(import.meta.env.VITE_ADMIN_EMAILS || '')
+  .split(',')
+  .map((value) => String(value || '').trim().toLowerCase())
+  .filter(Boolean);
+
+function resolveLoginIdentity(rawIdentity) {
+  const value = String(rawIdentity || '').trim().toLowerCase();
+  if (!value) return '';
+  if (value.includes('@')) return value;
+  if (value === 'admin' && ADMIN_EMAILS.length > 0) return ADMIN_EMAILS[0];
+  return value;
+}
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -12,24 +24,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login, googleAuth } = useAuth();
   const navigate = useNavigate();
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-  const googleAllowedOriginsRaw = import.meta.env.VITE_GOOGLE_ALLOWED_ORIGINS
-    || 'http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174';
-
-  const normalizeOrigin = useCallback((origin) => String(origin || '').trim().replace(/\/$/, ''), []);
-
-  const googleAllowedOrigins = useMemo(
-    () => googleAllowedOriginsRaw
-      .split(',')
-      .map((item) => normalizeOrigin(item))
-      .filter(Boolean),
-    [googleAllowedOriginsRaw, normalizeOrigin]
-  );
-
-  const isGoogleOriginAllowed = useMemo(() => {
-    if (!googleClientId || typeof window === 'undefined') return false;
-    return googleAllowedOrigins.includes(normalizeOrigin(window.location.origin));
-  }, [googleAllowedOrigins, googleClientId, normalizeOrigin]);
 
   const getPostAuthPath = useCallback((nextUser) => {
     if (nextUser?.role === 'admin') {
@@ -51,7 +45,7 @@ export default function Login() {
     setError('');
     setLoading(true);
 
-    const normalizedIdentity = email.trim().toLowerCase();
+    const normalizedIdentity = resolveLoginIdentity(email);
     const result = await login(normalizedIdentity, password);
     if (result.success) {
       const pendingInvite = String(localStorage.getItem('hm_pending_invite') || '').trim();
@@ -69,16 +63,11 @@ export default function Login() {
     setLoading(false);
   };
 
-  const handleGoogleSuccess = useCallback(async (credentialResponse) => {
-    if (!credentialResponse?.credential) {
-      setError('Google sign-in failed.');
-      return;
-    }
-
-    setLoading(true);
+  const handleGoogleSignIn = async () => {
     setError('');
+    setLoading(true);
 
-    const result = await googleAuth(credentialResponse.credential, 'participant');
+    const result = await googleAuth();
     if (result.success) {
       const pendingInvite = String(localStorage.getItem('hm_pending_invite') || '').trim();
       const hasValidInvite = /^[a-zA-Z0-9_-]+$/.test(pendingInvite);
@@ -94,27 +83,7 @@ export default function Login() {
     }
 
     setLoading(false);
-  }, [getPostAuthPath, googleAuth, navigate]);
-
-  const googleLoginButton = useMemo(() => {
-    if (!googleClientId || !isGoogleOriginAllowed) {
-      return (
-        <button type="button" disabled>
-          Google sign-in unavailable on this origin
-        </button>
-      );
-    }
-
-    return (
-      <GoogleLogin
-        onSuccess={handleGoogleSuccess}
-        onError={() => setError('Google sign-in failed. Verify this origin is added in Google OAuth Authorized JavaScript origins and the client ID matches VITE_GOOGLE_CLIENT_ID.')}
-        width="340"
-        shape="rectangular"
-        text="signin_with"
-      />
-    );
-  }, [googleClientId, handleGoogleSuccess, isGoogleOriginAllowed]);
+  };
 
   return (
     <main className="auth-modern">
@@ -142,13 +111,13 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="auth-modern__form">
           <label>
-            Email or username
+            Email
             <div className="auth-modern__field">
               <Mail size={16} />
               <input
-                type="text"
+                type="email"
                 autoComplete="username"
-                placeholder="you@example.com or admin"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -178,17 +147,12 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="auth-modern__divider"><span>OR</span></div>
-
+        <div className="auth-modern__divider">or continue with</div>
         <div className="auth-modern__socials">
-          {googleLoginButton}
+          <button type="button" onClick={handleGoogleSignIn} disabled={loading}>
+            Continue with Google
+          </button>
         </div>
-
-        {googleClientId && !isGoogleOriginAllowed ? (
-          <p className="auth-modern__subtitle">
-            Add {typeof window !== 'undefined' ? window.location.origin : 'this origin'} to Google OAuth allowed origins.
-          </p>
-        ) : null}
 
         <p className="auth-modern__switch">
           Don't have an account? <Link to="/signup">Sign up</Link>

@@ -1,7 +1,16 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import Grainient from './Grainient'
 
 const GrainyGradient = memo(function GrainyGradient() {
+  // Detect mobile and motion preferences for performance
+  const isMobile = useMemo(() => window.innerWidth < 768, [])
+  const prefersReducedMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
+  
+  // Skip expensive animations on mobile
+  if (isMobile || prefersReducedMotion) {
+    return <div className="fixed inset-0 -z-10 bg-gradient-to-br from-orange-500 via-purple-600 to-blue-600" />
+  }
+
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden">
       {/* ─── Base Gradient ─── */}

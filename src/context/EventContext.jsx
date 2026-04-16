@@ -6,9 +6,11 @@ import {
   createEventRecord,
   createRegistrationRecord,
   deleteEventRecord,
+  deleteRegistrationRecord,
   listEvents as listFirebaseEvents,
   listRegistrations as listFirebaseRegistrations,
   updateEventRecord,
+  updateRegistrationRecord,
 } from '../lib/firebase-data';
 
 const EventContext = createContext(null);
@@ -415,7 +417,11 @@ export function EventProvider({ children }) {
       return { success: true, event: savedEvent };
     } catch (error) {
       console.warn('Event persistence failed:', error);
-      return { success: false, error: error?.message || 'Failed to save event' };
+      const rawMessage = String(error?.message || 'Failed to save event');
+      const friendlyMessage = rawMessage.includes('exceeds the maximum allowed size')
+        ? 'Event is too large for Firestore (max 1MB). Reduce embedded image size or use image URLs.'
+        : rawMessage;
+      return { success: false, error: friendlyMessage };
     }
   };
 
@@ -521,6 +527,7 @@ export function EventProvider({ children }) {
       id: generateId('reg'),
       userId,
       eventId,
+      teamLeadId: userId,
       teamId,
       participantType: teamData.participantType || 'student',
       teamName: teamData.teamName || null,
@@ -574,6 +581,108 @@ export function EventProvider({ children }) {
       console.warn('Registration persistence failed:', error);
       return { success: false, error: error?.message || 'Failed to register for event.' };
     }
+  };
+
+  const updateTeamRegistration = async ({
+    registrationId,
+    eventId,
+    teamName,
+    teamLeadName,
+    participantType,
+    members = [],
+    removedMemberLabels = [],
+  }) => {
+    const resolvedRegistrationId = String(registrationId || '').trim();
+    const resolvedEventId = String(eventId || '').trim();
+    if (!resolvedRegistrationId || !resolvedEventId) {
+      return { success: false, error: 'Team registration could not be updated.' };
+    }
+
+    const currentLeadRegistration = registrations.find((entry) => String(entry.id || '') === resolvedRegistrationId);
+    if (!currentLeadRegistration) {
+      return { success: false, error: 'Team registration was not found.' };
+    }
+
+    const nextMembers = Array.from(
+      new Set(
+        members
+          .map((member) => String(member || '').trim())
+          .filter(Boolean)
+      )
+    );
+    const leadLabel = String(teamLeadName || currentLeadRegistration.teamLeadName || currentLeadRegistration.participant?.name || currentLeadRegistration.participant?.email || '').trim();
+    const mergedMembers = leadLabel ? [leadLabel, ...nextMembers] : nextMembers;
+
+    const updatedLead = await updateRegistrationRecord(resolvedRegistrationId, {
+      ...currentLeadRegistration,
+      participantType: participantType || currentLeadRegistration.participantType || 'student',
+      teamName: teamName || currentLeadRegistration.teamName || null,
+      teamLeadName: leadLabel || currentLeadRegistration.teamLeadName || null,
+      teamLeadId: currentLeadRegistration.teamLeadId || currentLeadRegistration.userId,
+      teamSize: mergedMembers.length,
+      members: mergedMembers,
+    });
+
+    const removedLabels = Array.from(
+      new Set(
+        (Array.isArray(removedMemberLabels) ? removedMemberLabels : [])
+          .map((label) => String(label || '').trim().toLowerCase())
+          .filter(Boolean)
+      )
+    );
+
+    const deletedRegistrationIds = [];
+    if (removedLabels.length > 0) {
+      const relatedRegistrations = registrations.filter((entry) =>
+        String(entry.eventId || '') === resolvedEventId &&
+        String(entry.id || '') !== resolvedRegistrationId &&
+        String(entry.teamId || '') === String(currentLeadRegistration.teamId || '')
+      );
+
+      for (const entry of relatedRegistrations) {
+        const participantName = normalizeRegistrationField(entry.participant?.name);
+        const participantEmail = normalizeRegistrationField(entry.participant?.email);
+        const memberLabels = Array.isArray(entry.members)
+          ? entry.members.map((member) => normalizeRegistrationField(member))
+          : [];
+
+        const shouldRemove = removedLabels.some(
+          (label) => label === participantName || label === participantEmail || memberLabels.includes(label)
+        );
+
+        if (!shouldRemove) continue;
+
+        await deleteRegistrationRecord(entry.id);
+        deletedRegistrationIds.push(entry.id);
+      }
+    }
+
+    const nextRegistrations = registrations
+      .filter((entry) => !deletedRegistrationIds.includes(entry.id))
+      .map((entry) => (String(entry.id || '') === resolvedRegistrationId ? updatedLead : entry));
+
+    saveRegistrations(nextRegistrations);
+
+    const removedCount = deletedRegistrationIds.length;
+    if (removedCount > 0) {
+      const targetEvent = events.find((entry) => String(entry.id || '') === resolvedEventId) || null;
+      const updatedEvents = events.map((entry) => {
+        if (String(entry.id || '') !== resolvedEventId) return entry;
+        return {
+          ...entry,
+          registeredCount: Math.max(0, Number(entry.registeredCount || 0) - removedCount),
+        };
+      });
+      saveEvents(updatedEvents);
+
+      void updateEventRecord(resolvedEventId, {
+        registeredCount: Math.max(0, Number(targetEvent?.registeredCount || 0) - removedCount),
+      }).catch((error) => {
+        console.warn('Team update event count sync failed:', error);
+      });
+    }
+
+    return { success: true, registration: updatedLead, removedRegistrationIds: deletedRegistrationIds };
   };
 
   const checkInParticipant = async (qrToken) => {
@@ -898,6 +1007,7 @@ export function EventProvider({ children }) {
         id: generateId('reg'),
         userId,
         eventId: invite.eventId,
+        teamLeadId: leaderRegistration?.teamLeadId || leaderRegistration?.userId || invite.inviterId,
         teamId: resolvedTeamId,
         teamName: invite.teamName || leaderRegistration?.teamName || null,
         members: [currentUser.name || currentUser.email],
@@ -971,7 +1081,7 @@ export function EventProvider({ children }) {
     <EventContext.Provider value={{
       events, registrations, credentials, teamInvitations, organizerNotifications,
       createEvent, updateEvent, deleteEvent,
-      registerForEvent, checkInParticipant,
+      registerForEvent, updateTeamRegistration, checkInParticipant,
       issueCredential, bulkIssueCredentials, claimCredential,
       createTeamInvitation, getInvitationById, acceptTeamInvitation,
       getOrganizerNotifications, markOrganizerNotificationRead, markAllOrganizerNotificationsRead,

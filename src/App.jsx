@@ -219,7 +219,9 @@ function App() {
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/host-onboarding" element={<HostOnboarding />} />
               <Route path="/dashboard" element={<Profile />} />
+              <Route path="/dashboard/settings" element={<Profile />} />
               <Route path="/profile" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/profile/settings" element={<Navigate to="/dashboard/settings" replace />} />
               <Route path="/help-center" element={<HelpCenter />} />
 
               <Route element={<RequireRole role="organizer" />}>

@@ -1,4 +1,4 @@
-    import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
     import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import GrainyGradient from '../components/GrainyGradient';
@@ -18,20 +18,23 @@ const DUMMY_LOGOS = [
 
 export default function Landing() {
   const [scrollY, setScrollY] = useState(0);
+  
+  // Detect mobile and motion preferences
+  const isMobile = useMemo(() => window.innerWidth < 768, []);
+  const prefersReducedMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, []);
 
   useEffect(() => {
     let ticking = false;
+    let rafId = null;
 
     const onScroll = () => {
-      if (ticking) {
-        return;
+      if (!ticking) {
+        rafId = window.requestAnimationFrame(() => {
+          setScrollY(window.scrollY || 0);
+          ticking = false;
+        });
+        ticking = true;
       }
-
-      ticking = true;
-      window.requestAnimationFrame(() => {
-        setScrollY(window.scrollY || 0);
-        ticking = false;
-      });
     };
 
     onScroll();
@@ -39,16 +42,19 @@ export default function Landing() {
 
     return () => {
       window.removeEventListener('scroll', onScroll);
+      if (rafId) cancelAnimationFrame(rafId);
     };
   }, []);
 
-  const heroParallax = Math.min(scrollY * 0.24, 150);
-  const logoParallax = Math.min(scrollY * 0.14, 100);
-  const featuresParallax = Math.min(scrollY * 0.08, 64);
+  // Disable parallax on mobile to improve scroll performance
+  const heroParallax = isMobile || prefersReducedMotion ? 0 : Math.min(scrollY * 0.24, 150);
+  const logoParallax = isMobile || prefersReducedMotion ? 0 : Math.min(scrollY * 0.14, 100);
+  const featuresParallax = isMobile || prefersReducedMotion ? 0 : Math.min(scrollY * 0.08, 64);
 
   return (
     <>
-      <GrainyGradient />
+      {/* Disable expensive WebGL gradient on mobile and for reduced-motion users */}
+      {!isMobile && !prefersReducedMotion ? <GrainyGradient /> : <div className="fixed inset-0 -z-10 bg-gradient-to-br from-orange-500 via-purple-600 to-blue-600" />}
       <div className="relative z-10 w-full overflow-hidden">
         <div
           className="min-h-screen flex flex-col justify-center"

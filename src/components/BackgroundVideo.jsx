@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from 'react'
+import { memo, useEffect, useRef, useMemo } from 'react'
 import Hls from 'hls.js'
 
 const VIDEO_SRC = 'https://stream.mux.com/hUT6X11m1Vkw1QMxPOLgI761x2cfpi9bHFbi5cNg4014.m3u8'
@@ -6,6 +6,20 @@ const VIDEO_SRC = 'https://stream.mux.com/hUT6X11m1Vkw1QMxPOLgI761x2cfpi9bHFbi5c
 const BackgroundVideo = memo(function BackgroundVideo() {
   const videoRef = useRef(null)
   const hlsRef = useRef(null)
+
+  // Detect mobile and network conditions
+  const isMobile = useMemo(() => /mobile|android|iphone/i.test(navigator.userAgent), [])
+  const connection = useMemo(() => navigator.connection, [])
+  const isSlowNetwork = useMemo(() => {
+    return !connection || connection.effectiveType === '3g' || connection.effectiveType === '4g'
+  }, [connection])
+
+  // Skip video on mobile for better performance
+  if (isMobile) {
+    return (
+      <div className="fixed inset-0 -z-10 w-full h-full overflow-hidden bg-gradient-to-br from-orange-500 via-purple-600 to-blue-600" />
+    )
+  }
 
   useEffect(() => {
     const video = videoRef.current
@@ -15,11 +29,11 @@ const BackgroundVideo = memo(function BackgroundVideo() {
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
-        maxBufferLength: 60,
-        maxMaxBufferLength: 120,
-        maxBufferSize: 60 * 1000 * 1000,
-        startLevel: -1,
-        abrEwmaDefaultEstimate: 5000000,
+        maxBufferLength: isSlowNetwork ? 15 : 60,
+        maxMaxBufferLength: isSlowNetwork ? 30 : 120,
+        maxBufferSize: isSlowNetwork ? 30 * 1000 * 1000 : 60 * 1000 * 1000,
+        startLevel: isSlowNetwork ? 0 : -1,
+        abrEwmaDefaultEstimate: isSlowNetwork ? 1000000 : 5000000,
       })
       hlsRef.current = hls
 
@@ -41,7 +55,7 @@ const BackgroundVideo = memo(function BackgroundVideo() {
         video.play().catch(() => {})
       })
     }
-  }, [])
+  }, [isSlowNetwork])
 
   return (
     <div className="fixed inset-0 -z-10 w-full h-full overflow-hidden">

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowUpRight, Star, Zap } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Star, Zap, Trophy, Lightbulb, Target, Briefcase, Users } from 'lucide-react';
 import { useEvents } from '../context/EventContext';
 import EventCard from '../components/events/EventCard';
 import Badge from '../components/ui/Badge';
@@ -10,7 +10,49 @@ import './Home.css';
 
 export default function Home() {
   const { events } = useEvents();
-  const featuredEvents = events.slice(0, 4);
+  const featuredEvents = events.slice(0, 3);
+
+  const trustedOrganizations = [
+    'NASSCOM', 'Google', 'Microsoft', 'Amazon', 'Meta',
+    'Adobe', 'IBM', 'Intel', 'Apple', 'Oracle',
+    'Infosys', 'TCS', 'HCL', 'Accenture', 'Wipro',
+  ];
+
+  const features = [
+    {
+      icon: Trophy,
+      title: 'Hackathons',
+      description: 'Hosting full-stack innovation competitions, building tomorrow\'s solutions today',
+    },
+    {
+      icon: Lightbulb,
+      title: 'Innovation Programs',
+      description: 'Identify and nurture startups, support policy makers with edge-cutting ideas',
+    },
+    {
+      icon: Target,
+      title: 'Competitions & Contests',
+      description: 'Challenge your teams and organizations to push boundaries',
+    },
+    {
+      icon: Briefcase,
+      title: 'Programs & Events',
+      description: 'Curated workshops, bootcamps, and community building initiatives',
+    },
+    {
+      icon: Users,
+      title: 'Opportunities',
+      description: 'Connect with mentors, investors, and like-minded innovators',
+    },
+  ];
+
+  const categories = [
+    { name: 'Hackathons', count: '150+', icon: Trophy },
+    { name: 'Innovation', count: '80+', icon: Lightbulb },
+    { name: 'Competitions', count: '120+', icon: Target },
+    { name: 'Programs', count: '60+', icon: Briefcase },
+    { name: 'Opportunities', count: '200+', icon: Users },
+  ];
 
   const partners = [
     'NASSCOM', 'TechForge', 'InnovateIndia', 'DataWave', 'PixelLabs',
@@ -35,45 +77,70 @@ export default function Home() {
 
   return (
     <div className="home-page">
-      {/* ── Hero ── */}
+      {/* ── Hero Section ── */}
       <section className="home-hero">
         <div className="home-hero__grid-overlay" />
         <div className="container home-hero__content">
           <h1 className="home-hero__title">
-            Accelerate Innovation<br />
-            From <em>Vision</em> to <em>Value</em>
+            Turn Your Hunches Into
+            <em>Real Benchmarks.</em>
           </h1>
 
           <p className="home-hero__subtitle">
-            A Global end to end Platform for Enterprise <strong>Hackathons</strong>, <strong>Hiring Challenges</strong> and <strong>Innovation Programs</strong>
+            An end-to-end platform to own hackathons, manage challenges, and build real-world solutions
           </p>
 
           <div className="home-hero__ctas">
-            <Link to="/events" className="home-hero__cta-primary">
-              For Innovators <ArrowRight size={18} />
+            <Link to="/signup?role=organizer" className="home-hero__cta-primary">
+              For Organizers <ArrowRight size={18} />
             </Link>
-            <Link to="/signup" className="home-hero__cta-secondary">
-              For Corporates <ArrowUpRight size={18} />
+            <Link to="/events" className="home-hero__cta-secondary">
+              For Participants <ArrowRight size={18} />
             </Link>
-          </div>
-
-          <div className="home-hero__social-proof">
-            <div className="home-hero__avatars">
-              {['A', 'P', 'R', 'K', 'S'].map((char, i) => (
-                <div key={i} className="home-hero__avatar">{char}</div>
-              ))}
-            </div>
-            <span className="home-hero__social-text"><strong>50,000+</strong> innovators already shaping the future</span>
           </div>
         </div>
       </section>
 
-      {/* ── Logo Marquee ── */}
-      <section className="home-marquee">
-        <div className="home-marquee__track">
-          {partners.map((name, i) => (
-            <span key={i} className="home-marquee__item">{name}</span>
-          ))}
+      {/* ── Trust Section ── */}
+      <section className="home-trust">
+        <div className="container">
+          <h2 className="home-trust__title">Trusted by leading Organizations & Institutions</h2>
+          <div className="home-trust__logos">
+            {trustedOrganizations.map((org, i) => (
+              <div key={i} className="home-trust__logo-item">
+                {org}
+              </div>
+            ))}
+            <div className="home-trust__logo-more">→</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Features Section ── */}
+      <section className="home-features">
+        <div className="container">
+          <div className="home-features__header">
+            <h2 className="home-features__title">
+              Everything you can sum on
+              <span>Hunchmate Platform</span>
+            </h2>
+            <p className="home-features__subtitle">Creating every experience effortfully</p>
+          </div>
+
+          <div className="home-features__grid">
+            {features.map((feature, i) => {
+              const IconComponent = feature.icon;
+              return (
+                <div key={i} className="home-features__card">
+                  <div className="home-features__icon">
+                    <IconComponent size={32} />
+                  </div>
+                  <h3 className="home-features__card-title">{feature.title}</h3>
+                  <p className="home-features__card-description">{feature.description}</p>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -97,6 +164,26 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Categories Section ── */}
+      <section className="home-categories">
+        <div className="container">
+          <h2 className="home-categories__title">5-Categories / Format</h2>
+          <div className="home-categories__grid">
+            {categories.map((cat, i) => {
+              const IconComponent = cat.icon;
+              return (
+                <div key={i} className="home-categories__item">
+                  <div className="home-categories__icon">
+                    <IconComponent size={24} />
+                  </div>
+                  <h3>{cat.name}</h3>
+                  <p>{cat.count}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
       {/* ── Delivered Impact ── */}
       <section className="home-stats">
         <div className="home-stats__header">
@@ -118,44 +205,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── How It Works ── */}
-      <section className="home-how">
-        <div className="container">
-          <div className="section-header">
-            <h2 className="section-title">Innovation for Enterprises</h2>
-            <p className="section-subtitle">Hunchmate enables customized innovation with a global ecosystem of builders</p>
-          </div>
-          <div className="home-how__grid">
-            {[
-              { num: '01', lottie: LOTTIE_URLS.how_idea, emoji: '💡', title: 'Innovation Challenge', desc: 'Launch focused corporate challenges and hackathons to solve real business problems and unlock breakthrough ideas.' },
-              { num: '02', lottie: LOTTIE_URLS.how_startup, emoji: '🔍', title: 'Startup Scouting', desc: 'Identify high-potential startups aligned to your business goals and collaborate on cutting-edge technologies.' },
-              { num: '03', lottie: LOTTIE_URLS.how_hackathon, emoji: '🏗️', title: 'Internal Hackathon', desc: 'Activate your internal workforce to co-create solutions, generate fresh ideas, and accelerate transformation.' },
-              { num: '04', lottie: LOTTIE_URLS.how_hiring, emoji: '🏆', title: 'Hiring Hackathon', desc: 'Discover exceptional talent through real-world problem solving and performance-driven recruitment programs.' },
-            ].map((step, i) => (
-              <div key={i} className="home-how__step">
-                <div className="home-how__icon-wrap">
-                  <AnimatedIcon url={step.lottie} size="sm" />
-                </div>
-                <div className="home-how__step-num">{step.num}</div>
-                <h3 className="home-how__step-title">{step.title}</h3>
-                <p className="home-how__step-desc">{step.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── Testimonials ── */}
-      <section className="home-featured">
-        <div className="container">
-          <div className="section-header">
-            <h2 className="section-title">AI-Powered Experiences</h2>
-            <p className="section-subtitle">A Bento style layout inspired by your reference, adapted to this project.</p>
-          </div>
-          <BentoGridThirdDemo />
-        </div>
-      </section>
-
       <section className="home-testimonials">
         <div className="container">
           <div className="section-header">

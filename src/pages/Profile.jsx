@@ -1,17 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity,
   Award,
+  Calendar,
+  Check,
+  Copy,
+  Download,
   ExternalLink,
-  FileText,
-  GraduationCap,
+  Bell,
   Link2,
+  Lock,
+  Mail,
+  MapPin,
+  Phone,
   QrCode,
-  Save,
   Settings2,
-  Sparkles,
-  UserCircle,
+  User,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../context/AuthContext';
@@ -24,7 +28,7 @@ function buildForm(user) {
   return {
     name: user?.name || '',
     avatar: user?.avatar || '',
-    avatarBackdrop: user?.avatarBackdrop || 'linear-gradient(135deg, #fed7aa 0%, #fb923c 50%, #f97316 100%)',
+    avatarBackdrop: user?.avatarBackdrop || 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
     institution: user?.institution || '',
     institutionName: user?.institutionName || user?.institution || '',
     organizationName: user?.organizationName || '',
@@ -53,67 +57,40 @@ function readImageFile(file) {
   });
 }
 
-function getCoverStyle(value) {
-  if (!value) return undefined;
-  if (value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://') || value.startsWith('/')) {
-    return {
-      backgroundImage: `url(${value})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat',
-    };
-  }
-
-  return { background: value };
-}
-
-const PROFILE_ICON_MAP = {
-  identity: UserCircle,
-  email: FileText,
-  location: FileText,
-  joined: Activity,
-  settings: Settings2,
-  save: Save,
-  about: FileText,
-  education: GraduationCap,
-  skills: Sparkles,
-  links: Link2,
-  highlights: Sparkles,
-  activity: Activity,
-  badges: Award,
-};
-
-function AnimatedMark({ name, size = 'xs', className = '' }) {
-  const sizeMap = {
-    xs: 20,
-    sm: 28,
-    md: 34,
-  };
-
-  const iconSize = sizeMap[size] || sizeMap.xs;
-  const Icon = PROFILE_ICON_MAP[name] || PROFILE_ICON_MAP.identity;
-
-  return (
-    <span className={`profile-page__icon ${className}`.trim()} style={{ width: iconSize, height: iconSize }}>
-      <Icon size={iconSize} strokeWidth={2} />
-    </span>
-  );
-}
+const ROADMAP_POINTS = [
+  { x: 14, y: 72 },
+  { x: 31, y: 56 },
+  { x: 49, y: 63 },
+  { x: 67, y: 43 },
+  { x: 84, y: 27 },
+];
 
 export default function Profile() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { user, updateProfile } = useAuth();
-  const { events, getUserRegistrations, getUserCredentials, getEventById, syncParticipantDetailsInRegistrations } = useEvents();
-  const dropdownRef = useRef(null);
+  const { getUserRegistrations, getUserCredentials, getEventById, syncParticipantDetailsInRegistrations } = useEvents();
 
   const [form, setForm] = useState(() => buildForm(user));
   const [saved, setSaved] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('events');
+  const [eventFilter, setEventFilter] = useState('all');
+  const [copiedLink, setCopiedLink] = useState(false);
   const [registeredEventsOpen, setRegisteredEventsOpen] = useState(false);
+  const [credentialsOpen, setCredentialsOpen] = useState(false);
+  const [achievementsOpen, setAchievementsOpen] = useState(false);
+  const [selectedCredentialId, setSelectedCredentialId] = useState('');
   const [selectedRegistrationId, setSelectedRegistrationId] = useState('');
   const [selectedQrRegistration, setSelectedQrRegistration] = useState(null);
+  const [urlFields, setUrlFields] = useState(['', '']);
 
   useEffect(() => {
     setForm(buildForm(user));
+    const linked = user?.socials?.linkedin || '';
+    const git = user?.socials?.github || '';
+    const extra = Array.isArray(user?.socials?.additionalUrls) ? user.socials.additionalUrls : [];
+    const nextUrls = [linked, git, ...extra];
+    setUrlFields(nextUrls.length ? nextUrls : ['', '']);
   }, [user]);
 
   const registrations = useMemo(() => {
@@ -125,11 +102,6 @@ export default function Profile() {
     if (!user) return [];
     return getUserCredentials(user.id);
   }, [getUserCredentials, user]);
-
-  const hostedEvents = useMemo(() => {
-    if (!user || user.role !== 'organizer') return [];
-    return events.filter((event) => event.organizer?.id === user.id);
-  }, [events, user]);
 
   const registeredEventItems = useMemo(() => {
     if (!registrations.length) return [];
@@ -145,71 +117,141 @@ export default function Profile() {
       .sort((a, b) => new Date(b.registration.createdAt) - new Date(a.registration.createdAt));
   }, [getEventById, registrations]);
 
+  const credentialItems = useMemo(() => {
+    if (!credentials.length) return [];
+
+    return credentials
+      .map((credential) => {
+        const event = getEventById(credential.eventId);
+        return {
+          ...credential,
+          eventTitle: event?.title || 'Event credential',
+        };
+      })
+      .sort((a, b) => new Date(b.issuedAt) - new Date(a.issuedAt));
+  }, [credentials, getEventById]);
+
+  const filteredEventItems = useMemo(() => {
+    if (eventFilter === 'attended') {
+      return registeredEventItems.filter(({ registration }) => registration.checkedIn);
+    }
+
+    if (eventFilter === 'upcoming') {
+      return registeredEventItems.filter(({ registration }) => !registration.checkedIn);
+    }
+
+    return registeredEventItems;
+  }, [eventFilter, registeredEventItems]);
+
+  const { profileCompletion, missingProfileFields } = useMemo(() => {
+    const checks = [
+      { label: 'Add full name', done: Boolean(String(form.name || '').trim()) },
+      { label: 'Upload profile photo', done: Boolean(String(form.avatar || '').trim()) },
+      { label: 'Add bio', done: Boolean(String(form.bio || '').trim()) },
+      { label: 'Add location', done: Boolean(String(form.city || '').trim() && String(form.state || '').trim()) },
+      { label: 'Add social links', done: Boolean(String(form.linkedin || '').trim() || String(form.github || '').trim()) },
+      { label: 'Add skills', done: Boolean(String(form.skills || '').trim()) },
+    ];
+
+    const completed = checks.filter((item) => item.done).length;
+    const completion = Math.round((completed / checks.length) * 100);
+
+    return {
+      profileCompletion: completion,
+      missingProfileFields: checks.filter((item) => !item.done).map((item) => item.label),
+    };
+  }, [form.avatar, form.bio, form.city, form.github, form.linkedin, form.name, form.skills, form.state]);
+
+  const achievementSummary = useMemo(() => {
+    const checkedInCount = registrations.filter((item) => item.checkedIn).length;
+    const winnerCredentials = credentials.filter((item) => item.type === 'winner').length;
+
+    const allAchievements = [
+      {
+        id: 'first-registration',
+        title: 'Getting Started',
+        description: 'Registered for your first event.',
+        xp: 5,
+        requirement: 'Register 1 event',
+        progress: Math.min(registrations.length, 1),
+        target: 1,
+        unlocked: registrations.length > 0,
+      },
+      {
+        id: 'first-checkin',
+        title: 'Event Explorer',
+        description: 'Checked in to at least one event.',
+        xp: 25,
+        requirement: 'Check in at 1 event',
+        progress: Math.min(checkedInCount, 1),
+        target: 1,
+        unlocked: checkedInCount > 0,
+      },
+      {
+        id: 'credential-holder',
+        title: 'Credential Collector',
+        description: 'Earned your first event credential.',
+        xp: 40,
+        requirement: 'Earn 1 credential',
+        progress: Math.min(credentials.length, 1),
+        target: 1,
+        unlocked: credentials.length > 0,
+      },
+      {
+        id: 'winner-circle',
+        title: 'Champion Circle',
+        description: 'Won an event and received a winner credential.',
+        xp: 70,
+        requirement: 'Earn 1 winner credential',
+        progress: Math.min(winnerCredentials, 1),
+        target: 1,
+        unlocked: winnerCredentials > 0,
+      },
+      {
+        id: 'profile-complete',
+        title: 'Profile Pro',
+        description: 'Completed your profile details 100%.',
+        xp: 20,
+        requirement: 'Reach 100% profile completion',
+        progress: profileCompletion,
+        target: 100,
+        unlocked: profileCompletion >= 100,
+      },
+    ];
+
+    const unlocked = allAchievements.filter((item) => item.unlocked);
+    const totalXp = unlocked.reduce((sum, item) => sum + item.xp, 0);
+    const xpPerLevel = 140;
+    const level = Math.floor(totalXp / xpPerLevel) + 1;
+    const xpInLevel = totalXp % xpPerLevel;
+    const nextLevelXp = xpPerLevel;
+
+    const locked = allAchievements.filter((item) => !item.unlocked);
+    const currentMilestoneIndex = allAchievements.findIndex((item) => !item.unlocked);
+
+    return {
+      level,
+      totalXp,
+      xpInLevel,
+      nextLevelXp,
+      badgesEarned: unlocked.length,
+      all: allAchievements,
+      lockedCount: locked.length,
+      nextUnlock: locked[0] || null,
+      currentMilestoneIndex: currentMilestoneIndex === -1 ? allAchievements.length - 1 : currentMilestoneIndex,
+      recent: unlocked.slice(-3).reverse(),
+    };
+  }, [credentials, profileCompletion, registrations]);
+
   const selectedRegisteredItem = useMemo(() => {
     if (!selectedRegistrationId) return null;
     return registeredEventItems.find((item) => item.registration.id === selectedRegistrationId) || null;
   }, [registeredEventItems, selectedRegistrationId]);
 
-  const attendedCount = registrations.filter((registration) => registration.checkedIn).length;
-  const completion = useMemo(() => {
-    const entityValue = user?.role === 'organizer' ? form.organizationName : (form.institutionName || form.institution);
-    const checks = [
-      form.name,
-      form.bio,
-      form.skills,
-      entityValue,
-      form.profileType,
-      form.stream,
-      form.graduationYear,
-      form.state,
-      form.city,
-      form.linkedin,
-      form.github,
-    ];
-    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
-  }, [form, user]);
-
-  const recentItems = useMemo(() => {
-    const regItems = registrations.map((registration) => {
-      const event = getEventById(registration.eventId);
-      if (!event) return null;
-      return {
-        id: `reg-${registration.id}`,
-        title: event.title,
-        subtitle: registration.checkedIn ? 'Attended' : 'Registered',
-        time: formatDate(registration.createdAt),
-      };
-    }).filter(Boolean);
-
-    const credItems = credentials.map((credential) => {
-      const event = getEventById(credential.eventId);
-      return {
-        id: `cred-${credential.id}`,
-        title: event?.title || 'Event credential',
-        subtitle: credential.type === 'winner' ? 'Winner credential' : 'Participation credential',
-        time: formatDate(credential.issuedAt),
-      };
-    });
-
-    return [...credItems, ...regItems]
-      .sort((a, b) => new Date(b.time) - new Date(a.time))
-      .slice(0, 4);
-  }, [credentials, getEventById, registrations]);
-
-  const highlightCards = useMemo(() => {
-    if (!user) return [];
-    return [
-      { key: 'registered-events', label: 'Registered Events', value: registrations.length, interactive: registrations.length > 0 },
-      { key: 'attended', label: 'Attended', value: attendedCount, interactive: false },
-      { key: 'credentials', label: 'Credentials', value: credentials.length, interactive: false },
-      {
-        key: 'saved-or-hosted',
-        label: user.role === 'organizer' ? 'Hosted Events' : 'Saved Events',
-        value: user.role === 'organizer' ? hostedEvents.length : registrations.length,
-        interactive: false,
-      },
-    ];
-  }, [attendedCount, credentials.length, hostedEvents.length, registrations, user]);
+  const selectedCredentialItem = useMemo(() => {
+    if (!selectedCredentialId) return null;
+    return credentialItems.find((item) => item.id === selectedCredentialId) || null;
+  }, [credentialItems, selectedCredentialId]);
 
   useEffect(() => {
     if (!registeredEventsOpen) return;
@@ -227,10 +269,31 @@ export default function Profile() {
     setSelectedQrRegistration(null);
   };
 
-  const openRegisteredEvents = () => {
-    if (!registeredEventItems.length) return;
+  const closeCredentialsModal = () => {
+    setCredentialsOpen(false);
+    setSelectedCredentialId('');
+  };
+
+  const closeAchievementsModal = () => {
+    setAchievementsOpen(false);
+  };
+
+  const openCredentials = () => {
+    setCredentialsOpen(true);
+    setSelectedCredentialId((current) => current || credentialItems[0]?.id || '');
+  };
+
+  const openEvents = () => {
     setRegisteredEventsOpen(true);
-    setSelectedRegistrationId((current) => current || registeredEventItems[0].registration.id);
+    setSelectedRegistrationId((current) => current || registeredEventItems[0]?.registration?.id || '');
+  };
+
+  const handleDownloadCredential = (credential) => {
+    if (!credential?.certificateImageUrl) return;
+    const anchor = document.createElement('a');
+    anchor.href = credential.certificateImageUrl;
+    anchor.download = `${credential.id}.png`;
+    anchor.click();
   };
 
   const handleSave = async (event) => {
@@ -261,8 +324,9 @@ export default function Profile() {
           .map((item) => item.trim())
           .filter(Boolean),
         socials: {
-          linkedin: form.linkedin,
-          github: form.github,
+          linkedin: urlFields[0] || '',
+          github: urlFields[1] || '',
+          additionalUrls: urlFields.slice(2).map((item) => item.trim()).filter(Boolean),
           instagram: user.socials?.instagram || '',
         },
       });
@@ -272,16 +336,11 @@ export default function Profile() {
       setSaved(true);
       window.setTimeout(() => {
         setSaved(false);
-        setSettingsOpen(false);
+        navigate('/dashboard');
       }, 900);
     } catch (error) {
       console.error('Failed to save profile:', error);
     }
-  };
-
-  const toggleSettings = () => {
-    setSettingsOpen((value) => !value);
-    requestAnimationFrame(() => dropdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
 
   const handleAvatarUpload = async (event) => {
@@ -298,6 +357,27 @@ export default function Profile() {
     setForm((current) => ({ ...current, avatarBackdrop: nextBackdrop }));
   };
 
+  const handleUrlChange = (index, value) => {
+    setUrlFields((current) => current.map((item, idx) => (idx === index ? value : item)));
+    if (index === 0) setForm((current) => ({ ...current, linkedin: value }));
+    if (index === 1) setForm((current) => ({ ...current, github: value }));
+  };
+
+  const addUrlField = () => {
+    setUrlFields((current) => [...current, '']);
+  };
+
+  const handleCopyProfileLink = async () => {
+    try {
+      const profileLink = `${window.location.origin}/dashboard`;
+      await navigator.clipboard.writeText(profileLink);
+      setCopiedLink(true);
+      window.setTimeout(() => setCopiedLink(false), 1400);
+    } catch (error) {
+      console.error('Unable to copy profile link:', error);
+    }
+  };
+
   if (!user) {
     return (
       <section className="profile-page profile-page--empty">
@@ -311,405 +391,373 @@ export default function Profile() {
     );
   }
 
-  const entityLabel = user.role === 'organizer' ? 'Organization' : 'Institution';
-  const entityValue = user.role === 'organizer' ? form.organizationName : (form.institutionName || form.institution);
-  const roleLabel = user.role === 'organizer' ? 'Host' : 'Participant';
-  const handleLabel = user.role === 'organizer' ? 'Event Host' : 'Student Profile';
-  const joinedLabel = user.createdAt ? formatDate(user.createdAt) : 'Recently joined';
+  const isSettingsPage = location.pathname === '/dashboard/settings' || location.pathname === '/profile/settings';
+
+  const handleLabel = form.currentDesignation || (user.role === 'organizer' ? 'Event Host' : 'Project Manager');
+
+  if (isSettingsPage) {
+    return (
+      <section className="profile-page">
+        <div className="profile-page__backdrop" />
+        <div className="container profile-page__shell">
+          <section className="profile-page__settings-view">
+            <header className="profile-page__settings-headline">
+              <h2>Settings</h2>
+              <p>Manage your account settings and set e-mail preferences.</p>
+            </header>
+
+            <div className="profile-page__settings-layout">
+              <aside className="profile-page__settings-side">
+                <button type="button" className="is-active"><User size={14} /> Profile</button>
+                <button type="button"><Bell size={14} /> Notifications</button>
+              </aside>
+
+              <form onSubmit={handleSave} className="profile-page__settings-card">
+                <div className="profile-page__settings-profile-row">
+                  <div className="profile-page__settings-avatar" style={{ '--avatar-backdrop': form.avatarBackdrop }}>
+                    {form.avatar ? <img src={form.avatar} alt={form.name || 'Profile avatar'} /> : <span>{form.name?.charAt(0) || 'U'}</span>}
+                  </div>
+                  <label className="profile-page__settings-upload-btn">
+                    Upload image
+                    <input type="file" accept="image/*" onChange={handleAvatarUpload} />
+                  </label>
+                </div>
+
+                <label>
+                  Username
+                  <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
+                </label>
+                <p className="profile-page__settings-note">This is your public display name. It can be your real name or a pseudonym. You can only change this once every 30 days.</p>
+
+                <label>
+                  Email
+                  <select value={user.email || ''} disabled>
+                    <option value={user.email || ''}>{user.email || 'Select a verified email to display'}</option>
+                  </select>
+                </label>
+                <p className="profile-page__settings-note">You can manage verified email addresses in your email settings.</p>
+
+                <label>
+                  Bio
+                  <textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} rows={3} />
+                </label>
+                <p className="profile-page__settings-note">You can @mention other users and organizations to link to them.</p>
+
+                <label>
+                  URLs
+                  <span className="profile-page__settings-note">Add links to your website, blog, or social media profiles.</span>
+                </label>
+
+                <div className="profile-page__settings-url-list">
+                  {urlFields.map((url, index) => (
+                    <input
+                      key={`url-${index}`}
+                      value={url}
+                      onChange={(event) => handleUrlChange(index, event.target.value)}
+                      placeholder={index === 0 ? 'https://shadcn.com' : index === 1 ? 'http://twitter.com/shadcn' : 'https://example.com'}
+                    />
+                  ))}
+                </div>
+
+                <button type="button" className="profile-page__settings-add-url" onClick={addUrlField}>Add URL</button>
+
+                <div className="profile-page__settings-actions-row">
+                  <button type="submit" className="profile-page__settings-submit">Update profile</button>
+                  {saved ? <span className="profile-page__saved">Saved</span> : null}
+                  <button className="profile-page__dropdown-close" type="button" onClick={() => navigate('/dashboard')}>
+                    Close
+                  </button>
+                </div>
+              </form>
+            </div>
+          </section>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="profile-page">
       <div className="profile-page__backdrop" />
       <div className="container profile-page__shell">
+        {/* Header Section */}
         <header className="profile-page__hero-card">
-          <div className="profile-page__cover" style={getCoverStyle(form.avatarBackdrop)} />
-
-          <div className="profile-page__hero-panel">
-            <div className="profile-page__hero-content">
-              <div className="profile-page__avatar-wrap">
-                <div className="profile-page__avatar" style={{ '--avatar-backdrop': form.avatarBackdrop }}>
-                  {form.avatar ? <img src={form.avatar} alt={form.name || 'Profile avatar'} /> : <span>{form.name?.charAt(0) || 'U'}</span>}
-                </div>
-              </div>
-
-              <div className="profile-page__hero-copy">
-                <p className="profile-page__eyebrow">{handleLabel}</p>
-                <h1>{form.name || 'Your profile'}</h1>
-                <div className="profile-page__meta">
-                  <span><i className="profile-page__dot" /> {user.email || 'Email not available'}</span>
-                  <span><i className="profile-page__dot" /> {entityValue || 'Location not set'}</span>
-                  <span><i className="profile-page__dot" /> {joinedLabel}</span>
-                </div>
-              </div>
-
-              <div className="profile-page__hero-actions">
-                <button className="profile-page__settings-btn" type="button" onClick={toggleSettings}>
-                  <AnimatedMark name="settings" size="sm" /> Settings
-                </button>
+          <div className="profile-page__hero-content">
+            <div className="profile-page__hero-avatar" style={{ '--avatar-backdrop': form.avatarBackdrop }}>
+              {form.avatar ? <img src={form.avatar} alt={form.name || 'Profile avatar'} /> : <span>{form.name?.charAt(0) || 'U'}</span>}
+            </div>
+            <div className="profile-page__hero-text">
+              <h1>{form.name || 'Your profile'}</h1>
+              <p>{handleLabel}</p>
+              <div className="profile-page__hero-level">
+                <Award size={14} /> Level {achievementSummary.level} • {achievementSummary.totalXp} XP
               </div>
             </div>
-            </div>
+          </div>
+          <div className="profile-page__hero-actions">
+            <button className="profile-page__btn-secondary" type="button" onClick={handleCopyProfileLink}>
+              {copiedLink ? <Check size={16} /> : <Copy size={16} />}
+              <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
+            </button>
+            <button className="profile-page__btn-primary" type="button" onClick={() => navigate('/dashboard/settings')}>
+              <Settings2 size={16} />
+              <span>Settings</span>
+            </button>
+          </div>
         </header>
 
-        {settingsOpen ? (
-          <section ref={dropdownRef} className="profile-page__dropdown">
-            <div className="profile-page__dropdown-header">
-              <div>
-                <p>Settings</p>
-                <h2>Edit account details</h2>
+        {/* Cards Grid - All sections equally prominent */}
+        <div className="profile-page__grid">
+          {/* Profile Info Card */}
+          <div className="profile-page__card">
+            <div className="profile-page__card-header">
+              <h2>Profile Info</h2>
+              <User size={18} />
+            </div>
+            <div className="profile-page__card-body">
+              <div className="profile-page__info-section">
+                <label>Email</label>
+                <p>{user.email || 'hello@example.com'}</p>
               </div>
-              <button className="profile-page__dropdown-close" type="button" onClick={() => setSettingsOpen(false)}>
-                Close
+              <div className="profile-page__info-section">
+                <label>Location</label>
+                <p><MapPin size={14} /> {[form.city, form.state].filter(Boolean).join(', ') || 'Not set'}</p>
+              </div>
+              <div className="profile-page__info-section">
+                <label>Contact</label>
+                <p><Phone size={14} /> {user.phoneNumber || 'Not set'}</p>
+              </div>
+
+              <div className="profile-page__progress-section">
+                <div className="profile-page__progress-header">
+                  <label>Profile Completion</label>
+                  <span>{profileCompletion}%</span>
+                </div>
+                <div className="profile-page__progress-bar">
+                  <div className="profile-page__progress-fill" style={{ width: `${profileCompletion}%` }} />
+                </div>
+                <div className="profile-page__chip-list">
+                  {missingProfileFields.length === 0
+                    ? <span className="profile-page__chip complete">✓ Complete</span>
+                    : missingProfileFields.slice(0, 2).map((item) => <span key={item} className="profile-page__chip">{item}</span>)}
+                </div>
+              </div>
+
+              <div className="profile-page__stats-mini">
+                <div className="profile-page__stat-item">
+                  <strong>{registrations.length}</strong>
+                  <span>Registered</span>
+                </div>
+                <div className="profile-page__stat-item">
+                  <strong>{credentials.length}</strong>
+                  <span>Credentials</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Achievements Card */}
+          <div className="profile-page__card">
+            <div className="profile-page__card-header">
+              <h2>Achievements</h2>
+              <Award size={18} />
+            </div>
+            <div className="profile-page__card-body">
+              <div className="profile-page__achievement-summary">
+                <div className="profile-page__achievement-stat">
+                  <div className="profile-page__achievement-icon">
+                    <Award size={24} />
+                  </div>
+                  <div>
+                    <strong>Level {achievementSummary.level}</strong>
+                    <span>{achievementSummary.totalXp} XP earned</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="profile-page__xp-bar">
+                <div className="profile-page__xp-track">
+                  <div className="profile-page__xp-fill" style={{ width: `${Math.round((achievementSummary.xpInLevel / achievementSummary.nextLevelXp) * 100)}%` }} />
+                </div>
+                <span>{achievementSummary.xpInLevel} / {achievementSummary.nextLevelXp} XP</span>
+              </div>
+
+              <div className="profile-page__badges">
+                <p className="profile-page__badges-count">Badges: <strong>{achievementSummary.badgesEarned} / {achievementSummary.all.length}</strong></p>
+                <div className="profile-page__badge-list">
+                  {achievementSummary.all.slice(0, 5).map((item, idx) => (
+                    <div key={item.id} className={`profile-page__badge ${item.unlocked ? 'unlocked' : 'locked'}`} title={item.title}>
+                      {item.unlocked ? <Check size={16} /> : <Lock size={16} />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button type="button" className="profile-page__btn-tertiary" onClick={() => setAchievementsOpen(true)}>
+                View Full Roadmap →
               </button>
             </div>
+          </div>
 
-            <form onSubmit={handleSave} className="profile-page__settings-grid">
-              <label>
-                Full name
-                <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
-              </label>
-
-              <label>
-                {entityLabel}
-                <input
-                  value={entityValue}
-                  onChange={(event) => setForm({
-                    ...form,
-                    [user.role === 'organizer' ? 'organizationName' : 'institutionName']: event.target.value,
-                  })}
-                />
-              </label>
-
-              <label>
-                Profile type
-                <select
-                  value={form.profileType}
-                  onChange={(event) => setForm({ ...form, profileType: event.target.value })}
-                >
-                  <option value="student">Student</option>
-                  <option value="working_professional">Working Professional</option>
-                </select>
-              </label>
-
-              <label>
-                Stream
-                <input value={form.stream} onChange={(event) => setForm({ ...form, stream: event.target.value })} />
-              </label>
-
-              <label>
-                Graduation year
-                <input value={form.graduationYear} onChange={(event) => setForm({ ...form, graduationYear: event.target.value })} />
-              </label>
-
-              <label>
-                State
-                <input value={form.state} onChange={(event) => setForm({ ...form, state: event.target.value })} />
-              </label>
-
-              <label>
-                City
-                <input value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} />
-              </label>
-
-              {form.profileType === 'working_professional' ? (
-                <>
-                  <label>
-                    Experience
-                    <input value={form.experience} onChange={(event) => setForm({ ...form, experience: event.target.value })} />
-                  </label>
-
-                  <label>
-                    Tech proficiency
-                    <input value={form.techProficiency} onChange={(event) => setForm({ ...form, techProficiency: event.target.value })} />
-                  </label>
-
-                  <label>
-                    Current designation
-                    <input value={form.currentDesignation} onChange={(event) => setForm({ ...form, currentDesignation: event.target.value })} />
-                  </label>
-
-                  <label className="profile-page__span-2">
-                    Work summary
-                    <textarea value={form.workSummary} onChange={(event) => setForm({ ...form, workSummary: event.target.value })} rows={3} />
-                  </label>
-                </>
-              ) : null}
-
-              <label>
-                Profile image
-                <input value={form.avatar} onChange={(event) => setForm({ ...form, avatar: event.target.value })} placeholder="https://..." />
-                <input type="file" accept="image/*" onChange={handleAvatarUpload} />
-                <span className="profile-page__field-note">Best size: 512 x 512 px. JPG, PNG, or WebP works well.</span>
-              </label>
-
-              <label>
-                Poster image
-                <input
-                  value={form.avatarBackdrop}
-                  onChange={(event) => setForm({ ...form, avatarBackdrop: event.target.value })}
-                  placeholder="https://..."
-                />
-                <input type="file" accept="image/*" onChange={handlePosterUpload} />
-                <span className="profile-page__field-note">Best size: 1600 x 600 px. Use a wide landscape image for the cleanest fit.</span>
-              </label>
-
-              <label>
-                Bio
-                <textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} rows={3} />
-              </label>
-
-              <label className="profile-page__span-2">
-                Skills
-                <input value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} placeholder="React, UI/UX, Python" />
-              </label>
-
-              <label>
-                LinkedIn
-                <div className="profile-page__inline-field">
-                  <AnimatedMark name="links" />
-                  <input value={form.linkedin} onChange={(event) => setForm({ ...form, linkedin: event.target.value })} placeholder="https://linkedin.com/in/..." />
-                </div>
-              </label>
-
-              <label>
-                GitHub
-                <div className="profile-page__inline-field">
-                  <AnimatedMark name="links" />
-                  <input value={form.github} onChange={(event) => setForm({ ...form, github: event.target.value })} placeholder="https://github.com/..." />
-                </div>
-              </label>
-
-              <div className="profile-page__settings-actions profile-page__span-2">
-                <button type="submit" className="profile-page__save-btn">
-                  <AnimatedMark name="save" size="sm" /> Save profile
-                </button>
-                {saved ? <span className="profile-page__saved"><AnimatedMark name="save" size="xs" /> Saved</span> : null}
-              </div>
-            </form>
-          </section>
-        ) : null}
-
-        <section className="profile-page__summary-row">
-          <article className="profile-page__summary-card profile-page__summary-card--accent">
-            <div>
-              <p>Complete profile</p>
-              <h3>{completion}% complete</h3>
-              <span>Add your missing details to improve visibility.</span>
+          {/* Event Activity Card */}
+          <div className="profile-page__card">
+            <div className="profile-page__card-header">
+              <h2>Event Activity</h2>
+              <Calendar size={18} />
             </div>
-            <div
-              className="profile-page__summary-ring"
-              style={{ '--progress': `${Math.max(0, Math.min(100, completion))}%` }}
-            >
-              {completion}%
-            </div>
-          </article>
+            <div className="profile-page__card-body">
+              <div className="profile-page__event-stats">
+                <div className="profile-page__event-stat">
+                  <span className="profile-page__stat-label">Registered</span>
+                  <strong>{registeredEventItems.length}</strong>
+                </div>
+                <div className="profile-page__event-stat">
+                  <span className="profile-page__stat-label">Attended</span>
+                  <strong>{registeredEventItems.filter(({ registration }) => registration.checkedIn).length}</strong>
+                </div>
+                <div className="profile-page__event-stat">
+                  <span className="profile-page__stat-label">Upcoming</span>
+                  <strong>{registeredEventItems.filter(({ registration }) => !registration.checkedIn).length}</strong>
+                </div>
+              </div>
 
-          <article className="profile-page__summary-card">
-            <p>Role</p>
-            <h3>{roleLabel}</h3>
-            <span>{handleLabel}</span>
-          </article>
-
-          <article className="profile-page__summary-card">
-            <p>Recent activity</p>
-            <h3>{recentItems.length}</h3>
-            <span>Registrations and credentials</span>
-          </article>
-        </section>
-
-        <div className="profile-page__grid">
-          <main className="profile-page__main">
-            <article className="profile-page__card">
-              <div className="profile-page__card-head">
-                <div>
-                  <p>About</p>
-                  <h2>Your profile at a glance</h2>
-                </div>
-                <AnimatedMark name="about" size="sm" />
-              </div>
-              <p className="profile-page__bio">{form.bio || 'No description added yet.'}</p>
-              <div className="profile-page__info-list">
-                <div>
-                  <span><i className="profile-page__dot" /> {entityLabel}</span>
-                  <strong>{entityValue || 'Not added yet'}</strong>
-                </div>
-                <div>
-                  <span><i className="profile-page__dot" /> Profile type</span>
-                  <strong>{form.profileType === 'working_professional' ? 'Working Professional' : 'Student'}</strong>
-                </div>
-                <div>
-                  <span><i className="profile-page__dot" /> Email</span>
-                  <strong>{user.email || 'Not available'}</strong>
-                </div>
-                <div>
-                  <span><i className="profile-page__dot" /> Stream</span>
-                  <strong>{form.stream || 'Not added yet'}</strong>
-                </div>
-                <div>
-                  <span><i className="profile-page__dot" /> Graduation year</span>
-                  <strong>{form.graduationYear || 'Not added yet'}</strong>
-                </div>
-                <div>
-                  <span><i className="profile-page__dot" /> Location</span>
-                  <strong>{[form.city, form.state].filter(Boolean).join(', ') || 'Not added yet'}</strong>
-                </div>
-                {form.profileType === 'working_professional' ? (
-                  <>
-                    <div>
-                      <span><i className="profile-page__dot" /> Experience</span>
-                      <strong>{form.experience || 'Not added yet'}</strong>
-                    </div>
-                    <div>
-                      <span><i className="profile-page__dot" /> Tech proficiency</span>
-                      <strong>{form.techProficiency || 'Not added yet'}</strong>
-                    </div>
-                    <div>
-                      <span><i className="profile-page__dot" /> Designation</span>
-                      <strong>{form.currentDesignation || 'Not added yet'}</strong>
-                    </div>
-                  </>
-                ) : null}
-              </div>
-            </article>
-
-            <article className="profile-page__card">
-              <div className="profile-page__card-head">
-                <div>
-                  <p>Education</p>
-                  <h2>Academic / work details</h2>
-                </div>
-                <AnimatedMark name="education" size="sm" />
-              </div>
-              <div className="profile-page__education">
-                <div className="profile-page__education-badge">{form.name?.charAt(0) || 'U'}</div>
-                <div>
-                  <h3>{(form.institutionName || entityValue) || 'Add your institution'}</h3>
-                  <p>{user.role === 'organizer' ? 'Event host profile' : 'Participant profile'} · {joinedLabel}</p>
-                  <span>{user.role === 'organizer' ? 'Organizer account' : `${form.stream || 'Student'} · ${form.graduationYear || 'Year not added'}`}</span>
-                </div>
-              </div>
-              {form.profileType === 'working_professional' ? (
-                <p className="profile-page__empty-line">
-                  {form.currentDesignation || 'Designation not added'} · {form.experience || 'Experience not added'}
-                </p>
-              ) : null}
-              {form.profileType === 'working_professional' && form.workSummary ? (
-                <p className="profile-page__bio">{form.workSummary}</p>
-              ) : null}
-            </article>
-
-            <article className="profile-page__card">
-              <div className="profile-page__card-head">
-                <div>
-                  <p>Skills</p>
-                  <h2>What you work with</h2>
-                </div>
-                <AnimatedMark name="skills" size="sm" />
-              </div>
-              <div className="profile-page__chips">
-                {form.skills
-                  ? form.skills.split(',').map((skill) => skill.trim()).filter(Boolean).map((skill) => (
-                    <span key={skill}>{skill}</span>
-                  ))
-                  : <p className="profile-page__empty-line">Add skills to show your strengths.</p>}
-              </div>
-            </article>
-
-            <article className="profile-page__card">
-              <div className="profile-page__card-head">
-                <div>
-                  <p>Social links</p>
-                  <h2>Where people can find you</h2>
-                </div>
-                <AnimatedMark name="links" size="sm" />
-              </div>
-              <div className="profile-page__links">
-                <a href={form.linkedin || '#'} onClick={(event) => !form.linkedin && event.preventDefault()}>
-                  LinkedIn <span>{form.linkedin || 'Add link'}</span>
-                </a>
-                <a href={form.github || '#'} onClick={(event) => !form.github && event.preventDefault()}>
-                  GitHub <span>{form.github || 'Add link'}</span>
-                </a>
-              </div>
-            </article>
-          </main>
-
-          <aside className="profile-page__side">
-            <article className="profile-page__card profile-page__card--dark">
-              <div className="profile-page__card-head">
-                <div>
-                  <p>Highlights</p>
-                  <h2>Quick stats</h2>
-                </div>
-                <AnimatedMark name="highlights" size="sm" />
-              </div>
-              <div className="profile-page__stats-grid">
-                {highlightCards.map((item) => (
-                  item.interactive ? (
-                    <button
-                      key={item.key}
-                      type="button"
-                      className="profile-page__stat-trigger"
-                      onClick={openRegisteredEvents}
-                    >
-                      <strong>{item.value}</strong>
-                      <span>{item.label}</span>
-                    </button>
-                  ) : (
-                    <div key={item.key}>
-                      <strong>{item.value}</strong>
-                      <span>{item.label}</span>
-                    </div>
-                  )
+              <div className="profile-page__event-filters">
+                {['all', 'attended', 'upcoming'].map((filter) => (
+                  <button
+                    key={filter}
+                    type="button"
+                    className={`profile-page__filter-tag ${eventFilter === filter ? 'active' : ''}`}
+                    onClick={() => setEventFilter(filter)}
+                  >
+                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  </button>
                 ))}
               </div>
-            </article>
 
-            <article className="profile-page__card profile-page__card--dark">
-              <div className="profile-page__card-head">
-                <div>
-                  <p>Activity</p>
-                  <h2>Recent updates</h2>
-                </div>
-                <AnimatedMark name="activity" size="sm" />
-              </div>
-              <div className="profile-page__activity-list">
-                {recentItems.length === 0 ? (
-                  <p className="profile-page__empty-line">No recent activity.</p>
-                ) : recentItems.map((item) => (
-                  <div key={item.id}>
-                    <strong>{item.title}</strong>
-                    <span>{item.subtitle}</span>
-                    <p>{item.time}</p>
+              <div className="profile-page__event-list">
+                {filteredEventItems.length === 0 ? (
+                  <p className="profile-page__empty-state">No events in this category</p>
+                ) : filteredEventItems.slice(0, 3).map(({ registration, event }) => (
+                  <div key={registration.id} className="profile-page__event-item">
+                    <div>
+                      <strong>{event.title}</strong>
+                      <span>{registration.teamName || 'Individual'}</span>
+                    </div>
+                    <span className={`profile-page__event-badge ${registration.checkedIn ? 'checked-in' : 'registered'}`}>
+                      {registration.checkedIn ? '✓ Attended' : '◇ Registered'}
+                    </span>
                   </div>
                 ))}
               </div>
-            </article>
 
-            <article className="profile-page__card profile-page__card--dark">
-              <div className="profile-page__card-head">
-                <div>
-                  <p>Badges</p>
-                  <h2>Verified progress</h2>
+              <button type="button" className="profile-page__btn-tertiary" onClick={openEvents}>
+                View All Events →
+              </button>
+            </div>
+          </div>
+
+          {/* Credentials Card */}
+          <div className="profile-page__card">
+            <div className="profile-page__card-header">
+              <h2>Credentials</h2>
+              <Download size={18} />
+            </div>
+            <div className="profile-page__card-body">
+              {credentialItems.length === 0 ? (
+                <div className="profile-page__empty-state">
+                  <p>Earn credentials by participating in events</p>
                 </div>
-                <AnimatedMark name="badges" size="sm" />
+              ) : (
+                <div className="profile-page__credential-list">
+                  {credentialItems.slice(0, 4).map((credential) => (
+                    <div key={credential.id} className="profile-page__credential-item">
+                      <div>
+                        <strong>{credential.eventTitle}</strong>
+                        <span className={credential.type === 'winner' ? 'winner' : 'participant'}>
+                          {credential.type === 'winner' ? '🏆 Winner' : '📜 Participation'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="profile-page__credential-action"
+                        onClick={() => handleDownloadCredential(credential)}
+                        title="Download credential"
+                      >
+                        <Download size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <button type="button" className="profile-page__btn-tertiary" onClick={openCredentials}>
+                View All Credentials →
+              </button>
+            </div>
+          </div>
+
+          {/* Social & Contact Card */}
+          <div className="profile-page__card">
+            <div className="profile-page__card-header">
+              <h2>Social Links</h2>
+              <Link2 size={18} />
+            </div>
+            <div className="profile-page__card-body">
+              <div className="profile-page__social-list">
+                {form.linkedin && (
+                  <a href={form.linkedin} target="_blank" rel="noopener noreferrer" className="profile-page__social-link">
+                    <span>LinkedIn</span>
+                    <ExternalLink size={14} />
+                  </a>
+                )}
+                {form.github && (
+                  <a href={form.github} target="_blank" rel="noopener noreferrer" className="profile-page__social-link">
+                    <span>GitHub</span>
+                    <ExternalLink size={14} />
+                  </a>
+                )}
+                {!form.linkedin && !form.github && (
+                  <p className="profile-page__empty-state">Add social links in settings</p>
+                )}
               </div>
-              <div className="profile-page__badge-row">
-                <span className={registrations.length ? 'is-on' : ''}>Registered</span>
-                <span className={attendedCount ? 'is-on' : ''}>Attended</span>
-                <span className={credentials.length ? 'is-on' : ''}>Credentials</span>
+              <button type="button" className="profile-page__btn-tertiary" onClick={() => navigate('/dashboard/settings')}>
+                Edit Social Links →
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Stats Card */}
+          <div className="profile-page__card">
+            <div className="profile-page__card-header">
+              <h2>Quick Stats</h2>
+              <Calendar size={18} />
+            </div>
+            <div className="profile-page__card-body">
+              <div className="profile-page__stats-grid">
+                <div className="profile-page__stat">
+                  <span>{registrations.filter(r => r.checkedIn).length}</span>
+                  <label>Events Attended</label>
+                </div>
+                <div className="profile-page__stat">
+                  <span>{credentials.filter(c => c.type === 'winner').length}</span>
+                  <label>Wins</label>
+                </div>
+                <div className="profile-page__stat">
+                  <span>{profileCompletion}%</span>
+                  <label>Profile Complete</label>
+                </div>
+                <div className="profile-page__stat">
+                  <span>{achievementSummary.badgesEarned}</span>
+                  <label>Badges</label>
+                </div>
               </div>
-            </article>
-          </aside>
+            </div>
+          </div>
         </div>
       </div>
 
-      <Modal
-        isOpen={registeredEventsOpen}
-        onClose={closeRegisteredEventsModal}
-        title="Registered Events"
-        size="lg"
-      >
+      {/* Modals */}
+      <Modal isOpen={registeredEventsOpen} onClose={closeRegisteredEventsModal} title="Registered Events" size="lg">
         {registeredEventItems.length === 0 ? (
           <p className="profile-page__empty-line">No registered events yet.</p>
         ) : (
@@ -757,12 +805,7 @@ export default function Profile() {
         )}
       </Modal>
 
-      <Modal
-        isOpen={!!selectedQrRegistration}
-        onClose={closeQrModal}
-        title="Event QR Pass"
-        size="sm"
-      >
+      <Modal isOpen={!!selectedQrRegistration} onClose={closeQrModal} title="Event QR Pass" size="sm">
         {selectedQrRegistration ? (
           <div className="profile-page__qr-modal">
             <div className="profile-page__qr-box">
@@ -770,7 +813,7 @@ export default function Profile() {
                 value={selectedQrRegistration.qrToken}
                 size={220}
                 bgColor="#F8FAFC"
-                fgColor="#9a3412"
+                fgColor="#111827"
                 level="H"
               />
             </div>
@@ -778,6 +821,140 @@ export default function Profile() {
             <p className="profile-page__qr-hint">Show this QR while validating your entry.</p>
           </div>
         ) : null}
+      </Modal>
+
+      <Modal isOpen={credentialsOpen} onClose={closeCredentialsModal} title="My Certificates" size="lg">
+        {credentialItems.length === 0 ? (
+          <p className="profile-page__empty-line">No credentials issued yet.</p>
+        ) : (
+          <div className="profile-page__registered-events-modal">
+            <div className="profile-page__registered-list">
+              {credentialItems.map((credential) => (
+                <button
+                  key={credential.id}
+                  type="button"
+                  className={`profile-page__registered-item ${selectedCredentialId === credential.id ? 'is-active' : ''}`}
+                  onClick={() => setSelectedCredentialId(credential.id)}
+                >
+                  <div>
+                    <strong>{credential.eventTitle}</strong>
+                    <span>{credential.type === 'winner' ? 'Winner credential' : 'Participation credential'}</span>
+                  </div>
+                  <small>{formatDate(credential.issuedAt)}</small>
+                </button>
+              ))}
+            </div>
+
+            {selectedCredentialItem ? (
+              <div className="profile-page__registered-options">
+                <h4>{selectedCredentialItem.eventTitle}</h4>
+                <p>View or download your credential.</p>
+                <div className="profile-page__registered-actions">
+                  {selectedCredentialItem.certificateImageUrl ? (
+                    <a
+                      href={selectedCredentialItem.certificateImageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="profile-page__registered-link"
+                    >
+                      <ExternalLink size={15} /> View Credential
+                    </a>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    className="profile-page__registered-qr-btn"
+                    onClick={() => handleDownloadCredential(selectedCredentialItem)}
+                    disabled={!selectedCredentialItem.certificateImageUrl}
+                  >
+                    <Download size={15} /> Download
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </Modal>
+
+      <Modal isOpen={achievementsOpen} onClose={closeAchievementsModal} title="Achievements" size="lg">
+        <div className="profile-page__achievements-modal">
+          <div className="profile-page__achievements-summary">
+            <div>
+              <strong>Level {achievementSummary.level}</strong>
+              <span>{achievementSummary.totalXp} XP total</span>
+            </div>
+            <div>
+              <strong>{achievementSummary.badgesEarned}</strong>
+              <span>Unlocked</span>
+            </div>
+            <div>
+              <strong>{achievementSummary.lockedCount}</strong>
+              <span>Locked</span>
+            </div>
+          </div>
+
+          <div className="profile-page__achievement-progress">
+            <div className="profile-page__progress-track">
+              <div
+                className="profile-page__progress-fill"
+                style={{ width: `${Math.round((achievementSummary.xpInLevel / achievementSummary.nextLevelXp) * 100)}%` }}
+              />
+            </div>
+            <span>{achievementSummary.xpInLevel} / {achievementSummary.nextLevelXp} XP to next level</span>
+          </div>
+
+          {achievementSummary.nextUnlock ? (
+            <p className="profile-page__achievement-next">
+              Next to unlock: <strong>{achievementSummary.nextUnlock.title}</strong>
+            </p>
+          ) : (
+            <p className="profile-page__achievement-next">All available achievements unlocked.</p>
+          )}
+
+          <div className="profile-page__achievement-roadmap-modal">
+            <h4>Roadmap Journey</h4>
+            <div className="profile-page__roadmap-map profile-page__roadmap-map--full">
+              <svg className="profile-page__roadmap-svg" viewBox="0 0 1000 260" preserveAspectRatio="none" aria-hidden="true">
+                <path
+                  className="profile-page__road-path"
+                  d="M -40 220 C 120 90, 220 250, 360 160 C 500 65, 620 230, 760 130 C 900 35, 980 120, 1040 20"
+                />
+                <path
+                  className="profile-page__road-center"
+                  d="M -40 220 C 120 90, 220 250, 360 160 C 500 65, 620 230, 760 130 C 900 35, 980 120, 1040 20"
+                />
+              </svg>
+
+            {achievementSummary.all.map((item, index) => {
+              const state = item.unlocked
+                ? 'is-unlocked'
+                : index === achievementSummary.currentMilestoneIndex
+                  ? 'is-current'
+                  : 'is-locked';
+              const point = ROADMAP_POINTS[index] || { x: 90, y: 20 };
+              const placement = index % 2 === 0 ? 'is-bottom' : 'is-top';
+
+              return (
+                <div
+                  key={item.id}
+                  className={`profile-page__roadmap-pin ${state} ${placement}`}
+                  style={{ left: `${point.x}%`, top: `${point.y}%` }}
+                >
+                  <div className="profile-page__roadmap-dot">
+                    {item.unlocked ? <Check size={14} /> : index === achievementSummary.currentMilestoneIndex ? <Award size={14} /> : <Lock size={14} />}
+                  </div>
+                  <div className="profile-page__roadmap-pin-line" />
+                  <div className="profile-page__roadmap-label">
+                    <strong>+{item.xp}</strong>
+                    <span>{item.title}</span>
+                    <small>{item.requirement} ({item.progress}/{item.target})</small>
+                  </div>
+                </div>
+              );
+            })}
+            </div>
+          </div>
+        </div>
       </Modal>
     </section>
   );

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Activity,
+  Award,
   BarChart3,
   Ban,
   CalendarRange,
@@ -62,11 +63,65 @@ ChartJS.register(
   Tooltip
 )
 
+function normalizeUserRole(role) {
+  const value = String(role || '').trim().toLowerCase()
+  if (value === 'admin') return 'admin'
+  if (value === 'organizer' || value === 'organiser') return 'organizer'
+  return 'participant'
+}
+
 function formatDate(value) {
   if (!value) return 'N/A'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return 'N/A'
   return date.toLocaleString()
+}
+
+function toTitleCase(value) {
+  return String(value || '')
+    .replace(/[-_]/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+function getAuditDescription(entry = {}) {
+  const action = String(entry?.action || '').trim().toLowerCase()
+  const targetType = toTitleCase(entry?.targetType || 'record')
+  const targetId = String(entry?.targetId || 'unknown')
+  const metadata = entry?.metadata || {}
+
+  if (action === 'user-role-updated') {
+    const role = toTitleCase(metadata?.role || 'participant')
+    return `${targetType} ${targetId} role changed to ${role}.`
+  }
+
+  if (action === 'user-status-updated') {
+    const status = toTitleCase(metadata?.status || 'active')
+    return `${targetType} ${targetId} status changed to ${status}.`
+  }
+
+  if (action === 'event-status-updated') {
+    const status = toTitleCase(metadata?.status || 'upcoming')
+    return `${targetType} ${targetId} status updated to ${status}.`
+  }
+
+  if (action === 'complaint-status-updated') {
+    const status = toTitleCase(metadata?.status || 'raised')
+    return `${targetType} ${targetId} moved to ${status}.`
+  }
+
+  if (action === 'complaint-created') {
+    return `${targetType} ${targetId} was raised by a user.`
+  }
+
+  if (action === 'local-notification') {
+    return `Notification ${targetId} was recorded in local mode.`
+  }
+
+  const readableAction = toTitleCase(action || 'activity recorded')
+  return `${readableAction} on ${targetType} ${targetId}.`
 }
 
 function getRoleClassName(role) {
@@ -165,7 +220,7 @@ function buildLocalUsers(events, registrations, credentials) {
       ...baseline,
       ...entry,
       id,
-      role: USER_ROLE_OPTIONS.includes(entry?.role) ? entry.role : (baseline.role || 'participant'),
+      role: normalizeUserRole(entry?.role || baseline?.role),
       status: USER_STATUS_OPTIONS.includes(entry?.status) ? entry.status : (baseline.status || 'active'),
     })
   })
@@ -219,10 +274,12 @@ function buildLocalDashboardData() {
   const users = buildLocalUsers(events, registrations, credentials)
 
   const roleCounts = users.reduce((acc, entry) => {
-    const role = USER_ROLE_OPTIONS.includes(entry?.role) ? entry.role : 'participant'
+    const role = normalizeUserRole(entry?.role)
     acc[role] += 1
     return acc
   }, { participant: 0, organizer: 0, admin: 0 })
+
+  const uniqueCredentialRecipients = new Set(credentials.map((c) => String(c?.userId || '').trim()).filter(Boolean))
 
   const metrics = {
     totalUsers: users.length,
@@ -231,6 +288,8 @@ function buildLocalDashboardData() {
     totalCheckIns: registrations.filter((entry) => Boolean(entry?.checkedIn)).length,
     activeSessions: 0,
     suspendedUsers: users.filter((entry) => entry?.status === 'suspended').length,
+    totalCredentials: credentials.length,
+    uniqueCredentialRecipients: uniqueCredentialRecipients.size,
     roleCounts,
   }
 
@@ -561,11 +620,22 @@ export default function AdminDashboard() {
 
   const metricCards = useMemo(() => {
     const metrics = overview?.metrics || {}
+    const roleCounts = metrics.roleCounts || {}
     return [
       {
         label: 'Total Users',
         value: metrics.totalUsers ?? 0,
         icon: Users,
+      },
+      {
+        label: 'Total Participants',
+        value: roleCounts.participant ?? 0,
+        icon: Users2,
+      },
+      {
+        label: 'Total Organisers',
+        value: roleCounts.organizer ?? 0,
+        icon: UserCog,
       },
       {
         label: 'Active Events',
@@ -581,6 +651,16 @@ export default function AdminDashboard() {
         label: 'Check-ins',
         value: metrics.totalCheckIns ?? 0,
         icon: CheckCheck,
+      },
+      {
+        label: 'Credentials Issued',
+        value: metrics.totalCredentials ?? 0,
+        icon: Award,
+      },
+      {
+        label: 'Unique Recipients',
+        value: metrics.uniqueCredentialRecipients ?? 0,
+        icon: Award,
       },
       {
         label: 'Live Sessions',
@@ -997,7 +1077,8 @@ export default function AdminDashboard() {
             {logs.map((entry) => (
               <article key={entry._id} className="admin-log-item">
                 <div>
-                  <strong>{entry.action}</strong>
+                  <strong>{toTitleCase(entry.action || 'audit event')}</strong>
+                  <p>{getAuditDescription(entry)}</p>
                   <p>{formatDate(entry.createdAt)}</p>
                 </div>
                 <div>

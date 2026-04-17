@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, ChevronDown, LogOut, User, LayoutDashboard, Zap, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import hunchmateLogo from '../../../HUNCHMATE - Logo Pack (2).png';
 import './Navbar.css';
 
 export default function Navbar() {
@@ -56,12 +57,13 @@ export default function Navbar() {
         <Link
           to="/"
           className="navbar__logo"
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, overflow: 'hidden', borderRadius: '8px' }}
         >
-          <span className="navbar__logo-icon-text">⚡</span>
-          <span className="navbar__logo-text" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 700 }}>
-            HunchMate
-          </span>
+          <img
+            src={hunchmateLogo}
+            alt="HunchMate"
+            style={{ width: '188px', height: '46px', objectFit: 'cover', objectPosition: 'center 58%' }}
+          />
         </Link>
 
         <div

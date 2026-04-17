@@ -57,32 +57,25 @@
 
 .sm-logo-img {
   display: block;
-  width: 180px;
-  height: 56px;
-  object-fit: none;
-  object-position: left top;
-  transform: scale(2.4);
-  transform-origin: left center;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 58%;
 }
 
 .sm-logo-img-frame {
-  width: 128px;
-  height: 36px;
+  width: 162px;
+  height: 42px;
   overflow: hidden;
   display: inline-flex;
   align-items: center;
+  border-radius: 8px;
 }
 
 @media (max-width: 420px) {
   .sm-logo-img-frame {
-    width: 116px;
-    height: 32px;
-  }
-
-  .sm-logo-img {
-    width: 166px;
-    height: 52px;
-    transform: scale(2.2);
+    width: 144px;
+    height: 38px;
   }
 }
 

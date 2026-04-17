@@ -16,6 +16,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useEvents } from '../context/EventContext'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
+import hunchmateLogo from '../../HUNCHMATE - Logo Pack (2).png'
 
 const NAV_LINKS = [
   { label: 'Home', to: '/' },
@@ -112,25 +113,12 @@ export default function Navbar() {
         to="/"
         className="pointer-events-auto absolute left-6 top-4 h-14 flex items-center gap-2 flex-shrink-0"
       >
-        <img
-          src="/brand-logo.svg"
-          alt="HunchMate"
-          className="h-8 w-auto"
-          onError={(event) => {
-            event.currentTarget.onerror = null
-            event.currentTarget.src = '/favicon.svg'
-          }}
-        />
-        <span
-          className="text-white/95 hidden sm:inline"
-          style={{
-            fontFamily: '"Plus Jakarta Sans", sans-serif',
-            fontWeight: 700,
-            fontSize: '1.08rem',
-            letterSpacing: '0',
-          }}
-        >
-          HunchMate
+        <span className="inline-flex overflow-hidden rounded-md" style={{ width: '208px', height: '52px' }}>
+          <img
+            src={hunchmateLogo}
+            alt="HunchMate"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 58%' }}
+          />
         </span>
       </Link>
 

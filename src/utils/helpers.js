@@ -120,11 +120,8 @@ export const slugifyEventTitle = (value) => {
 };
 
 export const buildEventPathSegment = (event) => {
-  const id = String(event?.id || event?._id || '').trim();
-  if (!id) return '';
-
   const titleSlug = slugifyEventTitle(event?.title);
-  return titleSlug ? `${titleSlug}-${id}` : id;
+  return titleSlug;
 };
 
 export const buildEventDetailPath = (event) => `/events/${buildEventPathSegment(event)}`;

@@ -829,6 +829,13 @@ export function EventProvider({ children }) {
     });
     if (directMatch) return directMatch;
 
+    const normalizedSlug = String(decoded || '').trim().toLowerCase();
+    const slugMatch = events.find((event) => {
+      const titleOnlySlug = String(slugifyEventTitle(event?.title) || '').trim().toLowerCase();
+      return Boolean(titleOnlySlug) && titleOnlySlug === normalizedSlug;
+    });
+    if (slugMatch) return slugMatch;
+
     const extractedIdMatch = decoded.match(/(evt-[a-z0-9-]+)$/i);
     const extractedId = String(extractedIdMatch?.[1] || '').trim();
     if (extractedId) {
@@ -839,7 +846,6 @@ export function EventProvider({ children }) {
       if (extractedMatch) return extractedMatch;
     }
 
-    const normalizedSlug = String(decoded || '').trim().toLowerCase();
     return (
       events.find((event) => {
         const canonicalSegment = String(buildEventPathSegment(event) || '').trim().toLowerCase();

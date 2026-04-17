@@ -14,6 +14,7 @@ const Terms = lazy(() => import('./pages/Terms'))
 const Privacy = lazy(() => import('./pages/Privacy'))
 const Login = lazy(() => import('./pages/Login'))
 const Signup = lazy(() => import('./pages/Signup'))
+const HostSignup = lazy(() => import('./pages/HostSignup'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
 const HostOnboarding = lazy(() => import('./pages/HostOnboarding'))
 const InviteJoin = lazy(() => import('./pages/InviteJoin'))
@@ -207,12 +208,13 @@ function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
-            <Route path="/host-event" element={<Navigate to="/signup" replace />} />
+            <Route path="/host-event" element={<Navigate to="/host-signup" replace />} />
             <Route path="/invites/:inviteId" element={<InviteJoin />} />
 
             <Route element={<RequireGuest />}>
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/host-signup" element={<HostSignup />} />
             </Route>
 
             <Route element={<RequireAuth />}>

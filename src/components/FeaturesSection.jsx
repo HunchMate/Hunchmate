@@ -1,42 +1,57 @@
 import { motion as Motion } from 'motion/react'
 // Updated: force HMR reload v2
-import { Lightbulb, Search, Building2, Trophy, QrCode, Award } from 'lucide-react'
+import { BarChart3, ClipboardCheck, FolderKanban, QrCode, Search, Trophy, Award, Briefcase } from 'lucide-react'
 
-const features = [
+const organizerFeatures = [
   {
-    icon: Lightbulb,
-    title: 'Innovation Challenge',
-    desc: 'Launch focused corporate challenges and hackathons to solve real business problems and unlock breakthrough ideas.',
-    color: '#FF3300',
+    icon: FolderKanban,
+    title: 'End-to-End Program Management',
+    desc: 'Manage your complete event lifecycle from launch to closure in one unified flow.',
+    color: '#FF6A00',
   },
   {
-    icon: Search,
-    title: 'Startup Scouting',
-    desc: 'Identify high-potential startups aligned to your business goals and collaborate on cutting-edge technologies.',
-    color: '#3B82F6',
-  },
-  {
-    icon: Building2,
-    title: 'Internal Hackathon',
-    desc: 'Activate your internal workforce to co-create solutions, generate fresh ideas, and accelerate transformation.',
-    color: '#8B5CF6',
-  },
-  {
-    icon: Trophy,
-    title: 'Hiring Hackathon',
-    desc: 'Discover exceptional talent through real-world problem solving and performance-driven recruitment programs.',
+    icon: ClipboardCheck,
+    title: 'Easy Event Setup',
+    desc: 'Create and configure events quickly with structured templates and flexible controls.',
     color: '#F59E0B',
   },
   {
     icon: QrCode,
-    title: 'QR-Based Entry',
-    desc: 'Instant QR scanning verifies and tracks attendance on event day. No manual check-ins, no bottlenecks.',
+    title: 'QR-Based Entry Validation',
+    desc: 'Enable seamless on-ground check-ins with secure QR attendance verification.',
     color: '#10B981',
   },
   {
+    icon: BarChart3,
+    title: 'Analytics & Insights',
+    desc: 'Track registrations, engagement, and outcomes using actionable performance metrics.',
+    color: '#60A5FA',
+  },
+]
+
+const participantFeatures = [
+  {
+    icon: Search,
+    title: 'Discover Relevant Opportunities',
+    desc: 'Explore hackathons and challenges tailored to your interests and skills.',
+    color: '#3B82F6',
+  },
+  {
+    icon: Trophy,
+    title: 'Easy Registration & Participation',
+    desc: 'Register fast and track your complete participation journey in one place.',
+    color: '#8B5CF6',
+  },
+  {
+    icon: Briefcase,
+    title: 'All-in-One Portfolio Building',
+    desc: 'Capture projects, event history, and milestones to strengthen your profile.',
+    color: '#06B6D4',
+  },
+  {
     icon: Award,
-    title: 'Verified Credentials',
-    desc: 'Post-event, digital credentials are generated with unique IDs — portable, verifiable, and tamper-proof.',
+    title: 'Showcase & Recognition',
+    desc: 'Earn verified credentials and highlight your achievements with confidence.',
     color: '#EC4899',
   },
 ]
@@ -93,63 +108,116 @@ export default function FeaturesSection() {
           </Motion.p>
       </div>
 
-      {/* Feature Cards Grid — glassmorphism on gradient */}
+      {/* Feature Cards Grid — split organizer and participant */}
       <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, i) => {
-            const Icon = feature.icon
-            return (
-              <Motion.div
-                key={feature.title}
-                custom={i}
-                variants={cardVariants}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: '-50px' }}
-                className="feature-card group relative rounded-2xl p-8 transition-all duration-300 cursor-default hover:scale-[1.02]"
-                style={{
-                  background: 'rgba(35,35,40,0.6)',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                }}
-              >
-                {/* Icon */}
-                <div
-                  className="feature-card__icon-wrap w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-all duration-300 group-hover:scale-110"
-                  style={{ backgroundColor: `${feature.color}25` }}
-                >
-                  <Icon
-                    size={22}
-                    strokeWidth={1.8}
-                    style={{ color: feature.color }}
-                  />
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div>
+            <div className="mb-4 text-center lg:text-left">
+              <p className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: 'rgba(255,255,255,0.62)' }}>For Organizers</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {organizerFeatures.map((feature, i) => {
+                const Icon = feature.icon
+                return (
+                  <Motion.div
+                    key={feature.title}
+                    custom={i}
+                    variants={cardVariants}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, margin: '-50px' }}
+                    className="feature-card group relative rounded-2xl p-8 transition-all duration-300 cursor-default hover:scale-[1.02]"
+                    style={{
+                      background: 'rgba(35,35,40,0.6)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                    }}
+                  >
+                    <div
+                      className="feature-card__icon-wrap w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-all duration-300 group-hover:scale-110"
+                      style={{ backgroundColor: `${feature.color}25` }}
+                    >
+                      <Icon size={22} strokeWidth={1.8} style={{ color: feature.color }} />
+                    </div>
 
-                {/* Title */}
-                <h3
-                  className="feature-card__title font-medium text-lg text-white mb-2 transition-colors duration-300"
-                  style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', letterSpacing: '-0.01em' }}
-                >
-                  {feature.title}
-                </h3>
+                    <h3
+                      className="feature-card__title font-medium text-lg text-white mb-2 transition-colors duration-300"
+                      style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', letterSpacing: '-0.01em' }}
+                    >
+                      {feature.title}
+                    </h3>
 
-                {/* Description */}
-                <p
-                  className="feature-card__desc text-sm leading-relaxed transition-colors duration-300"
-                  style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'rgba(255,255,255,0.5)' }}
-                >
-                  {feature.desc}
-                </p>
+                    <p
+                      className="feature-card__desc text-sm leading-relaxed transition-colors duration-300"
+                      style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'rgba(255,255,255,0.5)' }}
+                    >
+                      {feature.desc}
+                    </p>
 
-                {/* Hover accent line */}
-                <div
-                  className="absolute bottom-0 left-8 right-8 h-[2px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{ background: `linear-gradient(90deg, transparent, ${feature.color}, transparent)` }}
-                />
-              </Motion.div>
-            )
-          })}
+                    <div
+                      className="absolute bottom-0 left-8 right-8 h-[2px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      style={{ background: `linear-gradient(90deg, transparent, ${feature.color}, transparent)` }}
+                    />
+                  </Motion.div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-4 text-center lg:text-left">
+              <p className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: 'rgba(255,255,255,0.62)' }}>For Participants</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {participantFeatures.map((feature, i) => {
+                const Icon = feature.icon
+                return (
+                  <Motion.div
+                    key={feature.title}
+                    custom={i + organizerFeatures.length}
+                    variants={cardVariants}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, margin: '-50px' }}
+                    className="feature-card group relative rounded-2xl p-8 transition-all duration-300 cursor-default hover:scale-[1.02]"
+                    style={{
+                      background: 'rgba(35,35,40,0.6)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                    }}
+                  >
+                    <div
+                      className="feature-card__icon-wrap w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-all duration-300 group-hover:scale-110"
+                      style={{ backgroundColor: `${feature.color}25` }}
+                    >
+                      <Icon size={22} strokeWidth={1.8} style={{ color: feature.color }} />
+                    </div>
+
+                    <h3
+                      className="feature-card__title font-medium text-lg text-white mb-2 transition-colors duration-300"
+                      style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', letterSpacing: '-0.01em' }}
+                    >
+                      {feature.title}
+                    </h3>
+
+                    <p
+                      className="feature-card__desc text-sm leading-relaxed transition-colors duration-300"
+                      style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'rgba(255,255,255,0.5)' }}
+                    >
+                      {feature.desc}
+                    </p>
+
+                    <div
+                      className="absolute bottom-0 left-8 right-8 h-[2px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      style={{ background: `linear-gradient(90deg, transparent, ${feature.color}, transparent)` }}
+                    />
+                  </Motion.div>
+                )
+              })}
+            </div>
+          </div>
         </div>
       </div>
 

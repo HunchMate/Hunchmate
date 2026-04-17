@@ -1,5 +1,20 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowUpRight, Star, Zap, Trophy, Lightbulb, Target, Briefcase, Users } from 'lucide-react';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Star,
+  Trophy,
+  Lightbulb,
+  Target,
+  Briefcase,
+  Users,
+  QrCode,
+  BarChart3,
+  Search,
+  ClipboardCheck,
+  FolderKanban,
+  Award,
+} from 'lucide-react';
 import { useEvents } from '../context/EventContext';
 import EventCard from '../components/events/EventCard';
 import Badge from '../components/ui/Badge';
@@ -18,31 +33,49 @@ export default function Home() {
     'Infosys', 'TCS', 'HCL', 'Accenture', 'Wipro',
   ];
 
-  const features = [
+  const organizerFeatures = [
+    {
+      icon: FolderKanban,
+      title: 'End-to-End Program Management',
+      description: 'Plan, launch, monitor, and close events from a single workflow.',
+    },
+    {
+      icon: ClipboardCheck,
+      title: 'Easy Event Setup',
+      description: 'Create event pages, schedules, forms, and rules in minutes.',
+    },
+    {
+      icon: QrCode,
+      title: 'QR-Based Entry Validation',
+      description: 'Fast check-in and attendance verification with secure QR scans.',
+    },
+    {
+      icon: BarChart3,
+      title: 'Analytics & Insights',
+      description: 'Track registrations, engagement, and outcomes with clear dashboards.',
+    },
+  ];
+
+  const participantFeatures = [
+    {
+      icon: Search,
+      title: 'Discover by Interest',
+      description: 'Find hackathons and challenges that match your goals and skills.',
+    },
     {
       icon: Trophy,
-      title: 'Hackathons',
-      description: 'Hosting full-stack innovation competitions, building tomorrow\'s solutions today',
-    },
-    {
-      icon: Lightbulb,
-      title: 'Innovation Programs',
-      description: 'Identify and nurture startups, support policy makers with edge-cutting ideas',
-    },
-    {
-      icon: Target,
-      title: 'Competitions & Contests',
-      description: 'Challenge your teams and organizations to push boundaries',
+      title: 'Easy Registration',
+      description: 'Apply quickly, manage participation, and stay updated in one place.',
     },
     {
       icon: Briefcase,
-      title: 'Programs & Events',
-      description: 'Curated workshops, bootcamps, and community building initiatives',
+      title: 'All-in-One Portfolio',
+      description: 'Build proof of work with your projects, badges, and event history.',
     },
     {
-      icon: Users,
-      title: 'Opportunities',
-      description: 'Connect with mentors, investors, and like-minded innovators',
+      icon: Award,
+      title: 'Showcase & Recognition',
+      description: 'Earn verifiable credentials and highlight achievements confidently.',
     },
   ];
 
@@ -121,25 +154,47 @@ export default function Home() {
         <div className="container">
           <div className="home-features__header">
             <h2 className="home-features__title">
-              Everything you can sum on
-              <span>Hunchmate Platform</span>
+              Platform Features That Stand Out
             </h2>
-            <p className="home-features__subtitle">Creating every experience effortfully</p>
+            <p className="home-features__subtitle">Two focused experiences built for organizers and participants.</p>
           </div>
 
-          <div className="home-features__grid">
-            {features.map((feature, i) => {
-              const IconComponent = feature.icon;
-              return (
-                <div key={i} className="home-features__card">
-                  <div className="home-features__icon">
-                    <IconComponent size={32} />
-                  </div>
-                  <h3 className="home-features__card-title">{feature.title}</h3>
-                  <p className="home-features__card-description">{feature.description}</p>
-                </div>
-              );
-            })}
+          <div className="home-features__split">
+            <div className="home-features__column home-features__column--organizer">
+              <h3 className="home-features__column-title">For Organizers</h3>
+              <div className="home-features__grid">
+                {organizerFeatures.map((feature) => {
+                  const IconComponent = feature.icon;
+                  return (
+                    <div key={feature.title} className="home-features__card">
+                      <div className="home-features__icon">
+                        <IconComponent size={22} />
+                      </div>
+                      <h4 className="home-features__card-title">{feature.title}</h4>
+                      <p className="home-features__card-description">{feature.description}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="home-features__column home-features__column--participant">
+              <h3 className="home-features__column-title">For Participants</h3>
+              <div className="home-features__grid">
+                {participantFeatures.map((feature) => {
+                  const IconComponent = feature.icon;
+                  return (
+                    <div key={feature.title} className="home-features__card">
+                      <div className="home-features__icon">
+                        <IconComponent size={22} />
+                      </div>
+                      <h4 className="home-features__card-title">{feature.title}</h4>
+                      <p className="home-features__card-description">{feature.description}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </section>

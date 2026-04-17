@@ -170,6 +170,11 @@ function RequireRole({ role }) {
   if (!user) return <Navigate to="/login" replace />
   if (user.role !== role) return <Navigate to={getUserHome(user)} replace />
 
+  // Check host onboarding for organizers
+  if (role === 'organizer' && !hasCompletedHostOnboarding(user) && location.pathname !== '/host-onboarding') {
+    return <Navigate to="/host-onboarding" replace />
+  }
+
   return <Outlet />
 }
 

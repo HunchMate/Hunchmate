@@ -6,25 +6,25 @@ const organizerFeatures = [
   {
     icon: FolderKanban,
     title: 'End-to-End Program Management',
-    desc: 'Manage your complete event lifecycle from launch to closure in one unified flow.',
+    desc: 'Plan, launch, and manage entire programs seamlessly from a single dashboard.',
     color: '#FF6A00',
   },
   {
-    icon: ClipboardCheck,
-    title: 'Easy Event Setup',
-    desc: 'Create and configure events quickly with structured templates and flexible controls.',
+    icon: Award,
+    title: 'Easy E-Credentials Generator',
+    desc: 'Create and distribute certificates and credentials instantly with minimal effort.',
     color: '#F59E0B',
   },
   {
     icon: QrCode,
     title: 'QR-Based Entry Validation',
-    desc: 'Enable seamless on-ground check-ins with secure QR attendance verification.',
+    desc: 'Enable fast, secure check-ins and participation tracking using QR-based access.',
     color: '#10B981',
   },
   {
     icon: BarChart3,
     title: 'Analytics & Insights',
-    desc: 'Track registrations, engagement, and outcomes using actionable performance metrics.',
+    desc: 'Monitor engagement, performance, and outcomes with real-time data and reports.',
     color: '#60A5FA',
   },
 ]
@@ -32,26 +32,26 @@ const organizerFeatures = [
 const participantFeatures = [
   {
     icon: Search,
-    title: 'Discover Relevant Opportunities',
-    desc: 'Explore hackathons and challenges tailored to your interests and skills.',
+    title: 'Discover Opportunities of Your Interest',
+    desc: 'Explore relevant hackathons, challenges, and programs tailored to your interests.',
     color: '#3B82F6',
   },
   {
     icon: Trophy,
     title: 'Easy Registration & Participation',
-    desc: 'Register fast and track your complete participation journey in one place.',
+    desc: 'Join programs, form teams, and participate effortlessly in just a few steps.',
     color: '#8B5CF6',
   },
   {
     icon: Briefcase,
-    title: 'All-in-One Portfolio Building',
-    desc: 'Capture projects, event history, and milestones to strengthen your profile.',
+    title: 'Portfolio Building',
+    desc: 'Create a structured portfolio of your projects, ideas, and achievements.',
     color: '#06B6D4',
   },
   {
     icon: Award,
     title: 'Showcase & Recognition',
-    desc: 'Earn verified credentials and highlight your achievements with confidence.',
+    desc: 'Present your work, gain visibility, and earn recognition for your contributions.',
     color: '#EC4899',
   },
 ]
@@ -113,7 +113,7 @@ export default function FeaturesSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
             <div className="mb-4 text-center lg:text-left">
-              <p className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: 'rgba(255,255,255,0.62)' }}>For Organizers</p>
+              <p className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: 'rgba(255,255,255,0.62)' }}>For Organisers</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {organizerFeatures.map((feature, i) => {

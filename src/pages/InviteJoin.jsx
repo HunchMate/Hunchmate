@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, LogIn, Mail, Users, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useEvents } from '../context/EventContext';
+import { buildEventDetailPath } from '../utils/helpers';
 import Button from '../components/ui/Button';
 import './InviteJoin.css';
 
@@ -105,7 +106,7 @@ export default function InviteJoin() {
               <Button variant="primary" onClick={handleAccept} disabled={state.loading || invite.status === 'accepted'}>
                 {state.loading ? 'Accepting...' : 'Accept Invitation'}
               </Button>
-              <Button variant="ghost" onClick={() => navigate(`/events/${event.id}`)}>View Event</Button>
+              <Button variant="ghost" onClick={() => navigate(buildEventDetailPath(event))}>View Event</Button>
             </div>
           )}
         </article>

@@ -108,6 +108,27 @@ export const generateId = (prefix = 'item') => {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
 };
 
+export const slugifyEventTitle = (value) => {
+  const input = String(value || '').trim().toLowerCase();
+  if (!input) return '';
+
+  return input
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+};
+
+export const buildEventPathSegment = (event) => {
+  const id = String(event?.id || event?._id || '').trim();
+  if (!id) return '';
+
+  const titleSlug = slugifyEventTitle(event?.title);
+  return titleSlug ? `${titleSlug}-${id}` : id;
+};
+
+export const buildEventDetailPath = (event) => `/events/${buildEventPathSegment(event)}`;
+
 export const truncateText = (text, maxLen = 120) => {
   if (!text || text.length <= maxLen) return text;
   return text.substring(0, maxLen).trim() + '...';

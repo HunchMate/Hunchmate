@@ -21,7 +21,7 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../context/AuthContext';
 import { useEvents } from '../context/EventContext';
-import { formatDate } from '../utils/helpers';
+import { buildEventDetailPath, formatDate } from '../utils/helpers';
 import Modal from '../components/ui/Modal';
 import './Profile.css';
 
@@ -826,7 +826,7 @@ export default function Profile() {
                 <p>Choose an action for this registered event.</p>
                 <div className="profile-page__registered-actions">
                   <Link
-                    to={`/events/${selectedRegisteredItem.event.id}`}
+                    to={buildEventDetailPath(selectedRegisteredItem.event)}
                     className="profile-page__registered-link"
                     onClick={closeRegisteredEventsModal}
                   >

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Users, Trophy, Zap, Building2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useEvents } from '../../context/EventContext';
-import { formatDate } from '../../utils/helpers';
+import { buildEventDetailPath, formatDate } from '../../utils/helpers';
 import './EventCard.css';
 
 const categoryColors = {
@@ -48,7 +48,7 @@ export default function EventCard({ event, index = 0 }) {
 
   return (
     <Link
-      to={`/events/${id}`}
+      to={buildEventDetailPath(event)}
       className="hc-card"
       style={{ animationDelay: `${index * 60}ms` }}
     >

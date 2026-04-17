@@ -4,7 +4,7 @@ import { QrCode as QrCodeIcon, Award, Calendar, ArrowRight, Download, ExternalLi
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../../context/AuthContext';
 import { useEvents } from '../../context/EventContext';
-import { formatDate } from '../../utils/helpers';
+import { buildEventDetailPath, formatDate } from '../../utils/helpers';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
@@ -226,7 +226,7 @@ export default function ParticipantDashboard() {
                         >
                           QR Pass
                         </Button>
-                        <Link to={`/events/${event.id}`}>
+                        <Link to={buildEventDetailPath(event)}>
                           <Button variant="ghost" size="sm" icon={ExternalLink}>View</Button>
                         </Link>
                       </div>

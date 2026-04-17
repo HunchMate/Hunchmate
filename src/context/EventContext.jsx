@@ -1,6 +1,13 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { sampleEvents, sampleRegistrations, sampleCredentials } from '../utils/sampleData';
-import { generateId, generateQRToken, generateTeamQRToken, generateCredentialId } from '../utils/helpers';
+import {
+  buildEventPathSegment,
+  generateCredentialId,
+  generateId,
+  generateQRToken,
+  generateTeamQRToken,
+  slugifyEventTitle,
+} from '../utils/helpers';
 import {
   checkInByQrToken,
   createEventRecord,
@@ -805,7 +812,42 @@ export function EventProvider({ children }) {
   const getUserRegistrations = (userId) => registrations.filter(r => r.userId === userId);
   const getEventRegistrations = (eventId) => registrations.filter(r => r.eventId === eventId);
   const getUserCredentials = (userId) => credentials.filter(c => c.userId === userId);
-  const getEventById = (eventId) => events.find(e => e.id === eventId);
+  const getEventById = (eventId) => {
+    const raw = String(eventId || '').trim();
+    if (!raw) return null;
+
+    let decoded = raw;
+    try {
+      decoded = decodeURIComponent(raw);
+    } catch {
+      decoded = raw;
+    }
+
+    const directMatch = events.find((event) => {
+      const eventRawId = String(event?.id || event?._id || '').trim();
+      return eventRawId === decoded;
+    });
+    if (directMatch) return directMatch;
+
+    const extractedIdMatch = decoded.match(/(evt-[a-z0-9-]+)$/i);
+    const extractedId = String(extractedIdMatch?.[1] || '').trim();
+    if (extractedId) {
+      const extractedMatch = events.find((event) => {
+        const eventRawId = String(event?.id || event?._id || '').trim();
+        return eventRawId === extractedId;
+      });
+      if (extractedMatch) return extractedMatch;
+    }
+
+    const normalizedSlug = String(decoded || '').trim().toLowerCase();
+    return (
+      events.find((event) => {
+        const canonicalSegment = String(buildEventPathSegment(event) || '').trim().toLowerCase();
+        const titleOnlySlug = String(slugifyEventTitle(event?.title) || '').trim().toLowerCase();
+        return canonicalSegment === normalizedSlug || titleOnlySlug === normalizedSlug;
+      }) || null
+    );
+  };
 
   const getEventRegistrationForUser = (eventId, user = null) => {
     const normalizedEmail = normalizeRegistrationField(user?.email);

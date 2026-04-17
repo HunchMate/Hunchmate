@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom';
 import { useEvents } from '../context/EventContext';
 import { DottedGlowBackground } from '../components/ui/DottedGlowBackground';
 import { Card, CardContent, CardFooter } from '../components/ui/card';
-import { formatDate } from '../utils/helpers';
+import { buildEventDetailPath, formatDate } from '../utils/helpers';
 import './Events.css';
 
 const boardTabs = [
@@ -189,7 +189,7 @@ export default function Events() {
                   return (
                     <div key={`carousel-${eventId}`} className="explore-carousel__slide">
                       <Link
-                        to={`/events/${eventId}`}
+                        to={buildEventDetailPath(event)}
                         className="explore-carousel__card"
                         style={
                           posterImage
@@ -317,7 +317,7 @@ export default function Events() {
                   return (
                     <Link
                       key={eventId}
-                      to={`/events/${eventId}`}
+                      to={buildEventDetailPath(event)}
                       className="explore-card-link"
                     >
                       <Card className="explore-card h-full flex flex-col overflow-hidden hover:shadow-lg transition-shadow duration-200">

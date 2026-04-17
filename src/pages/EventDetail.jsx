@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useEvents } from '../context/EventContext';
-import { formatDate } from '../utils/helpers';
+import { buildEventPathSegment, formatDate } from '../utils/helpers';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -59,7 +59,7 @@ function toTimestamp(value) {
 }
 
 export default function EventDetail() {
-  const { eventId } = useParams();
+  const { eventId: eventParam } = useParams();
   const navigate = useNavigate();
   const { getEventById, getEventRegistrationForUser, registerForEvent, updateTeamRegistration, createTeamInvitation } = useEvents();
   const { user, findRegisteredUserByEmail } = useAuth();
@@ -81,8 +81,16 @@ export default function EventDetail() {
   const [showSuspendedModal, setShowSuspendedModal] = useState(false);
   const [now] = useState(() => Date.now());
 
-  const event = getEventById(eventId);
-  const currentRegistration = user ? getEventRegistrationForUser(eventId, user) : null;
+  const event = getEventById(eventParam);
+  const resolvedEventId = String(event?.id || '').trim();
+  const currentRegistration = user && resolvedEventId ? getEventRegistrationForUser(resolvedEventId, user) : null;
+
+  useEffect(() => {
+    if (!event || !eventParam) return;
+    const canonicalSegment = buildEventPathSegment(event);
+    if (!canonicalSegment || canonicalSegment === eventParam) return;
+    navigate(`/events/${canonicalSegment}`, { replace: true });
+  }, [event, eventParam, navigate]);
   const teamLeadId = String(currentRegistration?.teamLeadId || currentRegistration?.userId || '').trim();
   const canManageTeam = Boolean(
     currentRegistration && String(user?.id || '').trim() && teamLeadId === String(user?.id || '').trim()

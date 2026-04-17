@@ -209,12 +209,12 @@ function App() {
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/host-event" element={<Navigate to="/host-signup" replace />} />
+            <Route path="/host-signup" element={<HostSignup />} />
             <Route path="/invites/:inviteId" element={<InviteJoin />} />
 
             <Route element={<RequireGuest />}>
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
-              <Route path="/host-signup" element={<HostSignup />} />
             </Route>
 
             <Route element={<RequireAuth />}>

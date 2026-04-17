@@ -216,9 +216,11 @@ export default function HostSignup() {
             </div>
           </label>
 
-          <button type="submit" className="auth-modern__submit" disabled={loading}>
-            {loading ? 'Creating account...' : 'Create Host Account'}
-            {!loading && <ArrowRight size={16} style={{ marginLeft: '8px' }} />}
+          <button type="submit" className="auth-modern__submit auth-modern__submit--icon" disabled={loading}>
+            <span className="auth-modern__submit-label">
+              {loading ? 'Creating account...' : 'Create Host Account'}
+            </span>
+            {!loading && <ArrowRight size={16} className="auth-modern__submit-icon" />}
           </button>
 
           <div className="auth-modern__divider">or continue with</div>

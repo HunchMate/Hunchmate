@@ -210,6 +210,7 @@
 
 .auth-modern__submit {
   margin-top: 2px;
+  width: 100%;
   min-height: 42px;
   border: 1px solid #ffffff;
   border-radius: 10px;
@@ -218,9 +219,30 @@
   font-family: inherit;
   font-size: 0.98rem;
   font-weight: 600;
+  cursor: pointer;
   position: relative;
   overflow: hidden;
   transition: background 220ms ease, color 220ms ease, transform 120ms ease, box-shadow 220ms ease;
+}
+
+.auth-modern__submit--icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 40px;
+}
+
+.auth-modern__submit-label {
+  text-align: center;
+}
+
+.auth-modern__submit-icon {
+  position: absolute;
+  right: 14px;
+  left: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 .auth-modern__submit:disabled {

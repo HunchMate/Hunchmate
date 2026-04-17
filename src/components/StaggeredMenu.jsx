@@ -354,7 +354,7 @@ export const StaggeredMenu = ({
           ) : (
             <span className="sm-logo-badge" aria-hidden="true">HM</span>
           )}
-          <span className="sm-company-name">{companyName}</span>
+          {!logoUrl ? <span className="sm-company-name">{companyName}</span> : null}
         </div>
         <button
           ref={toggleBtnRef}

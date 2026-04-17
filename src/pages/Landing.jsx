@@ -5,6 +5,7 @@ import GrainyGradient from '../components/GrainyGradient';
 import FeaturesSection from '../components/FeaturesSection';
 import LogoLoop from '../components/LogoLoop';
 import StaggeredMenu from '../components/StaggeredMenu';
+import hunchmateLogo from '../../HUNCHMATE - Logo Pack (2).png';
 
 const DUMMY_LOGOS = [
   { node: <span className="font-bold text-lg text-white/60 font-sans tracking-wide">ACME CORP</span> },
@@ -91,11 +92,11 @@ export default function Landing() {
           socialItems={mobileSocialItems}
           displaySocials={true}
           displayItemNumbering={true}
+          logoUrl={hunchmateLogo}
           menuButtonColor="#ffffff"
           openMenuButtonColor="#ffffff"
           changeMenuColorOnOpen={true}
           colors={['#B497CF', '#5227FF']}
-          companyName="HunchMate"
           accentColor="#ff6b6b"
           isFixed={true}
           onMenuOpen={() => {}}

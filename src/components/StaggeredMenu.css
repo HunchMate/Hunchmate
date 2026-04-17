@@ -217,7 +217,7 @@
   transition: color 0.25s;
   display: inline-block;
   text-decoration: none;
-  padding-right: 1.35em;
+  padding-right: 1.9em;
 }
 
 .sm-panel-itemLabel {
@@ -238,8 +238,8 @@
   counter-increment: smItem;
   content: counter(smItem, decimal-leading-zero);
   position: absolute;
-  top: 0.15em;
-  right: 2.8em;
+  top: 0.28em;
+  right: 0.18em;
   font-size: 0.95rem;
   font-weight: 500;
   color: var(--sm-accent, #5227ff);
@@ -247,6 +247,16 @@
   pointer-events: none;
   user-select: none;
   opacity: var(--sm-num-opacity, 0);
+}
+
+@media (max-width: 520px) {
+  .sm-panel-item {
+    padding-right: 0;
+  }
+
+  .sm-panel-list[data-numbering] .sm-panel-item::after {
+    display: none;
+  }
 }
 
 .sm-socials {

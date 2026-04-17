@@ -57,9 +57,33 @@
 
 .sm-logo-img {
   display: block;
-  height: 28px;
-  width: auto;
-  object-fit: contain;
+  width: 180px;
+  height: 56px;
+  object-fit: none;
+  object-position: left top;
+  transform: scale(2.4);
+  transform-origin: left center;
+}
+
+.sm-logo-img-frame {
+  width: 128px;
+  height: 36px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (max-width: 420px) {
+  .sm-logo-img-frame {
+    width: 116px;
+    height: 32px;
+  }
+
+  .sm-logo-img {
+    width: 166px;
+    height: 52px;
+    transform: scale(2.2);
+  }
 }
 
 .sm-company-name {

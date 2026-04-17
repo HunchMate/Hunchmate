@@ -383,6 +383,31 @@
   color: #f0f4ff;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .event-detail__back:hover,
+  .event-detail__share-btn:hover,
+  .event-detail__tab:hover,
+  .reg-form__type-btn:hover,
+  .event-detail--fusion .event-detail__highlight-card:hover,
+  .event-detail--fusion .event-detail__metric-card:hover,
+  .event-detail--fusion .event-detail__panel:hover,
+  .event-detail--fusion .event-detail__side-poster:hover img {
+    transform: none !important;
+    border-color: initial !important;
+    background: initial !important;
+    box-shadow: initial !important;
+  }
+}
+
 .event-detail__tab.active {
   border-color: rgba(141, 184, 255, 0.6);
   background: linear-gradient(135deg, rgba(111, 159, 236, 0.28) 0%, rgba(96, 206, 182, 0.2) 100%);

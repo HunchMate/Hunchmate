@@ -304,6 +304,24 @@
   background: #e0f2fe;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .onboarding__segmented-option:hover,
+  .onboarding__option:hover {
+    border-color: initial;
+    box-shadow: initial;
+    background: initial;
+  }
+}
+
 .onboarding__no-result,
 .onboarding__no-skill {
   margin: 0;

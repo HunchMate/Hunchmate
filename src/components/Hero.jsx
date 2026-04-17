@@ -79,7 +79,7 @@ export default function Hero() {
             letterSpacing: '-0.02em',
           }}
         >
-          Turn your Hunchs into Real <span style={{ fontFamily: '"Orbitron", sans-serif', letterSpacing: '0.02em' }}>Benchmarks</span>
+          Turn your Hunches into Real <span style={{ fontFamily: '"Orbitron", sans-serif', letterSpacing: '0.02em' }}>Benchmarks</span>
         </Motion.h1>
       ) : (
         <h1
@@ -89,7 +89,7 @@ export default function Hero() {
             letterSpacing: '-0.02em',
           }}
         >
-          Turn your Hunchs into Real <span style={{ fontFamily: '"Orbitron", sans-serif', letterSpacing: '0.02em' }}>Benchmarks</span>
+          Turn your Hunches into Real <span style={{ fontFamily: '"Orbitron", sans-serif', letterSpacing: '0.02em' }}>Benchmarks</span>
         </h1>
       )}
 

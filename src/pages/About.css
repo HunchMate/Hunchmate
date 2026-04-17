@@ -41,6 +41,23 @@
 .about-cta__banner p { color: rgba(255,255,255,0.8); max-width: 480px; margin: 0 auto var(--space-8); }
 .about-cta__btns { display: flex; justify-content: center; gap: var(--space-4); flex-wrap: wrap; }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .about-mission__card:hover,
+  .about-value:hover,
+  .about-lifecycle__step:hover {
+    transform: none !important;
+  }
+}
+
 @media (max-width: 768px) {
   .about-mission__grid { grid-template-columns: 1fr; }
   .about-values__grid { grid-template-columns: 1fr; }

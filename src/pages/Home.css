@@ -98,7 +98,23 @@
   font-size: var(--text-base);
   border: 2px solid #000;
   transition: all var(--transition-fast);
-  box-shadow: 4px 4px 0px #000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .home-hero__cta-primary:hover,
+  .home-hero__cta-secondary:hover {
+    transform: none;
+    box-shadow: initial;
+  }
 }
 
 .home-hero__cta-secondary:hover {

@@ -76,6 +76,21 @@
   background: rgba(251, 146, 60, 0.16);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .contact-channel-card {
+    transform: none !important;
+  }
+}
+
 .contact-channel-card h2 {
   margin: 0.55rem 0 0;
   color: #3a1f08;

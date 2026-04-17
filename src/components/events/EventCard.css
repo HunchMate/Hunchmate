@@ -203,3 +203,31 @@
   transform: scale(1.04);
   box-shadow: 0 4px 14px rgba(234, 122, 50, 0.35);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .hc-card {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .hc-card:hover {
+    transform: none !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+    border-color: rgba(0, 0, 0, 0.06) !important;
+  }
+  .hc-card:hover .hc-card__title {
+    color: #1a1a2e !important;
+  }
+  .hc-card:hover .hc-card__cta {
+    transform: none !important;
+    box-shadow: initial !important;
+  }
+}

@@ -33,6 +33,15 @@
   font-weight: 800;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 .legal-page__hero h1 {
   margin: 0.4rem 0 0;
   color: #3a1f08;

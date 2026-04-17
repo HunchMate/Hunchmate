@@ -8,6 +8,7 @@ import {
   Download,
   ExternalLink,
   Bell,
+  ArrowRight,
   Link2,
   Lock,
   Mail,
@@ -397,37 +398,49 @@ export default function Profile() {
 
   if (isSettingsPage) {
     return (
-      <section className="profile-page">
+      <section className="profile-page profile-page--settings">
         <div className="profile-page__backdrop" />
         <div className="container profile-page__shell">
-          <section className="profile-page__settings-view">
-            <header className="profile-page__settings-headline">
-              <h2>Settings</h2>
-              <p>Manage your account settings and set e-mail preferences.</p>
-            </header>
+          <header className="profile-page__page-head">
+            <div>
+              <p className="profile-page__eyebrow">Account settings</p>
+              <h1>Edit your profile</h1>
+              <p>Control how you appear across HunchMate and keep your public profile polished.</p>
+            </div>
+            <button className="profile-page__btn-secondary" type="button" onClick={() => navigate('/dashboard')}>
+              <ArrowRight size={16} /> Back to profile
+            </button>
+          </header>
 
-            <div className="profile-page__settings-layout">
-              <aside className="profile-page__settings-side">
-                <button type="button" className="is-active"><User size={14} /> Profile</button>
-                <button type="button"><Bell size={14} /> Notifications</button>
-              </aside>
+          <div className="profile-page__settings-layout">
+            <aside className="profile-page__settings-side">
+              <button type="button" className="is-active"><User size={14} /> Profile</button>
+              <button type="button"><Bell size={14} /> Notifications</button>
+              <button type="button"><Lock size={14} /> Security</button>
+            </aside>
 
-              <form onSubmit={handleSave} className="profile-page__settings-card">
-                <div className="profile-page__settings-profile-row">
-                  <div className="profile-page__settings-avatar" style={{ '--avatar-backdrop': form.avatarBackdrop }}>
-                    {form.avatar ? <img src={form.avatar} alt={form.name || 'Profile avatar'} /> : <span>{form.name?.charAt(0) || 'U'}</span>}
-                  </div>
+            <form onSubmit={handleSave} className="profile-page__settings-card profile-page__panel-card">
+              <div className="profile-page__settings-profile-row">
+                <div className="profile-page__settings-avatar" style={{ '--avatar-backdrop': form.avatarBackdrop }}>
+                  {form.avatar ? <img src={form.avatar} alt={form.name || 'Profile avatar'} /> : <span>{form.name?.charAt(0) || 'U'}</span>}
+                </div>
+                <div className="profile-page__settings-actions-stack">
                   <label className="profile-page__settings-upload-btn">
                     Upload image
                     <input type="file" accept="image/*" onChange={handleAvatarUpload} />
                   </label>
+                  <label className="profile-page__settings-upload-btn">
+                    Upload backdrop
+                    <input type="file" accept="image/*" onChange={handlePosterUpload} />
+                  </label>
                 </div>
+              </div>
 
+              <div className="profile-page__settings-grid">
                 <label>
-                  Username
+                  Full name
                   <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
                 </label>
-                <p className="profile-page__settings-note">This is your public display name. It can be your real name or a pseudonym. You can only change this once every 30 days.</p>
 
                 <label>
                   Email
@@ -435,42 +448,59 @@ export default function Profile() {
                     <option value={user.email || ''}>{user.email || 'Select a verified email to display'}</option>
                   </select>
                 </label>
-                <p className="profile-page__settings-note">You can manage verified email addresses in your email settings.</p>
 
-                <label>
+                <label className="profile-page__span-2">
                   Bio
-                  <textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} rows={3} />
+                  <textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} rows={4} />
                 </label>
-                <p className="profile-page__settings-note">You can @mention other users and organizations to link to them.</p>
 
                 <label>
-                  URLs
-                  <span className="profile-page__settings-note">Add links to your website, blog, or social media profiles.</span>
+                  City
+                  <input value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} />
                 </label>
 
-                <div className="profile-page__settings-url-list">
+                <label>
+                  State
+                  <input value={form.state} onChange={(event) => setForm({ ...form, state: event.target.value })} />
+                </label>
+
+                <label>
+                  Institution
+                  <input value={form.institutionName} onChange={(event) => setForm({ ...form, institutionName: event.target.value })} />
+                </label>
+
+                <label>
+                  Skills
+                  <input value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} placeholder="React, UI Design, Product Strategy" />
+                </label>
+
+                <label className="profile-page__span-2">
+                  Social URLs
+                  <span className="profile-page__field-note">Add your public links for the profile surface.</span>
+                </label>
+
+                <div className="profile-page__settings-url-list profile-page__span-2">
                   {urlFields.map((url, index) => (
                     <input
                       key={`url-${index}`}
                       value={url}
                       onChange={(event) => handleUrlChange(index, event.target.value)}
-                      placeholder={index === 0 ? 'https://shadcn.com' : index === 1 ? 'http://twitter.com/shadcn' : 'https://example.com'}
+                      placeholder={index === 0 ? 'https://linkedin.com/in/you' : index === 1 ? 'https://github.com/you' : 'https://example.com'}
                     />
                   ))}
                 </div>
+              </div>
 
-                <button type="button" className="profile-page__settings-add-url" onClick={addUrlField}>Add URL</button>
-
-                <div className="profile-page__settings-actions-row">
-                  <button type="submit" className="profile-page__settings-submit">Update profile</button>
-                  {saved ? <span className="profile-page__saved">Saved</span> : null}
-                  <button className="profile-page__dropdown-close" type="button" onClick={() => navigate('/dashboard')}>
-                    Close
-                  </button>
-                </div>
-              </form>
-            </div>
-          </section>
+              <div className="profile-page__settings-actions-row">
+                <button type="button" className="profile-page__btn-secondary" onClick={addUrlField}>Add URL</button>
+                <button type="submit" className="profile-page__settings-submit">Save changes</button>
+                {saved ? <span className="profile-page__saved">Saved</span> : null}
+                <button className="profile-page__dropdown-close" type="button" onClick={() => navigate('/dashboard')}>
+                  Close
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </section>
     );
@@ -480,144 +510,111 @@ export default function Profile() {
     <section className="profile-page">
       <div className="profile-page__backdrop" />
       <div className="container profile-page__shell">
-        {/* Header Section */}
         <header className="profile-page__hero-card">
-          <div className="profile-page__hero-content">
+          <div className="profile-page__hero-banner">
             <div className="profile-page__hero-avatar" style={{ '--avatar-backdrop': form.avatarBackdrop }}>
               {form.avatar ? <img src={form.avatar} alt={form.name || 'Profile avatar'} /> : <span>{form.name?.charAt(0) || 'U'}</span>}
             </div>
-            <div className="profile-page__hero-text">
+            <div className="profile-page__hero-copy">
+              <p className="profile-page__eyebrow">Public profile</p>
               <h1>{form.name || 'Your profile'}</h1>
               <p>{handleLabel}</p>
-              <div className="profile-page__hero-level">
-                <Award size={14} /> Level {achievementSummary.level} • {achievementSummary.totalXp} XP
+              <div className="profile-page__hero-meta">
+                <span><MapPin size={14} /> {[form.city, form.state].filter(Boolean).join(', ') || 'Location not set'}</span>
+                <span><Mail size={14} /> {user.email || 'No email set'}</span>
+                <span><Award size={14} /> Level {achievementSummary.level}</span>
               </div>
             </div>
           </div>
+
           <div className="profile-page__hero-actions">
             <button className="profile-page__btn-secondary" type="button" onClick={handleCopyProfileLink}>
               {copiedLink ? <Check size={16} /> : <Copy size={16} />}
-              <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
+              <span>{copiedLink ? 'Copied' : 'Copy profile link'}</span>
             </button>
             <button className="profile-page__btn-primary" type="button" onClick={() => navigate('/dashboard/settings')}>
               <Settings2 size={16} />
-              <span>Settings</span>
+              <span>Edit profile</span>
             </button>
           </div>
         </header>
 
-        {/* Cards Grid - All sections equally prominent */}
-        <div className="profile-page__grid">
-          {/* Profile Info Card */}
-          <div className="profile-page__card">
-            <div className="profile-page__card-header">
-              <h2>Profile Info</h2>
-              <User size={18} />
+        <div className="profile-page__summary-row">
+          <article className="profile-page__summary-card">
+            <p>Profile completion</p>
+            <h3>{profileCompletion}% complete</h3>
+            <span>{missingProfileFields.length === 0 ? 'All essentials are complete' : `${missingProfileFields.length} items remain`}</span>
+          </article>
+          <article className="profile-page__summary-card">
+            <p>Engagement</p>
+            <h3>{registeredEventItems.length} event touchpoints</h3>
+            <span>{registeredEventItems.filter(({ registration }) => registration.checkedIn).length} attended</span>
+          </article>
+          <article className="profile-page__summary-card profile-page__summary-card--accent">
+            <div>
+              <p>Reputation</p>
+              <h3>{achievementSummary.badgesEarned} badges earned</h3>
+              <span>{achievementSummary.totalXp} XP collected</span>
             </div>
-            <div className="profile-page__card-body">
-              <div className="profile-page__info-section">
-                <label>Email</label>
-                <p>{user.email || 'hello@example.com'}</p>
+            <div className="profile-page__summary-ring">{achievementSummary.level}</div>
+          </article>
+        </div>
+
+        <div className="profile-page__content-grid">
+          <main className="profile-page__primary-column">
+            <section className="profile-page__card profile-page__profile-card">
+              <div className="profile-page__card-header">
+                <div>
+                  <p>Identity</p>
+                  <h2>Profile overview</h2>
+                </div>
+                <User size={18} />
               </div>
-              <div className="profile-page__info-section">
-                <label>Location</label>
-                <p><MapPin size={14} /> {[form.city, form.state].filter(Boolean).join(', ') || 'Not set'}</p>
-              </div>
-              <div className="profile-page__info-section">
-                <label>Contact</label>
-                <p><Phone size={14} /> {user.phoneNumber || 'Not set'}</p>
+              <div className="profile-page__profile-grid">
+                <div className="profile-page__info-section">
+                  <label>Email</label>
+                  <p>{user.email || 'hello@example.com'}</p>
+                </div>
+                <div className="profile-page__info-section">
+                  <label>Contact</label>
+                  <p><Phone size={14} /> {user.phoneNumber || 'Not set'}</p>
+                </div>
+                <div className="profile-page__info-section">
+                  <label>Location</label>
+                  <p><MapPin size={14} /> {[form.city, form.state].filter(Boolean).join(', ') || 'Not set'}</p>
+                </div>
+                <div className="profile-page__info-section">
+                  <label>Institution</label>
+                  <p>{form.institutionName || 'Not set'}</p>
+                </div>
               </div>
 
-              <div className="profile-page__progress-section">
-                <div className="profile-page__progress-header">
-                  <label>Profile Completion</label>
-                  <span>{profileCompletion}%</span>
+              <p className="profile-page__bio">{form.bio || 'Add a short bio so people understand your background, interests, and the kind of opportunities you want to explore.'}</p>
+
+              <div className="profile-page__chip-list">
+                {String(form.skills || '').trim()
+                  ? form.skills.split(',').map((skill) => skill.trim()).filter(Boolean).slice(0, 5).map((skill) => <span key={skill} className="profile-page__chip">{skill}</span>)
+                  : <span className="profile-page__chip">Add skills</span>}
+              </div>
+            </section>
+
+            <section className="profile-page__card profile-page__activity-card">
+              <div className="profile-page__card-header">
+                <div>
+                  <p>Activity</p>
+                  <h2>Events and participation</h2>
                 </div>
-                <div className="profile-page__progress-bar">
-                  <div className="profile-page__progress-fill" style={{ width: `${profileCompletion}%` }} />
-                </div>
-                <div className="profile-page__chip-list">
-                  {missingProfileFields.length === 0
-                    ? <span className="profile-page__chip complete">✓ Complete</span>
-                    : missingProfileFields.slice(0, 2).map((item) => <span key={item} className="profile-page__chip">{item}</span>)}
-                </div>
+                <Calendar size={18} />
               </div>
 
               <div className="profile-page__stats-mini">
                 <div className="profile-page__stat-item">
-                  <strong>{registrations.length}</strong>
+                  <strong>{registeredEventItems.length}</strong>
                   <span>Registered</span>
                 </div>
                 <div className="profile-page__stat-item">
-                  <strong>{credentials.length}</strong>
-                  <span>Credentials</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Achievements Card */}
-          <div className="profile-page__card">
-            <div className="profile-page__card-header">
-              <h2>Achievements</h2>
-              <Award size={18} />
-            </div>
-            <div className="profile-page__card-body">
-              <div className="profile-page__achievement-summary">
-                <div className="profile-page__achievement-stat">
-                  <div className="profile-page__achievement-icon">
-                    <Award size={24} />
-                  </div>
-                  <div>
-                    <strong>Level {achievementSummary.level}</strong>
-                    <span>{achievementSummary.totalXp} XP earned</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="profile-page__xp-bar">
-                <div className="profile-page__xp-track">
-                  <div className="profile-page__xp-fill" style={{ width: `${Math.round((achievementSummary.xpInLevel / achievementSummary.nextLevelXp) * 100)}%` }} />
-                </div>
-                <span>{achievementSummary.xpInLevel} / {achievementSummary.nextLevelXp} XP</span>
-              </div>
-
-              <div className="profile-page__badges">
-                <p className="profile-page__badges-count">Badges: <strong>{achievementSummary.badgesEarned} / {achievementSummary.all.length}</strong></p>
-                <div className="profile-page__badge-list">
-                  {achievementSummary.all.slice(0, 5).map((item, idx) => (
-                    <div key={item.id} className={`profile-page__badge ${item.unlocked ? 'unlocked' : 'locked'}`} title={item.title}>
-                      {item.unlocked ? <Check size={16} /> : <Lock size={16} />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button type="button" className="profile-page__btn-tertiary" onClick={() => setAchievementsOpen(true)}>
-                View Full Roadmap →
-              </button>
-            </div>
-          </div>
-
-          {/* Event Activity Card */}
-          <div className="profile-page__card">
-            <div className="profile-page__card-header">
-              <h2>Event Activity</h2>
-              <Calendar size={18} />
-            </div>
-            <div className="profile-page__card-body">
-              <div className="profile-page__event-stats">
-                <div className="profile-page__event-stat">
-                  <span className="profile-page__stat-label">Registered</span>
-                  <strong>{registeredEventItems.length}</strong>
-                </div>
-                <div className="profile-page__event-stat">
-                  <span className="profile-page__stat-label">Attended</span>
                   <strong>{registeredEventItems.filter(({ registration }) => registration.checkedIn).length}</strong>
-                </div>
-                <div className="profile-page__event-stat">
-                  <span className="profile-page__stat-label">Upcoming</span>
-                  <strong>{registeredEventItems.filter(({ registration }) => !registration.checkedIn).length}</strong>
+                  <span>Attended</span>
                 </div>
               </div>
 
@@ -637,45 +634,42 @@ export default function Profile() {
               <div className="profile-page__event-list">
                 {filteredEventItems.length === 0 ? (
                   <p className="profile-page__empty-state">No events in this category</p>
-                ) : filteredEventItems.slice(0, 3).map(({ registration, event }) => (
+                ) : filteredEventItems.slice(0, 4).map(({ registration, event }) => (
                   <div key={registration.id} className="profile-page__event-item">
                     <div>
                       <strong>{event.title}</strong>
                       <span>{registration.teamName || 'Individual'}</span>
                     </div>
                     <span className={`profile-page__event-badge ${registration.checkedIn ? 'checked-in' : 'registered'}`}>
-                      {registration.checkedIn ? '✓ Attended' : '◇ Registered'}
+                      {registration.checkedIn ? 'Attended' : 'Registered'}
                     </span>
                   </div>
                 ))}
               </div>
 
               <button type="button" className="profile-page__btn-tertiary" onClick={openEvents}>
-                View All Events →
+                View all events
               </button>
-            </div>
-          </div>
+            </section>
 
-          {/* Credentials Card */}
-          <div className="profile-page__card">
-            <div className="profile-page__card-header">
-              <h2>Credentials</h2>
-              <Download size={18} />
-            </div>
-            <div className="profile-page__card-body">
-              {credentialItems.length === 0 ? (
-                <div className="profile-page__empty-state">
-                  <p>Earn credentials by participating in events</p>
+            <section className="profile-page__card profile-page__credentials-card">
+              <div className="profile-page__card-header">
+                <div>
+                  <p>Credentials</p>
+                  <h2>Certificates and proof of work</h2>
                 </div>
+                <Download size={18} />
+              </div>
+
+              {credentialItems.length === 0 ? (
+                <p className="profile-page__empty-state">Earn credentials by participating in events.</p>
               ) : (
                 <div className="profile-page__credential-list">
                   {credentialItems.slice(0, 4).map((credential) => (
                     <div key={credential.id} className="profile-page__credential-item">
                       <div>
                         <strong>{credential.eventTitle}</strong>
-                        <span className={credential.type === 'winner' ? 'winner' : 'participant'}>
-                          {credential.type === 'winner' ? '🏆 Winner' : '📜 Participation'}
-                        </span>
+                        <span>{credential.type === 'winner' ? 'Winner credential' : 'Participation credential'}</span>
                       </div>
                       <button
                         type="button"
@@ -691,18 +685,63 @@ export default function Profile() {
               )}
 
               <button type="button" className="profile-page__btn-tertiary" onClick={openCredentials}>
-                View All Credentials →
+                View all credentials
               </button>
-            </div>
-          </div>
+            </section>
+          </main>
 
-          {/* Social & Contact Card */}
-          <div className="profile-page__card">
-            <div className="profile-page__card-header">
-              <h2>Social Links</h2>
-              <Link2 size={18} />
-            </div>
-            <div className="profile-page__card-body">
+          <aside className="profile-page__secondary-column">
+            <section className="profile-page__card profile-page__insight-card">
+              <div className="profile-page__card-header">
+                <div>
+                  <p>Achievements</p>
+                  <h2>Progress and recognition</h2>
+                </div>
+                <Award size={18} />
+              </div>
+
+              <div className="profile-page__achievement-summary">
+                <div className="profile-page__achievement-stat">
+                  <div className="profile-page__achievement-icon"><Award size={24} /></div>
+                  <div>
+                    <strong>Level {achievementSummary.level}</strong>
+                    <span>{achievementSummary.totalXp} XP earned</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="profile-page__xp-bar">
+                <div className="profile-page__xp-track">
+                  <div className="profile-page__xp-fill" style={{ width: `${Math.round((achievementSummary.xpInLevel / achievementSummary.nextLevelXp) * 100)}%` }} />
+                </div>
+                <span>{achievementSummary.xpInLevel} / {achievementSummary.nextLevelXp} XP</span>
+              </div>
+
+              <div className="profile-page__badges">
+                <p className="profile-page__badges-count">Badges: <strong>{achievementSummary.badgesEarned} / {achievementSummary.all.length}</strong></p>
+                <div className="profile-page__badge-list">
+                  {achievementSummary.all.slice(0, 5).map((item) => (
+                    <div key={item.id} className={`profile-page__badge ${item.unlocked ? 'unlocked' : 'locked'}`} title={item.title}>
+                      {item.unlocked ? <Check size={16} /> : <Lock size={16} />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button type="button" className="profile-page__btn-tertiary" onClick={() => setAchievementsOpen(true)}>
+                View roadmap
+              </button>
+            </section>
+
+            <section className="profile-page__card profile-page__links-card">
+              <div className="profile-page__card-header">
+                <div>
+                  <p>Connections</p>
+                  <h2>Social and public links</h2>
+                </div>
+                <Link2 size={18} />
+              </div>
+
               <div className="profile-page__social-list">
                 {form.linkedin && (
                   <a href={form.linkedin} target="_blank" rel="noopener noreferrer" className="profile-page__social-link">
@@ -720,39 +759,41 @@ export default function Profile() {
                   <p className="profile-page__empty-state">Add social links in settings</p>
                 )}
               </div>
-              <button type="button" className="profile-page__btn-tertiary" onClick={() => navigate('/dashboard/settings')}>
-                Edit Social Links →
-              </button>
-            </div>
-          </div>
 
-          {/* Quick Stats Card */}
-          <div className="profile-page__card">
-            <div className="profile-page__card-header">
-              <h2>Quick Stats</h2>
-              <Calendar size={18} />
-            </div>
-            <div className="profile-page__card-body">
+              <button type="button" className="profile-page__btn-tertiary" onClick={() => navigate('/dashboard/settings')}>
+                Edit social links
+              </button>
+            </section>
+
+            <section className="profile-page__card profile-page__stats-card">
+              <div className="profile-page__card-header">
+                <div>
+                  <p>Snapshot</p>
+                  <h2>Quick stats</h2>
+                </div>
+                <Calendar size={18} />
+              </div>
+
               <div className="profile-page__stats-grid">
                 <div className="profile-page__stat">
-                  <span>{registrations.filter(r => r.checkedIn).length}</span>
-                  <label>Events Attended</label>
+                  <span>{registrations.filter((r) => r.checkedIn).length}</span>
+                  <label>Events attended</label>
                 </div>
                 <div className="profile-page__stat">
-                  <span>{credentials.filter(c => c.type === 'winner').length}</span>
+                  <span>{credentials.filter((c) => c.type === 'winner').length}</span>
                   <label>Wins</label>
                 </div>
                 <div className="profile-page__stat">
                   <span>{profileCompletion}%</span>
-                  <label>Profile Complete</label>
+                  <label>Profile complete</label>
                 </div>
                 <div className="profile-page__stat">
                   <span>{achievementSummary.badgesEarned}</span>
                   <label>Badges</label>
                 </div>
               </div>
-            </div>
-          </div>
+            </section>
+          </aside>
         </div>
       </div>
 

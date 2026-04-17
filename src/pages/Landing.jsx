@@ -1,9 +1,10 @@
-import { useEffect, useState, useMemo } from 'react';
-    import Navbar from '../components/Navbar';
+import { useEffect, useState } from 'react';
+import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import GrainyGradient from '../components/GrainyGradient';
 import FeaturesSection from '../components/FeaturesSection';
 import LogoLoop from '../components/LogoLoop';
+import StaggeredMenu from '../components/StaggeredMenu';
 
 const DUMMY_LOGOS = [
   { node: <span className="font-bold text-lg text-white/60 font-sans tracking-wide">ACME CORP</span> },
@@ -18,10 +19,25 @@ const DUMMY_LOGOS = [
 
 export default function Landing() {
   const [scrollY, setScrollY] = useState(0);
-  
-  // Detect mobile and motion preferences
-  const isMobile = useMemo(() => window.innerWidth < 768, []);
-  const prefersReducedMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, []);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
+
+  useEffect(() => {
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    const onMotionChange = (event) => setPrefersReducedMotion(event.matches);
+
+    window.addEventListener('resize', onResize, { passive: true });
+    motionQuery.addEventListener('change', onMotionChange);
+
+    return () => {
+      window.removeEventListener('resize', onResize);
+      motionQuery.removeEventListener('change', onMotionChange);
+    };
+  }, []);
 
   useEffect(() => {
     let ticking = false;
@@ -51,10 +67,41 @@ export default function Landing() {
   const logoParallax = isMobile || prefersReducedMotion ? 0 : Math.min(scrollY * 0.14, 100);
   const featuresParallax = isMobile || prefersReducedMotion ? 0 : Math.min(scrollY * 0.08, 64);
 
+  const mobileMenuItems = [
+    { label: 'Home', ariaLabel: 'Go to home page', link: '/' },
+    { label: 'Explore Events', ariaLabel: 'Explore all events', link: '/events' },
+    { label: 'Host Event', ariaLabel: 'Create or host an event', link: '/host-event' },
+    { label: 'Contact', ariaLabel: 'Open contact page', link: '/contact' },
+    { label: 'Sign In', ariaLabel: 'Go to sign in page', link: '/login' },
+  ];
+
+  const mobileSocialItems = [
+    { label: 'Instagram', link: 'https://instagram.com' },
+    { label: 'LinkedIn', link: 'https://linkedin.com' },
+  ];
+
   return (
     <>
       {/* Disable expensive WebGL gradient on mobile and for reduced-motion users */}
       {!isMobile && !prefersReducedMotion ? <GrainyGradient /> : <div className="fixed inset-0 -z-10 bg-gradient-to-br from-orange-500 via-purple-600 to-blue-600" />}
+      {isMobile ? (
+        <StaggeredMenu
+          position="right"
+          items={mobileMenuItems}
+          socialItems={mobileSocialItems}
+          displaySocials={true}
+          displayItemNumbering={true}
+          menuButtonColor="#ffffff"
+          openMenuButtonColor="#ffffff"
+          changeMenuColorOnOpen={true}
+          colors={['#B497CF', '#5227FF']}
+          companyName="HunchMate"
+          accentColor="#ff6b6b"
+          isFixed={true}
+          onMenuOpen={() => {}}
+          onMenuClose={() => {}}
+        />
+      ) : null}
       <div className="relative z-10 w-full overflow-hidden">
         <div
           className="min-h-screen flex flex-col justify-center"
@@ -63,7 +110,7 @@ export default function Landing() {
             willChange: 'transform',
           }}
         >
-          <Navbar />
+          {!isMobile ? <Navbar /> : null}
           <Hero />
         </div>
         <div

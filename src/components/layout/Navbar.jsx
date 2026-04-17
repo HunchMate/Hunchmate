@@ -21,7 +21,7 @@ export default function Navbar() {
   const navLinks = [
     { label: 'Home', path: '/' },
     { label: 'Explore Events', path: '/events' },
-    { label: 'Host Event', path: '/signup' },
+    { label: 'Host Event', path: '/host-event' },
     { label: 'Contact Us', path: '/contact' },
   ];
 

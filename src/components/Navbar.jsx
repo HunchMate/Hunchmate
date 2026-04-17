@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 const NAV_LINKS = [
   { label: 'Home', to: '/' },
   { label: 'Explore Events', to: '/events' },
-  { label: 'Host Event', to: '/signup' },
+  { label: 'Host Event', to: '/host-event' },
   { label: 'Contact Us', to: '/contact' },
 ]
 

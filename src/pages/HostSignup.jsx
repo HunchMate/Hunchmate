@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, AlertCircle, X, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Auth.css';
@@ -14,8 +14,7 @@ export default function HostSignup() {
 
   // If user is already logged in as organizer, redirect to dashboard
   if (user?.role === 'organizer') {
-    navigate('/organizer/dashboard', { replace: true });
-    return null;
+    return <Navigate to="/organizer/dashboard" replace />;
   }
 
   // If user is logged in as participant, show upgrade message

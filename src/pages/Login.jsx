@@ -1,22 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, AlertCircle, X, ChevronRight, Hash, Globe, Code } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
+import { Mail, Lock, AlertCircle, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import GrainyGradient from '../components/GrainyGradient';
 import './Auth.css';
-
-const ADMIN_EMAILS = String(import.meta.env.VITE_ADMIN_EMAILS || '')
-  .split(',')
-  .map((value) => String(value || '').trim().toLowerCase())
-  .filter(Boolean);
-
-function resolveLoginIdentity(rawIdentity) {
-  const value = String(rawIdentity || '').trim().toLowerCase();
-  if (!value) return '';
-  if (value.includes('@')) return value;
-  if (value === 'admin' && ADMIN_EMAILS.length > 0) return ADMIN_EMAILS[0];
-  return value;
-}
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -25,6 +12,24 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login, googleAuth } = useAuth();
   const navigate = useNavigate();
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+  const googleAllowedOriginsRaw = import.meta.env.VITE_GOOGLE_ALLOWED_ORIGINS
+    || 'http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174';
+
+  const normalizeOrigin = useCallback((origin) => String(origin || '').trim().replace(/\/$/, ''), []);
+
+  const googleAllowedOrigins = useMemo(
+    () => googleAllowedOriginsRaw
+      .split(',')
+      .map((item) => normalizeOrigin(item))
+      .filter(Boolean),
+    [googleAllowedOriginsRaw, normalizeOrigin]
+  );
+
+  const isGoogleOriginAllowed = useMemo(() => {
+    if (!googleClientId || typeof window === 'undefined') return false;
+    return googleAllowedOrigins.includes(normalizeOrigin(window.location.origin));
+  }, [googleAllowedOrigins, googleClientId, normalizeOrigin]);
 
   const getPostAuthPath = useCallback((nextUser) => {
     if (nextUser?.role === 'admin') {
@@ -34,8 +39,11 @@ export default function Login() {
     if (!nextUser?.onboardingCompleted) {
       return nextUser?.role === 'organizer' ? '/host-onboarding' : '/onboarding';
     }
-    
-    return nextUser.role === 'organizer' ? '/organizer/dashboard' : '/events';
+    return nextUser.role === 'admin'
+      ? '/admin/dashboard'
+      : nextUser.role === 'organizer'
+        ? '/organizer/dashboard'
+        : '/events';
   }, []);
 
   const handleSubmit = async (e) => {
@@ -43,7 +51,7 @@ export default function Login() {
     setError('');
     setLoading(true);
 
-    const normalizedIdentity = resolveLoginIdentity(email);
+    const normalizedIdentity = email.trim().toLowerCase();
     const result = await login(normalizedIdentity, password);
     if (result.success) {
       const pendingInvite = String(localStorage.getItem('hm_pending_invite') || '').trim();
@@ -61,68 +69,100 @@ export default function Login() {
     setLoading(false);
   };
 
-  const handleGoogleSignIn = async () => {
-    setError('');
+  const handleGoogleSuccess = useCallback(async (credentialResponse) => {
+    if (!credentialResponse?.credential) {
+      setError('Google sign-in failed.');
+      return;
+    }
+
     setLoading(true);
-    const result = await googleAuth();
+    setError('');
+
+    const result = await googleAuth(credentialResponse.credential, 'participant');
     if (result.success) {
       const pendingInvite = String(localStorage.getItem('hm_pending_invite') || '').trim();
-      const path = pendingInvite && /^[a-zA-Z0-9_-]+$/.test(pendingInvite)
+      const hasValidInvite = /^[a-zA-Z0-9_-]+$/.test(pendingInvite);
+      const path = hasValidInvite
         ? `/invites/${pendingInvite}`
         : getPostAuthPath(result.user);
-      if (pendingInvite) localStorage.removeItem('hm_pending_invite');
+      if (pendingInvite) {
+        localStorage.removeItem('hm_pending_invite');
+      }
       navigate(path, { replace: true });
     } else {
       setError(result.error);
     }
+
     setLoading(false);
-  };
+  }, [getPostAuthPath, googleAuth, navigate]);
+
+  const googleLoginButton = useMemo(() => {
+    if (!googleClientId || !isGoogleOriginAllowed) {
+      return (
+        <button type="button" disabled>
+          Google sign-in unavailable on this origin
+        </button>
+      );
+    }
+
+    return (
+      <GoogleLogin
+        onSuccess={handleGoogleSuccess}
+        onError={() => setError('Google sign-in failed. Verify this origin is added in Google OAuth Authorized JavaScript origins and the client ID matches VITE_GOOGLE_CLIENT_ID.')}
+        width="340"
+        shape="rectangular"
+        text="signin_with"
+      />
+    );
+  }, [googleClientId, handleGoogleSuccess, isGoogleOriginAllowed]);
 
   return (
     <main className="auth-modern">
-      <GrainyGradient />
-      
-      <section className="auth-modern__card animate-fade-in-up">
-        <div className="auth-modern__toggle">
-          <button className="auth-modern__toggle-btn active" onClick={() => {}}>Sign In</button>
-          <Link to="/signup" className="auth-modern__toggle-btn">Join Community</Link>
-        </div>
-
-        <h1>Welcome Back</h1>
-        <p className="auth-modern__subtitle">Enter your details to access your dashboard.</p>
+      <section className="auth-modern__card">
+        <p className="auth-modern__brand">Hunchmate</p>
+        <h1>Sign in to your account</h1>
+        <p className="auth-modern__subtitle">Welcome back! Please enter your details.</p>
 
         {error ? (
-          <div className="auth-modern__error">
-            <AlertCircle size={18} />
-            <span>{error}</span>
-            <button className="auth-modern__error-dismiss" onClick={() => setError('')}>
-              <X size={16} />
+          <div className="auth-modern__error" role="alert" aria-live="polite">
+            <span className="auth-modern__error-icon" aria-hidden="true">
+              <AlertCircle size={14} />
+            </span>
+            <span className="auth-modern__error-text">{error}</span>
+            <button
+              type="button"
+              className="auth-modern__error-dismiss"
+              onClick={() => setError('')}
+              aria-label="Dismiss error"
+            >
+              <X size={14} />
             </button>
           </div>
         ) : null}
 
         <form onSubmit={handleSubmit} className="auth-modern__form">
-          <div>
-            <label>Email Address</label>
+          <label>
+            Email or username
             <div className="auth-modern__field">
-              <Mail size={18} />
+              <Mail size={16} />
               <input
-                type="email"
-                placeholder="name@company.com"
+                type="text"
+                autoComplete="username"
+                placeholder="you@example.com or admin"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
-          </div>
+          </label>
 
-          <div>
-            <div className="auth-modern__label-row">
-              <label>Password</label>
-              <Link to="/reset-password" title="Forgot password?" className="auth-modern__forgot">Forgot?</Link>
-            </div>
+          <label>
+            <span className="auth-modern__label-row">
+              Password
+              <Link to="/login" className="auth-modern__forgot">Forgot?</Link>
+            </span>
             <div className="auth-modern__field">
-              <Lock size={18} />
+              <Lock size={16} />
               <input
                 type="password"
                 placeholder="••••••••"
@@ -131,26 +171,27 @@ export default function Login() {
                 required
               />
             </div>
-          </div>
+          </label>
 
           <button type="submit" className="auth-modern__submit" disabled={loading}>
-            {loading ? 'Authenticating...' : 'Sign In'}
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
-        <div className="auth-modern__divider">or continue with</div>
-        
+        <div className="auth-modern__divider"><span>OR</span></div>
+
         <div className="auth-modern__socials">
-          <button type="button" onClick={handleGoogleSignIn} disabled={loading}>
-            <Globe size={18} /> Google
-          </button>
-          <button type="button" disabled>
-            <Code size={18} /> GitHub
-          </button>
+          {googleLoginButton}
         </div>
 
+        {googleClientId && !isGoogleOriginAllowed ? (
+          <p className="auth-modern__subtitle">
+            Add {typeof window !== 'undefined' ? window.location.origin : 'this origin'} to Google OAuth allowed origins.
+          </p>
+        ) : null}
+
         <p className="auth-modern__switch">
-          New to HunchMate? <Link to="/signup">Create account</Link>
+          Don't have an account? <Link to="/signup">Sign up</Link>
         </p>
       </section>
     </main>

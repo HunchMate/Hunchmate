@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { GoogleLogin } from '@react-oauth/google';
 import { Mail, Lock, User, AlertCircle, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Auth.css';
@@ -12,24 +11,6 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const { signup, googleAuth } = useAuth();
   const navigate = useNavigate();
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-  const googleAllowedOriginsRaw = import.meta.env.VITE_GOOGLE_ALLOWED_ORIGINS
-    || 'http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174';
-
-  const normalizeOrigin = useCallback((origin) => String(origin || '').trim().replace(/\/$/, ''), []);
-
-  const googleAllowedOrigins = useMemo(
-    () => googleAllowedOriginsRaw
-      .split(',')
-      .map((item) => normalizeOrigin(item))
-      .filter(Boolean),
-    [googleAllowedOriginsRaw, normalizeOrigin]
-  );
-
-  const isGoogleOriginAllowed = useMemo(() => {
-    if (!googleClientId || typeof window === 'undefined') return false;
-    return googleAllowedOrigins.includes(normalizeOrigin(window.location.origin));
-  }, [googleAllowedOrigins, googleClientId, normalizeOrigin]);
 
   const getPostAuthPath = useCallback((nextUser) => {
     if (nextUser?.role === 'admin') {
@@ -87,11 +68,8 @@ export default function Signup() {
     setLoading(false);
   };
 
-  const handleGoogleSuccess = useCallback(async (credentialResponse) => {
-    if (!credentialResponse?.credential) {
-      setError('Google sign-in failed.');
-      return;
-    }
+  const handleGoogleSignup = async () => {
+    setError('');
 
     if (!termsAccepted) {
       setError('Please agree to the Terms and Conditions to continue.');
@@ -99,15 +77,14 @@ export default function Signup() {
     }
 
     setLoading(true);
-    setError('');
     const termsAcceptedAt = new Date().toISOString();
 
-    const result = await googleAuth(
-      credentialResponse.credential,
-      form.role,
-      {},
-      { termsAccepted: true, termsAcceptedAt }
-    );
+    const result = await googleAuth({
+      role: form.role,
+      termsAccepted: true,
+      termsAcceptedAt,
+    });
+
     if (result.success) {
       const pendingInvite = localStorage.getItem('hm_pending_invite');
       const path = pendingInvite
@@ -119,27 +96,7 @@ export default function Signup() {
     }
 
     setLoading(false);
-  }, [form.role, getPostAuthPath, googleAuth, navigate, termsAccepted]);
-
-  const googleSignupButton = useMemo(() => {
-    if (!googleClientId || !isGoogleOriginAllowed) {
-      return (
-        <button type="button" disabled>
-          Google sign-in unavailable on this origin
-        </button>
-      );
-    }
-
-    return (
-      <GoogleLogin
-        onSuccess={handleGoogleSuccess}
-        onError={() => setError('Google sign-in failed. Verify this origin is added in Google OAuth Authorized JavaScript origins and the client ID matches VITE_GOOGLE_CLIENT_ID.')}
-        width="340"
-        shape="rectangular"
-        text="signup_with"
-      />
-    );
-  }, [googleClientId, handleGoogleSuccess, isGoogleOriginAllowed]);
+  };
 
   return (
     <main className="auth-modern">
@@ -249,14 +206,10 @@ export default function Signup() {
         <div className="auth-modern__divider"><span>OR</span></div>
 
         <div className="auth-modern__socials">
-          {googleSignupButton}
+          <button type="button" onClick={handleGoogleSignup} disabled={loading}>
+            Continue with Google
+          </button>
         </div>
-
-        {googleClientId && !isGoogleOriginAllowed ? (
-          <p className="auth-modern__subtitle">
-            Add {typeof window !== 'undefined' ? window.location.origin : 'this origin'} to Google OAuth allowed origins.
-          </p>
-        ) : null}
 
         <p className="auth-modern__switch">
           Already have an account? <Link to="/login">Sign in</Link>

@@ -166,7 +166,7 @@ export default function EventDetail() {
     );
   }
 
-  const viewsCount = Math.max(1200, Math.round((event.registeredCount || 0) * 4.6));
+  const viewsCount = parseInt(event.pageViews || event.views) || (event.registeredCount || 0) * 3;
   const regEndMs = new Date(event.timeline.registrationEnd).getTime();
   const regStartMs = new Date(event.timeline.registrationStart).getTime();
   const daysToClose = Math.ceil((regEndMs - now) / (1000 * 60 * 60 * 24));
@@ -551,14 +551,36 @@ export default function EventDetail() {
     { title: 'FAQ', value: 'faq', content: faqTabContent },
   ];
 
-  if (event.prize) {
+  const hasPrizesArray = Array.isArray(event.prizes) && event.prizes.length > 0;
+  if (event.prize || hasPrizesArray) {
     animatedTabs.splice(2, 0, {
-      title: 'Prizes',
+      title: 'Prizes & Rewards',
       value: 'prizes',
       content: (
         <section className="event-detail__panel event-detail__tab-content-scroll">
           <h2>Prize Pool</h2>
-          <p>{event.prize}</p>
+          {event.prize && !hasPrizesArray && <p>{event.prize}</p>}
+          
+          {hasPrizesArray && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+              {event.prizes.map((p, idx) => {
+                 let iconColor = '#94a3b8'; // Default grey
+                 if (idx === 0) iconColor = '#fbbf24'; // Gold
+                 else if (idx === 1) iconColor = '#94a3b8'; // Silver
+                 else if (idx === 2) iconColor = '#d97706'; // Bronze
+                 
+                 return (
+                   <div key={idx} className="flex flex-col items-center justify-center p-8 rounded-2xl border hover:scale-105 transition-transform duration-300" style={{ background: '#f8fafc', borderColor: '#e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                      <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: 'white', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}>
+                        <Trophy size={28} style={{ color: iconColor }} />
+                      </div>
+                      <h3 className="text-xs uppercase tracking-widest font-bold text-slate-500 mb-2">{p.rank}</h3>
+                      <p className="text-xl font-extrabold text-slate-800 text-center">{p.reward}</p>
+                   </div>
+                 );
+              })}
+            </div>
+          )}
         </section>
       ),
     });
@@ -860,8 +882,8 @@ export default function EventDetail() {
               <strong>{event.teamSize ? `${event.teamSize.min}-${event.teamSize.max}` : 'Solo'}</strong>
             </div>
             <div className="event-detail__side-row">
-              <span>Fee / Prize</span>
-              <strong>{event.prize || 'Free'}</strong>
+              <span>Entry Fee</span>
+              <strong>{event.fee && event.fee.trim() !== '' ? event.fee : 'Free'}</strong>
             </div>
             {(organizerContactEmail || organizerContactPhone) ? (
               <div className="event-detail__side-contact">

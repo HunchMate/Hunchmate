@@ -14,14 +14,9 @@ const BackgroundVideo = memo(function BackgroundVideo() {
     return !connection || connection.effectiveType === '3g' || connection.effectiveType === '4g'
   }, [connection])
 
-  // Skip video on mobile for better performance
-  if (isMobile) {
-    return (
-      <div className="fixed inset-0 -z-10 w-full h-full overflow-hidden bg-gradient-to-br from-orange-500 via-purple-600 to-blue-600" />
-    )
-  }
-
   useEffect(() => {
+    if (isMobile) return undefined
+
     const video = videoRef.current
     if (!video) return
 
@@ -55,7 +50,14 @@ const BackgroundVideo = memo(function BackgroundVideo() {
         video.play().catch(() => {})
       })
     }
-  }, [isSlowNetwork])
+  }, [isMobile, isSlowNetwork])
+
+  // Skip video on mobile for better performance
+  if (isMobile) {
+    return (
+      <div className="fixed inset-0 -z-10 w-full h-full overflow-hidden bg-gradient-to-br from-orange-500 via-purple-600 to-blue-600" />
+    )
+  }
 
   return (
     <div className="fixed inset-0 -z-10 w-full h-full overflow-hidden">

@@ -7,7 +7,6 @@ import {
   Copy,
   Download,
   ExternalLink,
-  Bell,
   ArrowRight,
   Link2,
   Lock,
@@ -74,7 +73,6 @@ export default function Profile() {
 
   const [form, setForm] = useState(() => buildForm(user));
   const [saved, setSaved] = useState(false);
-  const [activeTab, setActiveTab] = useState('events');
   const [eventFilter, setEventFilter] = useState('all');
   const [copiedLink, setCopiedLink] = useState(false);
   const [registeredEventsOpen, setRegisteredEventsOpen] = useState(false);
@@ -415,8 +413,6 @@ export default function Profile() {
           <div className="profile-page__settings-layout">
             <aside className="profile-page__settings-side">
               <button type="button" className="is-active"><User size={14} /> Profile</button>
-              <button type="button"><Bell size={14} /> Notifications</button>
-              <button type="button"><Lock size={14} /> Security</button>
             </aside>
 
             <form onSubmit={handleSave} className="profile-page__settings-card profile-page__panel-card">

@@ -1,6 +1,7 @@
 import { motion as Motion } from 'motion/react'
 // Updated: force HMR reload v2
 import { BarChart3, ClipboardCheck, FolderKanban, QrCode, Search, Trophy, Award, Briefcase } from 'lucide-react'
+import LogoLoop from './LogoLoop';
 
 const organizerFeatures = [
   {
@@ -69,254 +70,269 @@ const cardVariants = {
   }),
 }
 
+const ORGANIZATION_LOGOS = [
+  { src: '/logos/organizations/9.png', alt: 'Lovable' },
+  { src: '/logos/organizations/10.png', alt: 'Axibator' },
+  { src: '/logos/organizations/11.png', alt: 'Wission Axis' },
+  { src: '/logos/organizations/12.png', alt: 'Auth0' },
+  { src: '/logos/organizations/13.png', alt: 'Maker Brains' },
+  { src: '/logos/organizations/14.png', alt: 'Anedya' },
+  { src: '/logos/organizations/15.png', alt: 'ABTechVille' },
+  { src: '/logos/organizations/16.png', alt: 'Artway Design Studio' },
+  { src: '/logos/organizations/17.png', alt: 'Notion' },
+  { src: '/logos/organizations/18.png', alt: 'Intercom' },
+];
+
+const INSTITUTION_LOGOS = [
+  { src: '/logos/institutions/8.png', alt: 'Geethanjali College' },
+  { src: '/logos/institutions/7.png', alt: 'TKREC Hyderabad' },
+  { src: '/logos/institutions/6.png', alt: 'Anurag University' },
+  { src: '/logos/institutions/5.png', alt: 'Vaagdevi Colleges' },
+  { src: '/logos/institutions/4.png', alt: 'JNTUH' },
+  { src: '/logos/institutions/3.png', alt: 'Geenovate Foundation' },
+];
+
+// Custom render function: uses background-image div to bypass .logoloop__item img CSS constraints
+const renderLogoItem = (item) => (
+  <div
+    style={{
+      width: '190px',
+      height: '90px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    }}
+  >
+    <div
+      role="img"
+      aria-label={item.alt ?? ''}
+      style={{
+        width: '180px',
+        height: '80px',
+        backgroundImage: `url(${item.src})`,
+        backgroundSize: 'contain',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+        opacity: 0.9,
+      }}
+    />
+  </div>
+);
+
 export default function FeaturesSection() {
   return (
     <section id="features-section" className="relative">
-      {/* Section Header */}
-      <div className="max-w-7xl mx-auto px-6 pt-24 pb-8 text-center">
-        <Motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.5 }}
-          className="text-sm font-semibold tracking-widest uppercase mb-4"
-          style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'rgba(255,255,255,0.5)' }}
-        >
-          Innovation for Enterprises
-        </Motion.p>
 
-        <Motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="font-semibold text-3xl sm:text-4xl lg:text-5xl text-white leading-tight max-w-2xl mx-auto"
-          style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', letterSpacing: '-0.02em' }}
-        >
-          Customized innovation with a global ecosystem
-        </Motion.h2>
 
-          <Motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-base sm:text-lg max-w-xl mx-auto mt-5 leading-relaxed"
-          style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'rgba(255,255,255,0.55)' }}
-        >
-          Hunchmate enables enterprises to launch hackathons, source talent, and drive real outcomes — all from one platform.
-          </Motion.p>
-      </div>
+      {/* White Background Wrapper beginning behind the grids */}
+      <div
+        className="relative w-full overflow-visible bg-white pt-10 pb-24 border-t border-white/5"
+      >
+        {/* Soft edge masking the transition */}
+        <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent to-white -mt-48 pointer-events-none" />
 
-      {/* Feature Cards Grid — split organizer and participant */}
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div>
-            <div className="mb-4 text-center lg:text-left">
-              <p className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: 'rgba(255,255,255,0.62)' }}>For Organisers</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {organizerFeatures.map((feature, i) => {
-                const Icon = feature.icon
-                return (
-                  <Motion.div
-                    key={feature.title}
-                    custom={i}
-                    variants={cardVariants}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true, margin: '-50px' }}
-                    className="feature-card group relative rounded-2xl p-8 transition-all duration-300 cursor-default hover:scale-[1.02]"
-                    style={{
-                      background: 'rgba(35,35,40,0.6)',
-                      backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                    }}
-                  >
-                    <div
-                      className="feature-card__icon-wrap w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-all duration-300 group-hover:scale-110"
-                      style={{ backgroundColor: `${feature.color}25` }}
-                    >
-                      <Icon size={22} strokeWidth={1.8} style={{ color: feature.color }} />
-                    </div>
-
-                    <h3
-                      className="feature-card__title font-medium text-lg text-white mb-2 transition-colors duration-300"
-                      style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', letterSpacing: '-0.01em' }}
-                    >
-                      {feature.title}
-                    </h3>
-
-                    <p
-                      className="feature-card__desc text-sm leading-relaxed transition-colors duration-300"
-                      style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'rgba(255,255,255,0.5)' }}
-                    >
-                      {feature.desc}
-                    </p>
-
-                    <div
-                      className="absolute bottom-0 left-8 right-8 h-[2px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      style={{ background: `linear-gradient(90deg, transparent, ${feature.color}, transparent)` }}
-                    />
-                  </Motion.div>
-                )
-              })}
-            </div>
+        {/* Organizations Logo Loop */}
+        <div className="w-full pt-14 pb-10">
+          <div className="text-center mb-8">
+            <p
+              className="text-xs font-bold tracking-[0.25em] uppercase"
+              style={{ color: '#94a3b8', fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+            >
+              Trusted by Organizations
+            </p>
           </div>
+          <LogoLoop
+            logos={ORGANIZATION_LOGOS}
+            speed={30}
+            gap={60}
+            logoHeight={100}
+            pauseOnHover
+            fadeOut
+            fadeOutColor="#ffffff"
+            scaleOnHover
+            renderItem={renderLogoItem}
+            ariaLabel="Organization partner logos"
+          />
+        </div>
 
-          <div>
-            <div className="mb-4 text-center lg:text-left">
-              <p className="text-xs uppercase tracking-[0.18em] font-semibold" style={{ color: 'rgba(255,255,255,0.62)' }}>For Participants</p>
+        {/* Divider */}
+        <div className="max-w-5xl mx-auto border-b border-gray-100" />
+
+        {/* Institutions Logo Loop */}
+        <div className="w-full pt-10 pb-14">
+          <div className="text-center mb-8">
+            <p
+              className="text-xs font-bold tracking-[0.25em] uppercase"
+              style={{ color: '#94a3b8', fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+            >
+              Partnered Institutions
+            </p>
+          </div>
+          <LogoLoop
+            logos={INSTITUTION_LOGOS}
+            speed={30}
+            direction="right"
+            gap={60}
+            logoHeight={100}
+            pauseOnHover
+            fadeOut
+            fadeOutColor="#ffffff"
+            scaleOnHover
+            renderItem={renderLogoItem}
+            ariaLabel="Institution partner logos"
+          />
+        </div>
+
+        {/* Feature Cards Grid — split organizer and participant */}
+        <div className="max-w-7xl mx-auto px-6 py-16 relative z-10">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl lg:text-5xl font-extrabold text-slate-800 tracking-tight uppercase" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', letterSpacing: '2px' }}>
+              FEATURED PROGRAMS
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8">
+
+            {/* Organisers Column */}
+            <div>
+              <div className="mb-10 text-center">
+                <h3 className="text-2xl font-extrabold tracking-widest text-slate-800 mb-3 uppercase">
+                  For Organisers
+                </h3>
+                <div className="h-1 w-16 bg-amber-500 rounded-full mx-auto opacity-80" />
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
+                {organizerFeatures.map((feature, i) => {
+                  const Icon = feature.icon;
+                  return (
+                    <Motion.div
+                      key={feature.title}
+                      custom={i}
+                      variants={cardVariants}
+                      initial="hidden"
+                      whileInView="visible"
+                      viewport={{ once: true, margin: '-50px' }}
+                      className="group bg-white rounded-xl p-6 transition-all duration-300 hover:-translate-y-1"
+                      style={{
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 24px 48px -12px rgba(0,0,0,0.02)'
+                      }}
+                    >
+                      <div className="flex items-center gap-4 mb-4">
+                        <div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 text-white"
+                          style={{ background: `linear-gradient(135deg, ${feature.color}, ${feature.color}99)` }}
+                        >
+                          <Icon size={24} strokeWidth={2} />
+                        </div>
+                        <h3
+                          className="font-bold text-base leading-tight uppercase tracking-wide transition-colors duration-300 group-hover:text-amber-500"
+                          style={{ color: '#4B6BF5' }}
+                        >
+                          {feature.title}
+                        </h3>
+                      </div>
+                      <p className="text-sm text-slate-500 leading-relaxed font-medium">
+                        {feature.desc}
+                      </p>
+                    </Motion.div>
+                  );
+                })}
+              </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {participantFeatures.map((feature, i) => {
-                const Icon = feature.icon
-                return (
-                  <Motion.div
-                    key={feature.title}
-                    custom={i + organizerFeatures.length}
-                    variants={cardVariants}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true, margin: '-50px' }}
-                    className="feature-card group relative rounded-2xl p-8 transition-all duration-300 cursor-default hover:scale-[1.02]"
-                    style={{
-                      background: 'rgba(35,35,40,0.6)',
-                      backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                    }}
-                  >
-                    <div
-                      className="feature-card__icon-wrap w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-all duration-300 group-hover:scale-110"
-                      style={{ backgroundColor: `${feature.color}25` }}
-                    >
-                      <Icon size={22} strokeWidth={1.8} style={{ color: feature.color }} />
-                    </div>
 
-                    <h3
-                      className="feature-card__title font-medium text-lg text-white mb-2 transition-colors duration-300"
-                      style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', letterSpacing: '-0.01em' }}
-                    >
-                      {feature.title}
-                    </h3>
+            {/* Participants Column */}
+            <div>
+              <div className="mb-10 text-center">
+                <h3 className="text-2xl font-extrabold tracking-widest text-slate-800 mb-3 uppercase">
+                  For Participants
+                </h3>
+                <div className="h-1 w-16 bg-indigo-500 rounded-full mx-auto opacity-80" />
+              </div>
 
-                    <p
-                      className="feature-card__desc text-sm leading-relaxed transition-colors duration-300"
-                      style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'rgba(255,255,255,0.5)' }}
+              <div className="grid grid-cols-1 gap-6">
+                {participantFeatures.map((feature, i) => {
+                  const Icon = feature.icon;
+                  return (
+                    <Motion.div
+                      key={feature.title}
+                      custom={i + organizerFeatures.length}
+                      variants={cardVariants}
+                      initial="hidden"
+                      whileInView="visible"
+                      viewport={{ once: true, margin: '-50px' }}
+                      className="group bg-white rounded-xl p-6 transition-all duration-300 hover:-translate-y-1"
+                      style={{
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 24px 48px -12px rgba(0,0,0,0.02)'
+                      }}
                     >
-                      {feature.desc}
-                    </p>
-
-                    <div
-                      className="absolute bottom-0 left-8 right-8 h-[2px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      style={{ background: `linear-gradient(90deg, transparent, ${feature.color}, transparent)` }}
-                    />
-                  </Motion.div>
-                )
-              })}
+                      <div className="flex items-center gap-4 mb-4">
+                        <div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 text-white"
+                          style={{ background: `linear-gradient(135deg, ${feature.color}, ${feature.color}99)` }}
+                        >
+                          <Icon size={24} strokeWidth={2} />
+                        </div>
+                        <h3
+                          className="font-bold text-base leading-tight uppercase tracking-wide transition-colors duration-300 group-hover:text-indigo-500"
+                          style={{ color: '#4B6BF5' }}
+                        >
+                          {feature.title}
+                        </h3>
+                      </div>
+                      <p className="text-sm text-slate-500 leading-relaxed font-medium">
+                        {feature.desc}
+                      </p>
+                    </Motion.div>
+                  );
+                })}
+              </div>
             </div>
+
           </div>
         </div>
-      </div>
 
-      {/* Impact Stats */}
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        <Motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-50px' }}
-          transition={{ duration: 0.6 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-6"
-        >
-          {[
-            { value: '50,000+', label: 'Active Innovators across the ecosystem' },
-            { value: '250+', label: 'Enterprise hackathons and programs powered' },
-            { value: '35,000+', label: 'Verified credentials issued to participants' },
-            { value: '100%', label: 'Skill validated talent discovery pipeline' },
-          ].map((stat, i) => (
-            <div
-              key={i}
-              className="text-center p-6 rounded-2xl"
-              style={{
-                background: 'rgba(35,35,40,0.5)',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255,255,255,0.08)',
-              }}
-            >
-              <div
-                className="text-2xl sm:text-3xl font-bold text-white mb-1"
-                style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
-              >
-                {stat.value}
-              </div>
-              <div
-                className="text-xs sm:text-sm leading-snug"
-                style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'rgba(255,255,255,0.45)' }}
-              >
-                {stat.label}
-              </div>
-            </div>
-          ))}
-        </Motion.div>
-      </div>
-
-      {/* Bottom CTA */}
-      <div className="max-w-7xl mx-auto px-6 pb-24 text-center">
-        <Motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-50px' }}
-          transition={{ duration: 0.6 }}
-          className="rounded-3xl p-12 sm:p-16 relative overflow-hidden"
-          style={{
-            background: 'rgba(35,35,40,0.7)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.1)',
-          }}
-        >
-          {/* Decorative glow */}
-          <div className="absolute -top-20 -right-20 w-60 h-60 bg-[#e8813b]/15 rounded-full blur-3xl" />
-          <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-[#1e3a8a]/20 rounded-full blur-3xl" />
-
-          <h3
-            className="font-semibold text-2xl sm:text-3xl lg:text-4xl text-white leading-tight relative z-10 max-w-lg mx-auto"
-            style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', letterSpacing: '-0.02em' }}
+        {/* Impact Stats */}
+        <div className="max-w-7xl mx-auto px-6 py-16 border-t border-gray-100 mt-8">
+          <Motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.6 }}
+            className="grid grid-cols-2 lg:grid-cols-4 gap-6"
           >
-            Innovation Leaders Execute Faster
-          </h3>
-          <p
-            className="mt-4 text-base sm:text-lg max-w-md mx-auto relative z-10"
-            style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'rgba(255,255,255,0.5)' }}
-          >
-            Break through complexity and turn priorities into measurable outcomes.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8 relative z-10">
-            <a
-              id="cta-bottom-explore"
-              href="#events"
-              className="inline-flex items-center gap-2 font-medium px-8 py-3.5 rounded-full hover:scale-105 transition-transform duration-200"
-              style={{
-                background: 'rgba(255,255,255,0.95)',
-                color: '#1a1a1a',
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
-              }}
-            >
-              Explore Events
-            </a>
-            <a
-              id="cta-bottom-call"
-              href="#contact"
-              className="inline-flex items-center gap-2 hover:text-white font-medium px-6 py-3.5 transition-colors duration-200"
-              style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', color: 'rgba(255,255,255,0.6)' }}
-            >
-              Book a Call →
-            </a>
-          </div>
-        </Motion.div>
+            {[
+              { value: '50,000+', label: 'Active Innovators across the ecosystem' },
+              { value: '250+', label: 'Enterprise hackathons and programs powered' },
+              { value: '35,000+', label: 'Verified credentials issued to participants' },
+              { value: '100%', label: 'Skill validated talent discovery pipeline' },
+            ].map((stat, i) => (
+              <div
+                key={i}
+                className="text-center p-6 rounded-2xl"
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                }}
+              >
+                <div
+                  className="text-2xl sm:text-3xl font-bold text-slate-800 mb-1"
+                  style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+                >
+                  {stat.value}
+                </div>
+                <div
+                  className="text-xs sm:text-sm leading-snug"
+                  style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', color: '#64748b' }}
+                >
+                  {stat.label}
+                </div>
+              </div>
+            ))}
+          </Motion.div>
+        </div>
       </div>
     </section>
   )

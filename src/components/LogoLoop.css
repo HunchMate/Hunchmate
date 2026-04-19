@@ -41,9 +41,6 @@
 .logoloop__list {
   display: flex;
   align-items: center;
-  list-style: none;
-  margin: 0;
-  padding: 0;
 }
 
 .logoloop--vertical .logoloop__list {
@@ -89,25 +86,6 @@
 
 .logoloop--scale-hover .logoloop__item {
   overflow: visible;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-@media (hover: none) and (pointer: coarse) {
-  .logoloop--scale-hover .logoloop__item:hover img,
-  .logoloop--scale-hover .logoloop__item:hover .logoloop__node {
-    transform: none !important;
-  }
-  .logoloop__link:hover {
-    opacity: 1;
-  }
 }
 
 .logoloop--scale-hover .logoloop__item:hover img,

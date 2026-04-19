@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowUpDown,
   Calendar,
@@ -91,12 +91,14 @@ export default function Events() {
   const [sortMode, setSortMode] = useState('soonest');
   const [statusFilter, setStatusFilter] = useState('all');
   const [featuredIndex, setFeaturedIndex] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(16);
 
   const resetDiscoveryFilters = () => {
     setTab('All Programs');
     setSearch('');
     setSortMode('soonest');
     setStatusFilter('all');
+    setVisibleCount(16);
   };
 
   const filteredEvents = useMemo(() => {
@@ -310,7 +312,7 @@ export default function Events() {
           <div className="explore-board__main">
             <div className="explore-cards__grid">
               {filteredEvents.length > 0 ? (
-                filteredEvents.slice(0, 16).map((event) => {
+                filteredEvents.slice(0, visibleCount).map((event) => {
                   const eventId = resolveEventId(event);
                   const posterImage = resolvePosterImage(event);
 
@@ -361,7 +363,11 @@ export default function Events() {
                             <span className="explore-card__date-pill inline-flex items-center gap-2 text-xs text-slate-600">
                               <Calendar size={14} /> {buildDateLabel(event)}
                             </span>
-                            <span className="explore-card__status-pill">Open registration</span>
+                            <span className="explore-card__status-pill">
+                              {event.status === 'open' ? 'Open registration' : 
+                               event.status === 'ongoing' ? 'Live Now' : 
+                               event.status === 'completed' ? 'Completed' : 'Upcoming'}
+                            </span>
                           </div>
                         </CardContent>
 
@@ -400,6 +406,17 @@ export default function Events() {
                 </div>
               )}
             </div>
+
+            {visibleCount < filteredEvents.length && (
+              <div className="flex justify-center mt-8">
+                <button 
+                  onClick={() => setVisibleCount((prev) => prev + 16)}
+                  className="bg-white border text-gray-800 text-sm font-semibold px-6 py-2.5 rounded-lg transition-transform hover:-translate-y-0.5 shadow-sm flex items-center gap-2"
+                >
+                  Load More
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </section>

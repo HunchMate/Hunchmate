@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, AlertCircle, X } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, X, Globe, Code } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import GrainyGradient from '../components/GrainyGradient';
 import './Auth.css';
 
 export default function Signup() {
@@ -13,18 +14,11 @@ export default function Signup() {
   const navigate = useNavigate();
 
   const getPostAuthPath = useCallback((nextUser) => {
-    if (nextUser?.role === 'admin') {
-      return '/admin/dashboard';
-    }
-
+    if (nextUser?.role === 'admin') return '/admin/dashboard';
     if (!nextUser?.onboardingCompleted) {
       return nextUser?.role === 'organizer' ? '/host-onboarding' : '/onboarding';
     }
-    return nextUser.role === 'admin'
-      ? '/admin/dashboard'
-      : nextUser.role === 'organizer'
-        ? '/organizer/dashboard'
-        : '/events';
+    return nextUser.role === 'organizer' ? '/organizer/dashboard' : '/events';
   }, []);
 
   const handleSubmit = async (e) => {
@@ -34,34 +28,29 @@ export default function Signup() {
       setError('Please fill in all fields');
       return;
     }
-
     if (form.password.length < 8) {
       setError('Password must be at least 8 characters long.');
       return;
     }
-
     if (!termsAccepted) {
       setError('Please agree to the Terms and Conditions to continue.');
       return;
     }
 
     setLoading(true);
-    const termsAcceptedAt = new Date().toISOString();
-
-    const result = await signup({
+    const flags = {
       name: form.name.trim(),
       email: form.email.trim(),
       password: form.password,
       role: form.role,
       termsAccepted: true,
-      termsAcceptedAt,
-    });
+      termsAcceptedAt: new Date().toISOString()
+    };
+
+    const result = await signup(flags);
     if (result.success) {
       const pendingInvite = localStorage.getItem('hm_pending_invite');
-      const path = pendingInvite
-        ? `/invites/${pendingInvite}`
-        : getPostAuthPath(result.user);
-      navigate(path);
+      navigate(pendingInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user));
     } else {
       setError(result.error);
     }
@@ -70,27 +59,20 @@ export default function Signup() {
 
   const handleGoogleSignup = async () => {
     setError('');
-
     if (!termsAccepted) {
       setError('Please agree to the Terms and Conditions to continue.');
       return;
     }
-
     setLoading(true);
-    const termsAcceptedAt = new Date().toISOString();
     const result = await googleAuth({
       name: form.name.trim() || undefined,
       role: form.role,
       termsAccepted: true,
-      termsAcceptedAt,
+      termsAcceptedAt: new Date().toISOString()
     });
-
     if (result.success) {
       const pendingInvite = localStorage.getItem('hm_pending_invite');
-      const path = pendingInvite
-        ? `/invites/${pendingInvite}`
-        : getPostAuthPath(result.user);
-      navigate(path);
+      navigate(pendingInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user));
     } else {
       setError(result.error);
     }
@@ -99,116 +81,114 @@ export default function Signup() {
 
   return (
     <main className="auth-modern">
-      <section className="auth-modern__card">
-        <p className="auth-modern__brand">Hunchmate</p>
-        <h1>Create your account</h1>
-        <p className="auth-modern__subtitle">Choose role in one signup flow and continue.</p>
+      <GrainyGradient />
+
+      <section className="auth-modern__card animate-fade-in-up">
+        <div className="auth-modern__toggle">
+          <Link to="/login" className="auth-modern__toggle-btn">Sign In</Link>
+          <button className="auth-modern__toggle-btn active" onClick={() => {}}>Join Community</button>
+        </div>
+
+        <h1>Create Account</h1>
+        <p className="auth-modern__subtitle">Join thousands of builders in the Hunchmate ecosystem.</p>
 
         {error ? (
-          <div className="auth-modern__error" role="alert" aria-live="polite">
-            <span className="auth-modern__error-icon" aria-hidden="true">
-              <AlertCircle size={14} />
-            </span>
-            <span className="auth-modern__error-text">{error}</span>
-            <button
-              type="button"
-              className="auth-modern__error-dismiss"
-              onClick={() => setError('')}
-              aria-label="Dismiss error"
-            >
-              <X size={14} />
+          <div className="auth-modern__error">
+            <AlertCircle size={18} />
+            <span>{error}</span>
+            <button className="auth-modern__error-dismiss" onClick={() => setError('')}>
+              <X size={16} />
             </button>
           </div>
         ) : null}
 
         <form onSubmit={handleSubmit} className="auth-modern__form">
-          <label>
-            Full name
+          <div>
+            <label>Full Name</label>
             <div className="auth-modern__field">
-              <User size={16} />
+              <User size={18} />
               <input
                 type="text"
-                placeholder="Your full name"
+                placeholder="Jane Doe"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
               />
             </div>
-          </label>
+          </div>
 
-          <label>
-            Email
+          <div>
+            <label>Email Address</label>
             <div className="auth-modern__field">
-              <Mail size={16} />
+              <Mail size={18} />
               <input
                 type="email"
-                placeholder="you@example.com"
+                placeholder="jane@example.com"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 required
               />
             </div>
-          </label>
+          </div>
 
-          <label>
-            Password
+          <div>
+            <label>Password</label>
             <div className="auth-modern__field">
-              <Lock size={16} />
+              <Lock size={18} />
               <input
                 type="password"
-                placeholder="Create a password"
+                placeholder="Min. 8 characters"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 required
               />
             </div>
-          </label>
+          </div>
 
-          <label>
-            Account type
+          <div>
+            <label>I want to...</label>
             <div className="auth-modern__roles">
-              <button
-                type="button"
-                className={form.role === 'participant' ? 'active' : ''}
+              <div 
+                className={`auth-modern__role-card ${form.role === 'participant' ? 'active' : ''}`}
                 onClick={() => setForm({ ...form, role: 'participant' })}
               >
-                Participant
-              </button>
-              <button
-                type="button"
-                className={form.role === 'organizer' ? 'active' : ''}
+                <span className="auth-modern__role-name">Participate</span>
+              </div>
+              <div 
+                className={`auth-modern__role-card ${form.role === 'organizer' ? 'active' : ''}`}
                 onClick={() => setForm({ ...form, role: 'organizer' })}
               >
-                Host
-              </button>
+                <span className="auth-modern__role-name">Organize</span>
+              </div>
             </div>
-          </label>
+          </div>
 
           <button type="submit" className="auth-modern__submit" disabled={loading}>
-            {loading ? 'Creating account...' : 'Sign up'}
+            {loading ? 'Creating account...' : 'Create Account'}
           </button>
-
-          <div className="auth-modern__divider">or continue with</div>
-          <div className="auth-modern__socials">
-            <button type="button" onClick={handleGoogleSignup} disabled={loading}>
-              Continue with Google
-            </button>
-          </div>
 
           <label className="auth-modern__consent">
             <input
               type="checkbox"
               checked={termsAccepted}
-              onChange={(e) => {
-                setTermsAccepted(e.target.checked);
-                if (e.target.checked) setError('');
-              }}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
             />
             <span>
-              I agree to the <Link to="/terms">Terms and Conditions</Link> and <Link to="/privacy">Privacy Policy</Link>.
+              I agree to the <Link to="/terms">Terms</Link> and <Link to="/privacy">Privacy Policy</Link>.
             </span>
           </label>
         </form>
+
+        <div className="auth-modern__divider">or sign up with</div>
+
+        <div className="auth-modern__socials">
+          <button type="button" onClick={handleGoogleSignup} disabled={loading}>
+            <Globe size={18} /> Google
+          </button>
+          <button type="button" disabled>
+            <Code size={18} /> GitHub
+          </button>
+        </div>
 
         <p className="auth-modern__switch">
           Already have an account? <Link to="/login">Sign in</Link>

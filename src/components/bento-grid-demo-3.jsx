@@ -48,7 +48,7 @@ const SkeletonOne = () => {
     <Motion.div
       initial="initial"
       whileHover="animate"
-      className="flex flex-1 w-full h-full min-h-[6rem] dark:bg-dot-white/[0.2] bg-dot-black/[0.2] flex-col space-y-2"
+      className="flex flex-1 w-full h-full min-h-[6rem]  flex-col space-y-2"
     >
       <Motion.div
         variants={variants}
@@ -94,7 +94,7 @@ const SkeletonTwo = () => {
       initial="initial"
       animate="animate"
       whileHover="hover"
-      className="flex flex-1 w-full h-full min-h-[6rem] dark:bg-dot-white/[0.2] bg-dot-black/[0.2] flex-col space-y-2"
+      className="flex flex-1 w-full h-full min-h-[6rem]  flex-col space-y-2"
     >
       {arr.map((width, i) => (
         <Motion.div
@@ -147,7 +147,7 @@ const SkeletonFour = () => {
       initial="initial"
       animate="animate"
       whileHover="hover"
-      className="flex flex-1 w-full h-full min-h-[6rem] dark:bg-dot-white/[0.2] bg-dot-black/[0.2] flex-row space-x-2"
+      className="flex flex-1 w-full h-full min-h-[6rem]  flex-row space-x-2"
     >
       <Motion.div
         variants={first}
@@ -228,7 +228,7 @@ const SkeletonFive = () => {
     <Motion.div
       initial="initial"
       whileHover="animate"
-      className="flex flex-1 w-full h-full min-h-[6rem] dark:bg-dot-white/[0.2] bg-dot-black/[0.2] flex-col space-y-2"
+      className="flex flex-1 w-full h-full min-h-[6rem]  flex-col space-y-2"
     >
       <Motion.div
         variants={variants}

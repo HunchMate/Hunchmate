@@ -62,7 +62,7 @@ export default function Navbar() {
           <img
             src={hunchmateLogo}
             alt="HunchMate"
-            style={{ width: '188px', height: '46px', objectFit: 'cover', objectPosition: 'center 58%' }}
+            style={{ width: '228px', height: '56px', objectFit: 'cover', objectPosition: 'center 52%' }}
           />
         </Link>
 

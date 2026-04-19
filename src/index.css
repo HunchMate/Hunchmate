@@ -76,17 +76,19 @@
   --font-geist: "Geist", system-ui, sans-serif;
   --font-dm: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-mono: "Monaco", "Courier New", monospace;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
+  
+  /* Theme Variables base aligned to Dark mode */
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(1 0 0);
+  --primary: oklch(0.6 0.15 45); /* Orange primary */
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.205 0 0);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.205 0 0);
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
@@ -141,11 +143,12 @@ body {
   padding: 0 1.5rem;
 }
 
-/* ─── Glassmorphism ─── */
+/* ─── Premium Dark Glassmorphism ─── */
 .glass {
-  background: rgba(255, 255, 255, 0.8) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* ─── Animations ─── */
@@ -385,9 +388,8 @@ body.ev-page-active {
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+  /* Removed global border that was creating the 'grid' look */
+  /* * { @apply border-border outline-ring/50; } */
   body {
     @apply bg-background text-foreground;
   }

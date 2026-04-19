@@ -41,16 +41,6 @@ const GrainyGradient = memo(function GrainyGradient() {
           TECHY ELEMENTS — high visibility layer
           ══════════════════════════════════════════ */}
 
-      {/* ─── Dot Grid ─── */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.35 }}>
-        <defs>
-          <pattern id="dotgrid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-            <circle cx="20" cy="20" r="1" fill="white" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#dotgrid)" />
-      </svg>
-
       {/* ─── Large Hexagon — top-left ─── */}
       <svg
         className="absolute pointer-events-none"
@@ -299,6 +289,7 @@ const GrainyGradient = memo(function GrainyGradient() {
       >
         <polygon points="30,5 55,50 5,50" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.2" />
       </svg>
+
     </div>
   )
 })

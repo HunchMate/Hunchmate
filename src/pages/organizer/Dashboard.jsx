@@ -79,8 +79,7 @@ export default function OrganizerDashboard() {
         const owner = event.organiser || event.organizer || {};
         return (
           owner.id === user.id ||
-          owner.name === user.organizationName ||
-          owner.id === 'org-001'
+          owner.name === user.organizationName
         );
       }
     );

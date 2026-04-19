@@ -7,6 +7,7 @@ import {
   signInWithPopup,
   signOut,
   updateProfile as updateFirebaseProfile,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { firebaseAuth, firebaseReady } from '../lib/firebase';
 import {
@@ -258,11 +259,36 @@ export function AuthProvider({ children }) {
       return nextUser;
     } catch (err) {
       setError(err?.message || 'Profile update failed');
-      throw err;
     } finally {
       setLoading(false);
     }
   }, [persistSession, token, user?.id]);
+
+  const resetPassword = useCallback(async (email) => {
+    if (!firebaseReady || !firebaseAuth) {
+      return { success: false, error: 'Firebase Auth is not configured.' };
+    }
+    
+    setLoading(true);
+    setError(null);
+    try {
+      await sendPasswordResetEmail(firebaseAuth, String(email || '').trim().toLowerCase());
+      return { success: true };
+    } catch (err) {
+      const errorCode = String(err?.code || '').toLowerCase();
+      let message = err?.message || 'Failed to send reset email';
+      
+      if (errorCode.includes('auth/user-not-found')) {
+        message = 'No account found with this email address.';
+      } else if (errorCode.includes('auth/invalid-email')) {
+        message = 'Please enter a valid email address.';
+      }
+      
+      return { success: false, error: message };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const findRegisteredUserByEmail = useCallback((email) => {
     if (!email) return null;
@@ -298,8 +324,9 @@ export function AuthProvider({ children }) {
     googleAuth,
     logout,
     updateProfile,
+    resetPassword,
     findRegisteredUserByEmail,
-  }), [user, token, loading, error, signup, login, googleAuth, logout, updateProfile, findRegisteredUserByEmail]);
+  }), [user, token, loading, error, signup, login, googleAuth, logout, updateProfile, resetPassword, findRegisteredUserByEmail]);
 
   return (
     <AuthContext.Provider value={contextValue}>

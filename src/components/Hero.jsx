@@ -27,45 +27,6 @@ export default function Hero() {
       id="hero-section"
       className="relative z-10 flex flex-col items-center justify-center text-center px-6 pt-16 pb-20 lg:pt-20 lg:pb-24"
     >
-      {/* Badge */}
-      {shouldAnimate ? (
-        <Motion.div
-          custom={0}
-          variants={fadeUp}
-          initial="hidden"
-          animate="visible"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8"
-          style={{
-            background: 'rgba(35,35,40,0.5)',
-            border: '1px solid rgba(255,255,255,0.1)',
-          }}
-        >
-          <span className="text-sm" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>⚡</span>
-          <span
-            className="text-white/80 text-sm font-medium"
-            style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
-          >
-            Where Hunches Become Achievements
-          </span>
-        </Motion.div>
-      ) : (
-        <div
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8"
-          style={{
-            background: 'rgba(35,35,40,0.5)',
-            border: '1px solid rgba(255,255,255,0.1)',
-          }}
-        >
-          <span className="text-sm" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>⚡</span>
-          <span
-            className="text-white/80 text-sm font-medium"
-            style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
-          >
-            Where Hunches Become Achievements
-          </span>
-        </div>
-      )}
-
       {/* Headline */}
       {shouldAnimate ? (
         <Motion.h1

@@ -12,7 +12,7 @@ import {
   Send,
   ChevronRight,
 } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useEvents } from '../context/EventContext'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
@@ -33,7 +33,10 @@ export default function Navbar() {
   const { user, logout } = useAuth()
   const { getOrganizerNotifications } = useEvents()
   const navigate = useNavigate()
+  const location = useLocation()
   const profileMenuRef = useRef(null)
+
+  const isLightPage = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/profile')
 
   const organizerNotifications = user?.role === 'organizer' ? getOrganizerNotifications(user.id) : []
   const unreadCount = organizerNotifications.filter((item) => !item.read).length
@@ -96,12 +99,10 @@ export default function Navbar() {
   }
 
   const getDashboardLabel = () => {
-    if (user?.role === 'admin') return 'Admin Control'
+    if (user?.role === 'admin') return 'Dashboard'
     if (user?.role === 'organizer') return 'Mission Control'
     return 'Profile'
   }
-
-  const navbarMaxWidth = 'min(800px, calc(100vw - 48px))'
 
   return (
     <nav
@@ -111,13 +112,25 @@ export default function Navbar() {
     >
       <Link
         to="/"
-        className="pointer-events-auto absolute left-6 top-4 h-14 flex items-center gap-2 flex-shrink-0"
+        className="pointer-events-auto absolute left-6 top-1 flex items-center flex-shrink-0"
       >
-        <span className="inline-flex overflow-hidden rounded-md" style={{ width: '208px', height: '52px' }}>
+        <span
+          className="inline-flex"
+          style={{ width: '300px', height: '80px' }}
+        >
           <img
             src={hunchmateLogo}
             alt="HunchMate"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 58%' }}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              objectPosition: 'left center',
+              transform: 'scale(2.4)',
+              transformOrigin: 'left center',
+              filter: isLightPage ? 'invert(1) brightness(0.2)' : 'none',
+              transition: 'filter 0.3s ease'
+            }}
           />
         </span>
       </Link>
@@ -131,7 +144,7 @@ export default function Navbar() {
           WebkitBackdropFilter: 'blur(16px)',
           border: '1px solid rgba(255,255,255,0.1)',
           minWidth: 'min(420px, 100%)',
-          maxWidth: navbarMaxWidth,
+          maxWidth: 'min(900px, calc(100vw - 48px))',
           width: '100%',
         }}
       >

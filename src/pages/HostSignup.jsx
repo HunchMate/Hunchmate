@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, AlertCircle, X, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Auth.css';
+import hunchmateLogo from '../../HUNCHMATE - Logo Pack (2).png';
 
 export default function HostSignup() {
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'organizer' });
@@ -11,6 +12,21 @@ export default function HostSignup() {
   const [loading, setLoading] = useState(false);
   const { signup, googleAuth, user } = useAuth();
   const navigate = useNavigate();
+
+  const getPostAuthPath = useCallback((nextUser) => {
+    if (nextUser?.role === 'admin') {
+      return '/admin/dashboard';
+    }
+
+    if (!nextUser?.onboardingCompleted) {
+      return nextUser?.role === 'organizer' ? '/host-onboarding' : '/onboarding';
+    }
+    return nextUser.role === 'admin'
+      ? '/admin/dashboard'
+      : nextUser.role === 'organizer'
+        ? '/organizer/dashboard'
+        : '/events';
+  }, []);
 
   // If user is already logged in as organizer, redirect to dashboard
   if (user?.role === 'organizer') {
@@ -22,7 +38,14 @@ export default function HostSignup() {
     return (
       <main className="auth-modern">
         <section className="auth-modern__card">
-          <p className="auth-modern__brand">Hunchmate</p>
+        <div className="flex justify-center w-full mb-6 relative left-[-8px]">
+          <img
+            src={hunchmateLogo}
+            alt="HunchMate Dashboard"
+            className="h-10 object-contain drop-shadow-md"
+            style={{ transform: 'scale(1.4)' }}
+          />
+        </div>
           <h1>Create a Host Account</h1>
           <p className="auth-modern__subtitle">
             Your current account is set up as a Participant. To host events, you'll need to create a separate Host account.
@@ -63,21 +86,6 @@ export default function HostSignup() {
       </main>
     );
   }
-
-  const getPostAuthPath = useCallback((nextUser) => {
-    if (nextUser?.role === 'admin') {
-      return '/admin/dashboard';
-    }
-
-    if (!nextUser?.onboardingCompleted) {
-      return nextUser?.role === 'organizer' ? '/host-onboarding' : '/onboarding';
-    }
-    return nextUser.role === 'admin'
-      ? '/admin/dashboard'
-      : nextUser.role === 'organizer'
-        ? '/organizer/dashboard'
-        : '/events';
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -152,7 +160,14 @@ export default function HostSignup() {
   return (
     <main className="auth-modern">
       <section className="auth-modern__card">
-        <p className="auth-modern__brand">Hunchmate</p>
+        <div className="flex justify-center w-full mb-6 relative left-[-8px]">
+          <img
+            src={hunchmateLogo}
+            alt="HunchMate Dashboard"
+            className="h-10 object-contain drop-shadow-md"
+            style={{ transform: 'scale(1.4)' }}
+          />
+        </div>
         <h1>Host Events</h1>
         <p className="auth-modern__subtitle">Create your host account and start organizing amazing events.</p>
 

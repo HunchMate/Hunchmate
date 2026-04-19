@@ -122,7 +122,7 @@ export default function ParticipantDashboard() {
         <div className="dashboard__hero-mesh" />
         <div className="container">
           <div className="dashboard__welcome">
-            <div className="dashboard__avatar">{user.name?.charAt(0)}</div>
+            <div className="dashboard__avatar">{(user.name || 'U').charAt(0).toUpperCase()}</div>
             <div>
               <h1 className="dashboard__greeting">Mission Control</h1>
               <p className="dashboard__user-info">Welcome back, <strong>{user.name}</strong></p>
@@ -176,12 +176,12 @@ export default function ParticipantDashboard() {
         {activeTab === 'registrations' && (
           <div className="dashboard__section animate-fade-in">
             {upcomingSchedule.length > 0 ? (
-              <div className="dashboard__card glass" style={{ marginBottom: '1rem' }}>
+              <div className="dashboard__card glass mb-4">
                 <div className="dashboard__card-info">
                   <div className="dashboard__card-header">
                     <h3>Upcoming Schedule</h3>
                   </div>
-                  <div className="dashboard__card-meta" style={{ display: 'grid', gap: '0.3rem' }}>
+                  <div className="dashboard__card-meta flex-col gap-1">
                     {upcomingSchedule.map((item, idx) => (
                       <span key={`${item.eventId}-${item.label}-${idx}`}>
                         <strong>{item.label}</strong> · {formatDate(item.date)} · {item.eventTitle}
@@ -271,7 +271,7 @@ export default function ParticipantDashboard() {
                           <span>Names: {existing.recipients.join(', ')}</span>
                         </p>
                       ) : null}
-                      {state.error ? <p className="dashboard__card-meta" style={{ color: '#dc2626' }}>{state.error}</p> : null}
+                      {state.error ? <p className="dashboard__card-meta text-red-500">{state.error}</p> : null}
                     </div>
                     <div className="dashboard__card-actions">
                       {!existing ? (

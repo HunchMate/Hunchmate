@@ -15,6 +15,7 @@ const Privacy = lazy(() => import('./pages/Privacy'))
 const Login = lazy(() => import('./pages/Login'))
 const Signup = lazy(() => import('./pages/Signup'))
 const HostSignup = lazy(() => import('./pages/HostSignup'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
 const HostOnboarding = lazy(() => import('./pages/HostOnboarding'))
 const InviteJoin = lazy(() => import('./pages/InviteJoin'))
@@ -215,6 +216,7 @@ function App() {
             <Route element={<RequireGuest />}>
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
             </Route>
 
             <Route element={<RequireAuth />}>

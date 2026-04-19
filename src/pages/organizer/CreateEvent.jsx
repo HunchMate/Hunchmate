@@ -29,7 +29,7 @@ export default function CreateEvent() {
     description: '',
     shortDescription: '',
     venue: '',
-    prize: '',
+    fee: '',
     maxParticipants: 100,
     teamMin: '',
     teamMax: '',
@@ -68,6 +68,7 @@ export default function CreateEvent() {
   const [rules, setRules] = useState(['']);
   const [problemStatements, setProblemStatements] = useState([{ psId: '', psDescription: '', psStatement: '' }]);
   const [subEvents, setSubEvents] = useState([]);
+  const [prizes, setPrizes] = useState([{ rank: '1st Place', reward: '' }]);
   const [posterImage, setPosterImage] = useState('');
   const [showcaseImage, setShowcaseImage] = useState('');
   const [validationToast, setValidationToast] = useState({ visible: false, message: '' });
@@ -201,7 +202,7 @@ export default function CreateEvent() {
       description: targetEvent.description || '',
       shortDescription: targetEvent.shortDescription || '',
       venue: targetEvent.venue || targetEvent.location || '',
-      prize: targetEvent.prize || '',
+      fee: targetEvent.fee || '',
       maxParticipants: targetEvent.maxParticipants || 100,
       teamMin: targetEvent.teamSize?.min || '',
       teamMax: targetEvent.teamSize?.max || '',
@@ -253,6 +254,11 @@ export default function CreateEvent() {
         ? targetEvent.timelineItems
         : [{ title: 'Registration Opens', date: '', description: '' }]
     );
+    setPrizes(
+      Array.isArray(targetEvent.prizes) && targetEvent.prizes.length
+        ? targetEvent.prizes
+        : [{ rank: '1st Place', reward: '' }]
+    );
     setRules(Array.isArray(targetEvent.rules) && targetEvent.rules.length ? targetEvent.rules : ['']);
     setProblemStatements(
       normalizeProblemStatements(targetEvent.problemStatements)
@@ -272,7 +278,7 @@ export default function CreateEvent() {
     );
 
     didInitializeRef.current = true;
-  }, [isEditMode, targetEvent, user?.name, user?.spocName]);
+  }, [isEditMode, targetEvent, user?.name, user?.spocName, user?.email, user?.phoneNumber]);
 
   const convertFileToDataUrl = (file) =>
     new Promise((resolve, reject) => {
@@ -460,7 +466,8 @@ export default function CreateEvent() {
         eventEnd: form.eventEnd,
       },
       venue: form.venue,
-      prize: form.prize,
+      fee: form.fee,
+      prizes: prizes.map(p => ({ rank: String(p.rank || '').trim(), reward: String(p.reward || '').trim() })).filter(p => p.rank || p.reward),
       maxParticipants: parseInt(form.maxParticipants, 10) || 100,
       teamSize:
         form.teamMin && form.teamMax
@@ -675,8 +682,8 @@ export default function CreateEvent() {
                   onChange={(e) => update('venue', e.target.value)}
                 />
 
-                <div className="create-event__row">
-                  <Input label="Prize" placeholder="e.g. INR 5,00,000" value={form.prize} onChange={(e) => update('prize', e.target.value)} />
+                <div className="create-event__row z-[20]">
+                  <Input label="Entry Fee (Optional)" placeholder="e.g. Free, INR 500" value={form.fee} onChange={(e) => update('fee', e.target.value)} />
                   <Input
                     label="Max Participants"
                     type="number"
@@ -685,6 +692,37 @@ export default function CreateEvent() {
                     onChange={(e) => update('maxParticipants', e.target.value)}
                   />
                 </div>
+
+                <div className="create-event__dynamic-list mt-8 mb-6 z-[20]">
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="font-semibold text-sm">Prize Money / Rewards</label>
+                    <button type="button" className="create-event__mini-btn" onClick={() => addListItem(setPrizes, { rank: '', reward: '' })}>
+                      <Plus size={14} /> Add Tier
+                    </button>
+                  </div>
+                  {prizes.map((item, index) => (
+                    <div key={index} className="create-event__optional-card mt-2 p-4 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] rounded-xl flex gap-4">
+                      <div className="flex-1">
+                        <Input
+                          placeholder="Rank (e.g. 1st Place)"
+                          value={item.rank}
+                          onChange={(e) => updateListItem(setPrizes, index, { ...item, rank: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <Input
+                          placeholder="Reward (e.g. ₹50,000 or Macbook)"
+                          value={item.reward}
+                          onChange={(e) => updateListItem(setPrizes, index, { ...item, reward: e.target.value })}
+                        />
+                      </div>
+                      <button type="button" className="create-event__remove-btn opacity-50 hover:opacity-100" onClick={() => removeListItem(setPrizes, index)}>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
 
                 <div className="create-event__row">
                   <Input

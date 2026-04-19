@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Users, Trophy, Zap, Building2 } from 'lucide-react';
+import { Calendar, MapPin, Users, Trophy, Zap, Building2, Ticket } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useEvents } from '../../context/EventContext';
 import { buildEventDetailPath, formatDate } from '../../utils/helpers';
@@ -28,7 +28,7 @@ export default function EventCard({ event, index = 0 }) {
   const { getEventRegistrationForUser } = useEvents();
   const {
     id, title, category, mode, status,
-    organizer, timeline, venue, prize,
+    organizer, timeline, venue, prize, fee,
     registeredCount
   } = event;
 
@@ -91,6 +91,10 @@ export default function EventCard({ event, index = 0 }) {
           <div className="hc-card__meta-row">
             <MapPin size={14} />
             <span>{venue || mode}</span>
+          </div>
+          <div className="hc-card__meta-row" style={{ color: fee && fee.trim() !== '' && fee.toLowerCase() !== 'free' ? '#ea7a32' : '#166534', fontWeight: 600 }}>
+            <Ticket size={14} style={{ color: 'inherit' }} />
+            <span>{fee && fee.trim() !== '' && fee.toLowerCase() !== 'free' ? fee : 'Free Entry'}</span>
           </div>
         </div>
 

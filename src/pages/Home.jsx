@@ -80,17 +80,11 @@ export default function Home() {
   ];
 
   const categories = [
-    { name: 'Hackathons', count: '150+', icon: Trophy },
-    { name: 'Innovation', count: '80+', icon: Lightbulb },
-    { name: 'Competitions', count: '120+', icon: Target },
-    { name: 'Programs', count: '60+', icon: Briefcase },
-    { name: 'Opportunities', count: '200+', icon: Users },
-  ];
-
-  const partners = [
-    'NASSCOM', 'TechForge', 'InnovateIndia', 'DataWave', 'PixelLabs',
-    'MechMinds', 'CodeNation', 'StartupArena', 'NASSCOM', 'TechForge',
-    'InnovateIndia', 'DataWave', 'PixelLabs', 'MechMinds', 'CodeNation', 'StartupArena',
+    { name: 'Hackathons', count: `${events.filter(e => e.category === 'Hackathon').length || 10}+`, icon: Trophy },
+    { name: 'Innovation', count: `${events.filter(e => e.category === 'Innovation').length || 8}+`, icon: Lightbulb },
+    { name: 'Competitions', count: `${events.filter(e => e.category === 'Competition').length || 12}+`, icon: Target },
+    { name: 'Programs', count: `${events.filter(e => e.category === 'Program').length || 6}+`, icon: Briefcase },
+    { name: 'Opportunities', count: `${events.filter(e => !['Hackathon','Innovation','Competition','Program'].includes(e.category)).length || 20}+`, icon: Users },
   ];
 
   const testimonials = [
@@ -112,7 +106,7 @@ export default function Home() {
     <div className="home-page">
       {/* ── Hero Section ── */}
       <section className="home-hero">
-        <div className="home-hero__grid-overlay" />
+
         <div className="container home-hero__content">
           <h1 className="home-hero__title">
             Turn Your Hunches Into

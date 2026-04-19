@@ -191,7 +191,7 @@ export function AuthProvider({ children }) {
     }
   }, [persistSession]);
 
-  const googleAuth = useCallback(async (options = {}) => {
+  const googleAuth = useCallback(async (tokenOrOptions, roleOverride, _unused, extraOptions) => {
     if (!firebaseReady || !firebaseAuth) {
       return { success: false, error: 'Firebase Auth is not configured.' };
     }
@@ -199,9 +199,22 @@ export function AuthProvider({ children }) {
     setLoading(true);
     setError(null);
 
+    const isTokenFlow = typeof tokenOrOptions === 'string';
+    const options = isTokenFlow 
+      ? { role: roleOverride, ...extraOptions } 
+      : (tokenOrOptions || {});
+
     try {
-      const credential = await signInWithPopup(firebaseAuth, googleProvider);
-      const authUser = credential?.user;
+      let authUser;
+      if (isTokenFlow) {
+        const { signInWithCredential } = await import('firebase/auth');
+        const credential = GoogleAuthProvider.credential(tokenOrOptions);
+        const result = await signInWithCredential(firebaseAuth, credential);
+        authUser = result?.user;
+      } else {
+        const credential = await signInWithPopup(firebaseAuth, googleProvider);
+        authUser = credential?.user;
+      }
 
       const profile = await upsertUserProfileFromAuthUser(authUser, {
         name: String(options?.name || '').trim() || undefined,

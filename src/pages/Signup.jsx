@@ -144,7 +144,6 @@ export default function Signup() {
   return (
     <main className="auth-modern">
       <section className="auth-modern__card">
-        <p className="auth-modern__brand">Hunchmate</p>
         <h1>Create your account</h1>
         <p className="auth-modern__subtitle">Choose role in one signup flow and continue.</p>
 

@@ -119,7 +119,6 @@ export default function Login() {
   return (
     <main className="auth-modern">
       <section className="auth-modern__card">
-        <p className="auth-modern__brand">Hunchmate</p>
         <h1>Sign in to your account</h1>
         <p className="auth-modern__subtitle">Welcome back! Please enter your details.</p>
 

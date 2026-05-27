@@ -1,8 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&display=swap');
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -31,23 +28,23 @@
   --text-5xl: 3rem;
 
   /* Colors */
-  --color-text-heading: #1a1a1a;
-  --color-text-primary: #1a1a1a;
-  --color-text-secondary: #666666;
-  --color-text-muted: #999999;
-  --color-surface: #ffffff;
-  --color-border: #e5e7eb;
-  --color-accent: #ea7a32;
-  --color-accent-light: #f5a960;
-  --color-accent-subtle: rgba(234, 122, 50, 0.08);
-  --color-accent-dark: #c86a1f;
-  --color-primary: #4f46e5;
-  --color-primary-light: #eef2ff;
-  --color-primary-dark: #312e81;
+  --color-text-heading: #0b1c30;
+  --color-text-primary: #0b1c30;
+  --color-text-secondary: #213145;
+  --color-text-muted: #5a4136;
+  --color-surface: #f8f9ff;
+  --color-border: #e2bfb0;
+  --color-accent: #ff6b00;
+  --color-accent-light: #ffb693;
+  --color-accent-subtle: rgba(255, 107, 0, 0.08);
+  --color-accent-dark: #a04100;
+  --color-primary: #2559bd;
+  --color-primary-light: #e5eeff;
+  --color-primary-dark: #001946;
   --color-success: #16a34a;
   --color-success-bg: #dcfce7;
-  --color-coral: #ef4444;
-  --color-coral-bg: #fee2e2;
+  --color-coral: #ba1a1a;
+  --color-coral-bg: #ffdad6;
 
   /* Gradients */
   --gradient-hero: linear-gradient(135deg, #ffffff 0%, #f8f8f8 100%);
@@ -77,39 +74,39 @@
   --font-dm: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-mono: "Monaco", "Courier New", monospace;
   
-  /* Theme Variables base aligned to Dark mode */
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(1 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(1 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(1 0 0);
-  --primary: oklch(0.6 0.15 45); /* Orange primary */
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.205 0 0);
-  --secondary-foreground: oklch(0.97 0 0);
-  --muted: oklch(0.205 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* Theme Variables base aligned to Light mode (based on requested colors) */
+  --background: #f8f9ff;
+  --foreground: #0b1c30;
+  --card: #ffffff;
+  --card-foreground: #0b1c30;
+  --popover: #ffffff;
+  --popover-foreground: #0b1c30;
+  --primary: #ff6b00; /* Orange primary */
+  --primary-foreground: #ffffff;
+  --secondary: #2559bd; /* Blue secondary */
+  --secondary-foreground: #ffffff;
+  --muted: #e5eeff;
+  --muted-foreground: #213145;
+  --accent: #ffdbcc;
+  --accent-foreground: #a04100;
+  --destructive: #ba1a1a;
+  --border: #e2bfb0;
+  --input: #e2bfb0;
+  --ring: #ff6b00;
+  --chart-1: #ff6b00;
+  --chart-2: #2559bd;
+  --chart-3: #a04100;
+  --chart-4: #6c98ff;
+  --chart-5: #ffb693;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #f8f9ff;
+  --sidebar-foreground: #0b1c30;
+  --sidebar-primary: #ff6b00;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e5eeff;
+  --sidebar-accent-foreground: #002f76;
+  --sidebar-border: #e2bfb0;
+  --sidebar-ring: #ff6b00;
 }
 
 /* ─── Custom Theme ─── */

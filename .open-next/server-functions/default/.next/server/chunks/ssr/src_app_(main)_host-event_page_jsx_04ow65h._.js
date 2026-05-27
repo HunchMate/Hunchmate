@@ -1,0 +1,3 @@
+module.exports=[30536,a=>{"use strict";var b=a.i(87924),c=a.i(72131),d=a.i(50598),e=a.i(29338);a.s(["default",0,function(){let{user:a,loading:f}=(0,e.useAuth)(),g=(0,d.useNavigate)();return(0,c.useEffect)(()=>{f||(a&&("organizer"===a.role||"admin"===a.role)?g("/organizer/create-event"):g("/host-signup"))},[a,f,g]),(0,b.jsx)("main",{style:{minHeight:"60vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0b0f19"},children:(0,b.jsx)("div",{className:"animate-pulse",style:{color:"#ea7a32",fontSize:"1.25rem",fontFamily:'"Plus Jakarta Sans", sans-serif'},children:"Redirecting..."})})}])}];
+
+//# sourceMappingURL=src_app_%28main%29_host-event_page_jsx_04ow65h._.js.map

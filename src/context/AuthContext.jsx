@@ -1,54 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import {
-  createUserWithEmailAndPassword,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  signOut,
-  updateProfile as updateFirebaseProfile,
-  sendPasswordResetEmail,
-} from 'firebase/auth';
-import { firebaseAuth, firebaseReady } from '../lib/firebase';
+import { createClient } from '../utils/supabase/client';
 import {
   getUserProfile,
   updateUserProfile as updateUserProfileRecord,
   upsertUserProfileFromAuthUser,
-} from '../lib/firebase-data';
+} from '../lib/supabase-data';
 
 const AuthContext = createContext();
-const AUTH_PROVIDER = String(import.meta.env.VITE_AUTH_PROVIDER || 'firebase').trim().toLowerCase();
-const ADMIN_EMAILS = String(import.meta.env.VITE_ADMIN_EMAILS || '')
+const supabase = createClient();
+
+const ADMIN_EMAILS = String(process.env.NEXT_PUBLIC_ADMIN_EMAILS || '')
   .split(',')
   .map((value) => String(value || '').trim().toLowerCase())
   .filter(Boolean);
-const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: 'select_account' });
-
-function mapFirebaseLoginError(err, attemptedEmail = '') {
-  const code = String(err?.code || '').toLowerCase();
-  const normalizedEmail = String(attemptedEmail || '').trim().toLowerCase();
-  const isAdminEmail = normalizedEmail && ADMIN_EMAILS.includes(normalizedEmail);
-  if (code.includes('auth/invalid-email')) {
-    return 'Enter a valid email address. Firebase email/password sign-in does not support usernames.';
-  }
-  if (code.includes('auth/user-not-found') || code.includes('auth/invalid-credential')) {
-    if (isAdminEmail) {
-      return 'Invalid admin credentials in Firebase Auth. If this admin was created only in backend seed scripts, create the same admin email in Firebase Auth first (via Sign up or Firebase Console), then sign in.';
-    }
-    return 'Account not found or wrong password. For admin access, sign in with your admin email and password.';
-  }
-  if (code.includes('auth/wrong-password')) {
-    return 'Incorrect password. Please try again.';
-  }
-  if (code.includes('auth/too-many-requests')) {
-    return 'Too many attempts. Please wait a bit and try again.';
-  }
-  if (code.includes('auth/operation-not-allowed')) {
-    return 'Email/password sign-in is disabled in Firebase Auth. Enable it in the Firebase console.';
-  }
-  return err?.message || 'Login failed';
-}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -57,67 +21,106 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null);
 
   const clearSession = useCallback(() => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('authUser');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('authUser');
+    }
     setToken(null);
     setUser(null);
   }, []);
 
   const persistSession = useCallback((nextToken, nextUser) => {
-    if (nextToken) {
-      localStorage.setItem('authToken', nextToken);
-      setToken(nextToken);
+    if (typeof window !== 'undefined') {
+      if (nextToken) {
+        localStorage.setItem('authToken', nextToken);
+      }
+      if (nextUser) {
+        localStorage.setItem('authUser', JSON.stringify(nextUser));
+      }
     }
-
-    if (nextUser) {
-      localStorage.setItem('authUser', JSON.stringify(nextUser));
-      setUser(nextUser);
-    }
-
+    if (nextToken) setToken(nextToken);
+    if (nextUser) setUser(nextUser);
   }, []);
 
+  // Listen to auth changes
   useEffect(() => {
-    if (AUTH_PROVIDER !== 'firebase') {
-      setLoading(false);
-      setError('Only Firebase auth provider is supported in this build. Set VITE_AUTH_PROVIDER=firebase.');
-      return undefined;
+    let isMounted = true;
+
+    // Load initial session from local storage if available to avoid flicker
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('authUser');
+      const storedToken = localStorage.getItem('authToken');
+      if (storedUser && storedToken) {
+        try {
+          setUser(JSON.parse(storedUser));
+          setToken(storedToken);
+        } catch (e) {
+          // Ignore
+        }
+      }
     }
 
-    if (!firebaseReady || !firebaseAuth) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+
+      if (session) {
+        const nextToken = session.access_token;
+        persistSession(nextToken, null);
+
+        try {
+          let profile = await getUserProfile(session.user.id);
+          const intendedRole = session.user.user_metadata?.role;
+
+          if (profile && intendedRole && profile.role !== intendedRole) {
+            profile = await upsertUserProfileFromAuthUser(session.user, {
+              ...profile,
+              role: intendedRole,
+              provider: session.user.app_metadata?.provider || 'supabase',
+              accessToken: session.access_token,
+              refreshToken: session.refresh_token,
+            });
+          } else if (!profile) {
+            // Check if there was a role stored during OAuth signup flow
+            const pendingRole = typeof window !== 'undefined'
+              ? (localStorage.getItem('hm_oauth_role') || intendedRole || 'participant')
+              : (intendedRole || 'participant');
+            profile = await upsertUserProfileFromAuthUser(session.user, {
+              role: pendingRole,
+              provider: session.user.app_metadata?.provider || 'supabase',
+              accessToken: session.access_token,
+              refreshToken: session.refresh_token,
+            });
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('hm_oauth_role');
+            }
+          }
+
+          if (profile?.status === 'suspended') {
+            await supabase.auth.signOut();
+            clearSession();
+            setError('Your account is suspended. Please contact support.');
+          } else {
+            persistSession(nextToken, profile);
+            setError(null);
+          }
+        } catch (authError) {
+          console.error('Failed to bootstrap auth session profile:', authError);
+          clearSession();
+          setError('Failed to initialize session profile.');
+        }
+      } else {
+        clearSession();
+      }
       setLoading(false);
-      setError('Firebase Auth is not configured. Add VITE_FIREBASE_* values.');
-      return undefined;
-    }
-
-    const unsubscribe = onAuthStateChanged(firebaseAuth, async (nextAuthUser) => {
-      if (!nextAuthUser) {
-        clearSession();
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const freshToken = await nextAuthUser.getIdToken();
-        const profile = await upsertUserProfileFromAuthUser(nextAuthUser);
-        persistSession(freshToken, profile);
-        setError(null);
-      } catch (authError) {
-        console.error('Failed to bootstrap Firebase auth session:', authError);
-        clearSession();
-        setError('Failed to initialize your session. Please sign in again.');
-      } finally {
-        setLoading(false);
-      }
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [clearSession, persistSession]);
 
   const signup = useCallback(async (userData) => {
-    if (!firebaseReady || !firebaseAuth) {
-      return { success: false, error: 'Firebase Auth is not configured.' };
-    }
-
     setLoading(true);
     setError(null);
 
@@ -126,23 +129,44 @@ export function AuthProvider({ children }) {
       const password = String(userData?.password || '');
       const name = String(userData?.name || '').trim();
 
-      const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
-
-      if (name) {
-        await updateFirebaseProfile(credential.user, { displayName: name });
-      }
-
-      const profile = await upsertUserProfileFromAuthUser(credential.user, {
-        name,
+      const { data, error: signupError } = await supabase.auth.signUp({
         email,
-        role: userData?.role,
-        termsAccepted: Boolean(userData?.termsAccepted),
-        termsAcceptedAt: userData?.termsAcceptedAt || null,
-        provider: 'firebase',
+        password,
+        options: {
+          data: {
+            name,
+            role: userData?.role || 'participant',
+          },
+        },
       });
 
-      const idToken = await credential.user.getIdToken();
-      persistSession(idToken, profile);
+      if (signupError) throw signupError;
+
+      if (!data.user) {
+        throw new Error('Signup failed: No user details returned.');
+      }
+
+      // Explicitly set the session first so that the client is authenticated for profiles RLS rules
+      if (data.session) {
+        await supabase.auth.setSession(data.session);
+      }
+
+      const profile = await upsertUserProfileFromAuthUser(data.user, {
+        name,
+        email,
+        role: userData?.role || 'participant',
+        termsAccepted: Boolean(userData?.termsAccepted),
+        termsAcceptedAt: userData?.termsAcceptedAt || null,
+        provider: 'email',
+        accessToken: data.session?.access_token,
+        refreshToken: data.session?.refresh_token,
+      });
+
+      // If user is already logged in (no email verification required or configured)
+      if (data.session) {
+        persistSession(data.session.access_token, profile);
+      }
+
       return { success: true, user: profile };
     } catch (err) {
       const message = err?.message || 'Signup failed';
@@ -154,36 +178,53 @@ export function AuthProvider({ children }) {
   }, [persistSession]);
 
   const login = useCallback(async (email, password) => {
-    if (!firebaseReady || !firebaseAuth) {
-      return { success: false, error: 'Firebase Auth is not configured.' };
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      const credential = await signInWithEmailAndPassword(
-        firebaseAuth,
-        String(email || '').trim().toLowerCase(),
-        String(password || '')
-      );
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+        email: String(email || '').trim().toLowerCase(),
+        password: String(password || ''),
+      });
 
-      const [idToken, profile] = await Promise.all([
-        credential.user.getIdToken(),
-        getUserProfile(credential.user.uid),
-      ]);
+      if (loginError) throw loginError;
 
-      const resolvedProfile = profile || await upsertUserProfileFromAuthUser(credential.user, { provider: 'firebase' });
+      if (!data.user || !data.session) {
+        throw new Error('Login failed: Invalid response from authentication provider.');
+      }
+
+      let profile = await getUserProfile(data.user.id);
+      const intendedRole = data.user.user_metadata?.role;
+
+      if (profile && intendedRole && profile.role !== intendedRole) {
+        profile = await upsertUserProfileFromAuthUser(data.user, {
+          ...profile,
+          role: intendedRole,
+          provider: 'email',
+          accessToken: data.session.access_token,
+          refreshToken: data.session.refresh_token,
+        });
+      }
+
+      const resolvedProfile = profile || await upsertUserProfileFromAuthUser(data.user, {
+        role: intendedRole || 'participant',
+        provider: 'email',
+        accessToken: data.session.access_token,
+        refreshToken: data.session.refresh_token,
+      });
 
       if (resolvedProfile?.status === 'suspended') {
-        await signOut(firebaseAuth);
+        await supabase.auth.signOut();
         throw new Error('Your account is suspended. Please contact support.');
       }
 
-      persistSession(idToken, resolvedProfile);
+      persistSession(data.session.access_token, resolvedProfile);
       return { success: true, user: resolvedProfile };
     } catch (err) {
-      const message = mapFirebaseLoginError(err, email);
+      let message = err?.message || 'Login failed';
+      if (message.includes('Invalid login credentials')) {
+        message = 'Account not found or wrong password. For admin access, sign in with your admin email and password.';
+      }
       setError(message);
       return { success: false, error: message };
     } finally {
@@ -192,10 +233,6 @@ export function AuthProvider({ children }) {
   }, [persistSession]);
 
   const googleAuth = useCallback(async (tokenOrOptions, roleOverride, _unused, extraOptions) => {
-    if (!firebaseReady || !firebaseAuth) {
-      return { success: false, error: 'Firebase Auth is not configured.' };
-    }
-
     setLoading(true);
     setError(null);
 
@@ -204,39 +241,54 @@ export function AuthProvider({ children }) {
       ? { role: roleOverride, ...extraOptions } 
       : (tokenOrOptions || {});
 
+    // Save desired role to localStorage so the auth state change listener can apply it if it's a new profile signup
+    if (typeof window !== 'undefined' && options.role) {
+      localStorage.setItem('hm_oauth_role', options.role);
+    }
+
     try {
-      let authUser;
       if (isTokenFlow) {
-        const { signInWithCredential } = await import('firebase/auth');
-        const credential = GoogleAuthProvider.credential(tokenOrOptions);
-        const result = await signInWithCredential(firebaseAuth, credential);
-        authUser = result?.user;
+        const { data: tokenData, error: tokenError } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: tokenOrOptions,
+        });
+        if (tokenError) throw tokenError;
+
+        const profile = await upsertUserProfileFromAuthUser(tokenData.user, {
+          name: String(options?.name || '').trim() || undefined,
+          role: options?.role || 'participant',
+          termsAccepted: options?.termsAccepted,
+          termsAcceptedAt: options?.termsAcceptedAt,
+          provider: 'google',
+          accessToken: tokenData.session?.access_token,
+          refreshToken: tokenData.session?.refresh_token,
+        });
+
+        if (profile?.status === 'suspended') {
+          await supabase.auth.signOut();
+          throw new Error('Your account is suspended. Please contact support.');
+        }
+
+        if (tokenData.session) {
+          persistSession(tokenData.session.access_token, profile);
+        }
+        return { success: true, user: profile };
       } else {
-        const credential = await signInWithPopup(firebaseAuth, googleProvider);
-        authUser = credential?.user;
+        const { data, error: googleError } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/home` : undefined,
+            queryParams: {
+              prompt: 'select_account',
+            },
+          },
+        });
+
+        if (googleError) throw googleError;
+        return { success: true };
       }
-
-      const profile = await upsertUserProfileFromAuthUser(authUser, {
-        name: String(options?.name || '').trim() || undefined,
-        role: options?.role,
-        termsAccepted: options?.termsAccepted,
-        termsAcceptedAt: options?.termsAcceptedAt,
-        provider: 'google.com',
-      });
-
-      if (profile?.status === 'suspended') {
-        await signOut(firebaseAuth);
-        throw new Error('Your account is suspended. Please contact support.');
-      }
-
-      const idToken = await authUser.getIdToken();
-      persistSession(idToken, profile);
-      return { success: true, user: profile };
     } catch (err) {
-      const errorCode = String(err?.code || '').toLowerCase();
-      const message = errorCode.includes('popup-closed-by-user')
-        ? 'Google sign-in was cancelled.'
-        : err?.message || 'Google sign-in failed';
+      const message = err?.message || 'Google sign-in failed';
       setError(message);
       return { success: false, error: message };
     } finally {
@@ -247,9 +299,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     setLoading(true);
     try {
-      if (firebaseAuth) {
-        await signOut(firebaseAuth);
-      }
+      await supabase.auth.signOut();
     } catch (err) {
       console.error('Logout failed:', err);
     } finally {
@@ -259,7 +309,7 @@ export function AuthProvider({ children }) {
   }, [clearSession]);
 
   const updateProfile = useCallback(async (updates) => {
-    if (!token || !user?.id) {
+    if (!user?.id) {
       throw new Error('Not authenticated');
     }
 
@@ -272,31 +322,26 @@ export function AuthProvider({ children }) {
       return nextUser;
     } catch (err) {
       setError(err?.message || 'Profile update failed');
+      throw err;
     } finally {
       setLoading(false);
     }
   }, [persistSession, token, user?.id]);
 
   const resetPassword = useCallback(async (email) => {
-    if (!firebaseReady || !firebaseAuth) {
-      return { success: false, error: 'Firebase Auth is not configured.' };
-    }
-    
     setLoading(true);
     setError(null);
     try {
-      await sendPasswordResetEmail(firebaseAuth, String(email || '').trim().toLowerCase());
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        String(email || '').trim().toLowerCase(),
+        {
+          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined,
+        }
+      );
+      if (resetError) throw resetError;
       return { success: true };
     } catch (err) {
-      const errorCode = String(err?.code || '').toLowerCase();
-      let message = err?.message || 'Failed to send reset email';
-      
-      if (errorCode.includes('auth/user-not-found')) {
-        message = 'No account found with this email address.';
-      } else if (errorCode.includes('auth/invalid-email')) {
-        message = 'Please enter a valid email address.';
-      }
-      
+      const message = err?.message || 'Failed to send reset email';
       return { success: false, error: message };
     } finally {
       setLoading(false);
@@ -312,16 +357,18 @@ export function AuthProvider({ children }) {
       return user;
     }
 
-    const storedUser = localStorage.getItem('authUser');
-    if (!storedUser) return null;
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('authUser');
+      if (!storedUser) return null;
 
-    try {
-      const parsed = JSON.parse(storedUser);
-      if (String(parsed?.email || '').trim().toLowerCase() === normalized) {
-        return parsed;
+      try {
+        const parsed = JSON.parse(storedUser);
+        if (String(parsed?.email || '').trim().toLowerCase() === normalized) {
+          return parsed;
+        }
+      } catch {
+        return null;
       }
-    } catch {
-      return null;
     }
 
     return null;
@@ -348,7 +395,6 @@ export function AuthProvider({ children }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth must be used within AuthProvider');

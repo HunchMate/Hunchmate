@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from '@/utils/router';
 import { Menu, X, ChevronDown, LogOut, User, LayoutDashboard, Zap, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import hunchmateLogo from '../../../HUNCHMATE - Logo Pack (2).png';
+import hunchmateLogo from '@/../HUNCHMATE - Logo Pack (2).png';
 import './Navbar.css';
 
 export default function Navbar() {
@@ -60,7 +60,7 @@ export default function Navbar() {
           style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, overflow: 'hidden', borderRadius: '8px' }}
         >
           <img
-            src={hunchmateLogo}
+            src={hunchmateLogo?.src || hunchmateLogo}
             alt="HunchMate"
             style={{ width: '228px', height: '56px', objectFit: 'cover', objectPosition: 'center 52%' }}
           />

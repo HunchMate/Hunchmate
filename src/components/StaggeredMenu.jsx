@@ -351,7 +351,7 @@ export const StaggeredMenu = ({
         <div className="sm-logo" aria-label="Logo">
           {logoUrl ? (
             <span className="sm-logo-img-frame" aria-hidden="true">
-              <img src={logoUrl} alt="HunchMate" className="sm-logo-img" draggable={false} />
+              <img src={logoUrl?.src || logoUrl} alt="HunchMate" className="sm-logo-img" draggable={false} />
             </span>
           ) : (
             <span className="sm-logo-badge" aria-hidden="true">HM</span>

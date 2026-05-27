@@ -18,11 +18,14 @@ import {
   listRegistrations as listFirebaseRegistrations,
   updateEventRecord,
   updateRegistrationRecord,
-} from '../lib/firebase-data';
+} from '../lib/supabase-data';
 
 const EventContext = createContext(null);
 
 function safeReadJson(key, fallback) {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined' || !localStorage || typeof localStorage.getItem !== 'function') {
+    return fallback;
+  }
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return fallback;
@@ -33,6 +36,9 @@ function safeReadJson(key, fallback) {
 }
 
 function safeWriteJson(key, value) {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined' || !localStorage || typeof localStorage.setItem !== 'function') {
+    return false;
+  }
   try {
     localStorage.setItem(key, JSON.stringify(value));
     return true;
@@ -169,6 +175,7 @@ function buildCertificateImage({ event, recipients, type, config }) {
 
 export function EventProvider({ children }) {
   const syncWarnRef = useRef(0);
+  const [eventsLoading, setEventsLoading] = useState(true);
 
   const [events, setEvents] = useState(() => {
     const cached = safeReadJson('hm_events', null);
@@ -229,6 +236,7 @@ export function EventProvider({ children }) {
   // Intentionally mounted once; internal polling and focus handlers drive re-sync.
   useEffect(() => {
     let active = true;
+    let firstSync = true;
 
     const syncFromFirebase = async () => {
       try {
@@ -252,6 +260,11 @@ export function EventProvider({ children }) {
         if (now - syncWarnRef.current > 30000) {
           syncWarnRef.current = now;
           console.warn('Firebase sync failed, using local cache.', error);
+        }
+      } finally {
+        if (active && firstSync) {
+          firstSync = false;
+          setEventsLoading(false);
         }
       }
     };
@@ -547,6 +560,7 @@ export function EventProvider({ children }) {
       checkedIn: false,
       checkedInAt: null,
       createdAt: new Date().toISOString(),
+      ...teamData,
     };
 
     try {
@@ -957,7 +971,9 @@ export function EventProvider({ children }) {
     )}`;
 
     const outbound = JSON.parse(localStorage.getItem('hm_outbound_emails') || '[]');
-    const emailApiUrl = import.meta.env.VITE_INVITE_EMAIL_API_URL || 'http://localhost:8787/api/invitations/email';
+    const emailApiUrl = (typeof process !== 'undefined' && process.env ? (process.env.NEXT_PUBLIC_INVITE_EMAIL_API_URL || process.env.VITE_INVITE_EMAIL_API_URL) : '') ||
+      (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_INVITE_EMAIL_API_URL : '') ||
+      'http://localhost:8787/api/invitations/email';
     let emailSent = false;
     let emailError = '';
 
@@ -1128,6 +1144,7 @@ export function EventProvider({ children }) {
   return (
     <EventContext.Provider value={{
       events, registrations, credentials, teamInvitations, organizerNotifications,
+      eventsLoading,
       createEvent, updateEvent, deleteEvent,
       registerForEvent, updateTeamRegistration, checkInParticipant,
       issueCredential, bulkIssueCredentials, claimCredential,

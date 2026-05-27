@@ -39,7 +39,7 @@ export default function SiteHeader() {
           socialItems={MOBILE_SOCIAL_ITEMS}
           displaySocials={true}
           displayItemNumbering={true}
-          logoUrl={hunchmateLogo}
+          logoUrl={hunchmateLogo?.src || hunchmateLogo}
           menuButtonColor="#ffffff"
           openMenuButtonColor="#ffffff"
           changeMenuColorOnOpen={true}

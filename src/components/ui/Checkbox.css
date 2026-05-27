@@ -1,0 +1,122 @@
+/* ═══════════════════════════════════════════════════════════════
+   HunchMate — Animated Wave Checkbox
+   Source: Uiverse.io by vishnupprajapat (adapted to HM design)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Wrapper ── */
+.hm-cbx-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ── Hidden native input ── */
+.hm-cbx-inp {
+  display: none;
+  visibility: hidden;
+}
+
+/* ── Label (the whole clickable row) ── */
+.hm-cbx {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  margin: 0;
+  user-select: none;
+  cursor: pointer;
+}
+
+.hm-cbx[for] {
+  cursor: pointer;
+}
+
+/* ── Both spans ── */
+.hm-cbx span {
+  display: inline-block;
+  vertical-align: middle;
+  transform: translate3d(0, 0, 0);
+}
+
+/* ── Box (the visual checkbox square) ── */
+.hm-cbx__box {
+  position: relative;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  transform: scale(1);
+  border: 1.5px solid #9098a9;
+  transition: all 0.2s ease;
+  background: transparent;
+}
+
+/* Ripple pseudo-element */
+.hm-cbx__box::before {
+  content: '';
+  width: 100%;
+  height: 100%;
+  background: var(--color-accent, #ff6b00);
+  display: block;
+  transform: scale(0);
+  opacity: 1;
+  border-radius: 50%;
+}
+
+/* ── SVG checkmark ── */
+.hm-cbx__box svg {
+  position: absolute;
+  top: 3px;
+  left: 2px;
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 16px;
+  stroke-dashoffset: 16px;
+  transition: stroke-dashoffset 0.3s ease 0.1s;
+  transform: translate3d(0, 0, 0);
+}
+
+/* ── Label text ── */
+.hm-cbx__label {
+  padding-left: 8px;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: inherit;
+}
+
+/* ── Hover: highlight the box border ── */
+.hm-cbx:hover .hm-cbx__box {
+  border-color: var(--color-accent, #ff6b00);
+}
+
+/* ── Checked state ── */
+.hm-cbx-inp:checked + .hm-cbx .hm-cbx__box {
+  background: var(--color-accent, #ff6b00);
+  border-color: var(--color-accent, #ff6b00);
+  animation: hm-cbx-wave 0.4s ease;
+}
+
+.hm-cbx-inp:checked + .hm-cbx .hm-cbx__box svg {
+  stroke-dashoffset: 0;
+}
+
+.hm-cbx-inp:checked + .hm-cbx .hm-cbx__box::before {
+  transform: scale(3.5);
+  opacity: 0;
+  transition: all 0.6s ease;
+}
+
+/* ── Disabled state ── */
+.hm-cbx-inp:disabled + .hm-cbx {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Wave keyframe ── */
+@keyframes hm-cbx-wave {
+  50% {
+    transform: scale(0.88);
+  }
+}

@@ -337,7 +337,7 @@ export const sampleCredentials = [
   },
 ];
 
-export const eventCategories = ['Hackathon', 'Competition', 'Workshop', 'Conference', 'Bootcamp', 'Meetup'];
+export const eventCategories = ['Hackathon', 'Innovation Challenge', 'Competition', 'Workshop', 'Bootcamp', 'Hiring Challenge', 'Fellowship', 'Other'];
 export const eventModes = ['Online', 'Offline', 'Hybrid'];
 export const eventStatuses = ['open', 'upcoming', 'ongoing', 'completed'];
 

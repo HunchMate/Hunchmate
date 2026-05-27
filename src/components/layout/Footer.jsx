@@ -1,7 +1,7 @@
-import { Link } from 'react-router-dom';
+import { Link } from '@/utils/router';
 import { X, Link2, Globe, MessageCircle, Mail, Zap } from 'lucide-react';
 import './Footer.css';
-import hunchmateLogo from '../../../HUNCHMATE - Logo Pack (2).png';
+import hunchmateLogo from '@/../HUNCHMATE - Logo Pack (2).png';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -42,7 +42,7 @@ export default function Footer() {
           {/* Brand column */}
           <div className="site-footer__brand-col">
             <Link to="/" className="site-footer__brand-logo" aria-label="Hunchmate Home">
-              <img src={hunchmateLogo} alt="HunchMate" />
+              <img src={hunchmateLogo?.src || hunchmateLogo} alt="HunchMate" />
             </Link>
             <p className="site-footer__tagline">
               Discover and attend <br />

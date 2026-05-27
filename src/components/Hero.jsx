@@ -1,5 +1,5 @@
 import { motion as Motion } from 'motion/react'
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -15,9 +15,14 @@ const fadeUp = {
 }
 
 export default function Hero() {
-  // Detect mobile and motion preferences
-  const isMobile = useMemo(() => window.innerWidth < 768, [])
-  const prefersReducedMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
+  // Detect mobile and motion preferences safely on client side
+  const [isMobile, setIsMobile] = useState(false)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768)
+    setPrefersReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  }, [])
   
   // Skip animations on mobile for better performance
   const shouldAnimate = !isMobile && !prefersReducedMotion

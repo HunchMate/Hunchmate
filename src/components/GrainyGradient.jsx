@@ -1,10 +1,15 @@
-import { memo, useMemo } from 'react'
+import { memo, useState, useEffect } from 'react'
 import Grainient from './Grainient'
 
 const GrainyGradient = memo(function GrainyGradient() {
-  // Detect mobile and motion preferences for performance
-  const isMobile = useMemo(() => window.innerWidth < 768, [])
-  const prefersReducedMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
+  // Detect mobile and motion preferences for performance safely on client side
+  const [isMobile, setIsMobile] = useState(false)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768)
+    setPrefersReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  }, [])
   
   // Skip expensive animations on mobile
   if (isMobile || prefersReducedMotion) {

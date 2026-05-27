@@ -1,0 +1,32 @@
+{
+  "app": {
+    "[project]/src/app/(main)/about/page": [],
+    "[project]/src/app/(main)/admin/complaints/page": [],
+    "[project]/src/app/(main)/admin/dashboard/page": [],
+    "[project]/src/app/(main)/contact/page": [],
+    "[project]/src/app/(main)/dashboard/page": [],
+    "[project]/src/app/(main)/dashboard/settings/page": [],
+    "[project]/src/app/(main)/events/[eventId]/page": [],
+    "[project]/src/app/(main)/events/page": [],
+    "[project]/src/app/(main)/help-center/page": [],
+    "[project]/src/app/(main)/home/page": [],
+    "[project]/src/app/(main)/host-event/page": [],
+    "[project]/src/app/(main)/host-onboarding/page": [],
+    "[project]/src/app/(main)/host-signup/page": [],
+    "[project]/src/app/(main)/invites/[inviteId]/page": [],
+    "[project]/src/app/(main)/login/page": [],
+    "[project]/src/app/(main)/onboarding/page": [],
+    "[project]/src/app/(main)/organizer/create-event/page": [],
+    "[project]/src/app/(main)/organizer/dashboard/page": [],
+    "[project]/src/app/(main)/organizer/edit-event/[eventId]/page": [],
+    "[project]/src/app/(main)/privacy/page": [],
+    "[project]/src/app/(main)/reset-password/page": [],
+    "[project]/src/app/(main)/signup/page": [],
+    "[project]/src/app/(main)/terms/page": [],
+    "[project]/src/app/_not-found/page": [],
+    "[project]/src/app/page": []
+  },
+  "appUsingSizeAdjust": false,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}

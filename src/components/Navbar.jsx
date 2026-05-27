@@ -12,7 +12,7 @@ import {
   Send,
   ChevronRight,
 } from 'lucide-react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from '@/utils/router'
 import { useAuth } from '../context/AuthContext'
 import { useEvents } from '../context/EventContext'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
@@ -119,7 +119,7 @@ export default function Navbar() {
           style={{ width: '300px', height: '80px' }}
         >
           <img
-            src={hunchmateLogo}
+            src={hunchmateLogo?.src || hunchmateLogo}
             alt="HunchMate"
             style={{
               width: '100%',

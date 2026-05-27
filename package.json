@@ -12,7 +12,8 @@
     "auth-api": "node server/auth-server.js",
     "db:bootstrap": "node server/bootstrap-db.js",
     "preview": "npm run build && npx @opennextjs/cloudflare build && wrangler dev",
-    "deploy": "npm run build && npx @opennextjs/cloudflare build && wrangler deploy"
+    "deploy": "npm run build && npx @opennextjs/cloudflare build && wrangler deploy",
+    "pages:build": "npm run build && npx @opennextjs/cloudflare build && node -e \"require('fs').copyFileSync('.open-next/worker.js', '.open-next/assets/_worker.js')\""
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",

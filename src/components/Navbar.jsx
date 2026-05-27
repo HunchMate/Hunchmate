@@ -144,7 +144,7 @@ export default function Navbar() {
           WebkitBackdropFilter: 'blur(16px)',
           border: '1px solid rgba(255,255,255,0.1)',
           minWidth: 'min(420px, 100%)',
-          maxWidth: 'min(900px, calc(100vw - 48px))',
+          maxWidth: 'min(720px, calc(100vw - 48px))',
           width: '100%',
         }}
       >

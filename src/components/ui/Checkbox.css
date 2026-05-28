@@ -18,7 +18,7 @@
 /* ── Label (the whole clickable row) ── */
 .hm-cbx {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0;
   margin: 0;
   user-select: none;
@@ -32,7 +32,6 @@
 /* ── Both spans ── */
 .hm-cbx span {
   display: inline-block;
-  vertical-align: middle;
   transform: translate3d(0, 0, 0);
 }
 
@@ -47,6 +46,7 @@
   border: 1.5px solid #9098a9;
   transition: all 0.2s ease;
   background: transparent;
+  margin-top: 2px; /* nudge box to align with first line of text */
 }
 
 /* Ripple pseudo-element */

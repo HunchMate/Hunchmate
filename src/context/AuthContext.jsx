@@ -24,6 +24,22 @@ export function AuthProvider({ children }) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+
+      // Clear cookies starting with sb- to ensure Next.js middleware / server routes notice signout
+      document.cookie.split(';').forEach((c) => {
+        const name = c.trim().split('=')[0];
+        if (name.startsWith('sb-')) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        }
+      });
     }
     setToken(null);
     setUser(null);
@@ -64,11 +80,26 @@ export function AuthProvider({ children }) {
       if (!isMounted) return;
 
       if (session) {
+        // Validate the token is still live (getUser() triggers auto-refresh if needed)
+        const { data: { user: validUser }, error: userError } = await supabase.auth.getUser();
+        if (userError || !validUser) {
+          // Token is expired and could not be refreshed — force sign-out
+          await supabase.auth.signOut({ scope: 'local' });
+          if (isMounted) {
+            clearSession();
+            setLoading(false);
+          }
+          return;
+        }
+
         const nextToken = session.access_token;
         persistSession(nextToken, null);
 
         try {
           let profile = await getUserProfile(session.user.id);
+          if (profile && !profile.email) {
+            profile.email = session.user.email;
+          }
           const intendedRole = session.user.user_metadata?.role;
 
           if (profile && intendedRole && profile.role !== intendedRole) {
@@ -100,6 +131,9 @@ export function AuthProvider({ children }) {
             clearSession();
             setError('Your account is suspended. Please contact support.');
           } else {
+            if (profile && !profile.email && session.user.email) {
+              profile.email = session.user.email;
+            }
             persistSession(nextToken, profile);
             setError(null);
           }
@@ -146,10 +180,7 @@ export function AuthProvider({ children }) {
         throw new Error('Signup failed: No user details returned.');
       }
 
-      // Explicitly set the session first so that the client is authenticated for profiles RLS rules
-      if (data.session) {
-        await supabase.auth.setSession(data.session);
-      }
+      // Session is already automatically set by signUp in the client.
 
       const profile = await upsertUserProfileFromAuthUser(data.user, {
         name,
@@ -194,6 +225,9 @@ export function AuthProvider({ children }) {
       }
 
       let profile = await getUserProfile(data.user.id);
+      if (profile && !profile.email) {
+        profile.email = data.user.email;
+      }
       const intendedRole = data.user.user_metadata?.role;
 
       if (profile && intendedRole && profile.role !== intendedRole) {
@@ -267,6 +301,10 @@ export function AuthProvider({ children }) {
         if (profile?.status === 'suspended') {
           await supabase.auth.signOut();
           throw new Error('Your account is suspended. Please contact support.');
+        }
+
+        if (profile && !profile.email && tokenData.user?.email) {
+          profile.email = tokenData.user.email;
         }
 
         if (tokenData.session) {

@@ -33,32 +33,40 @@ export default function Stepper({
   const isLastStep = currentStep === totalSteps;
 
   const canMoveToStep = (targetStep) => {
-    if (targetStep <= currentStep) return true;
-    if (!onBeforeStepChange) return true;
+    try {
+      if (targetStep <= currentStep) return true;
+      if (!onBeforeStepChange) return true;
 
-    const result = onBeforeStepChange({
-      currentStep,
-      targetStep,
-      totalSteps,
-      isLastStep,
-    });
+      const result = onBeforeStepChange({
+        currentStep,
+        targetStep,
+        totalSteps,
+        isLastStep,
+      });
 
-    if (result === true || typeof result === 'undefined') return true;
 
-    if (result === false) {
-      onStepChangeBlocked?.({ currentStep, targetStep });
-      return false;
-    }
 
-    if (typeof result === 'object' && result !== null) {
-      if (result.ok === false) {
-        onStepChangeBlocked?.({ currentStep, targetStep, reason: result.reason || '' });
+      if (result === true || typeof result === 'undefined') return true;
+
+      if (result === false) {
+        onStepChangeBlocked?.({ currentStep, targetStep });
         return false;
       }
-      return true;
-    }
 
-    return true;
+      if (typeof result === 'object' && result !== null) {
+        if (result.ok === false) {
+
+          onStepChangeBlocked?.({ currentStep, targetStep, reason: result.reason || '' });
+          return false;
+        }
+        return true;
+      }
+
+      return true;
+    } catch (err) {
+
+      return false;
+    }
   };
 
   const updateStep = (newStep) => {
@@ -76,6 +84,7 @@ export default function Stepper({
   };
 
   const handleNext = () => {
+
     if (!isLastStep) {
       const targetStep = currentStep + 1;
       if (!canMoveToStep(targetStep)) return;
@@ -85,6 +94,7 @@ export default function Stepper({
   };
 
   const handleComplete = async () => {
+
     if (isSubmitting) return;
     if (!canMoveToStep(totalSteps + 1)) return;
 

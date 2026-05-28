@@ -44,9 +44,10 @@ function buildForm(user) {
     techProficiency: user?.techProficiency || '',
     currentDesignation: user?.currentDesignation || '',
     workSummary: user?.workSummary || '',
-    skills: Array.isArray(user?.skills) ? user.skills.join(', ') : '',
+    skills: Array.isArray(user?.skills) ? user.skills : [],
     linkedin: user?.socials?.linkedin || '',
     github: user?.socials?.github || '',
+    interests: Array.isArray(user?.socials?.interests) ? user.socials.interests : [],
   };
 }
 
@@ -320,15 +321,13 @@ export default function Profile() {
         currentDesignation: form.profileType === 'working_professional' ? form.currentDesignation : '',
         workSummary: form.profileType === 'working_professional' ? form.workSummary : '',
         headline: form.profileType === 'working_professional' ? form.currentDesignation : '',
-        skills: form.skills
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean),
+        skills: Array.isArray(form.skills) ? form.skills.map((item) => item.trim()).filter(Boolean) : [],
         socials: {
           linkedin: urlFields[0] || '',
           github: urlFields[1] || '',
           additionalUrls: urlFields.slice(2).map((item) => item.trim()).filter(Boolean),
           instagram: user.socials?.instagram || '',
+          interests: Array.isArray(form.interests) ? form.interests : [],
         },
       });
 
@@ -394,7 +393,7 @@ export default function Profile() {
 
   const isSettingsPage = location.pathname === '/dashboard/settings' || location.pathname === '/profile/settings';
 
-  const handleLabel = form.currentDesignation || (user.role === 'organizer' ? 'Event Host' : 'Project Manager');
+  const handleLabel = form.currentDesignation || (user.role === 'organizer' ? 'Event Host' : '');
 
   if (isSettingsPage) {
     return (
@@ -506,7 +505,8 @@ export default function Profile() {
 
   return (
     <>
-    <div className="bg-background text-on-surface font-body pb-20 md:pb-0">
+    <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');`}</style>
+    <div className="bg-[#EEF0F8] font-['DM_Sans',sans-serif] w-full min-h-[100vh] pb-20 md:pb-0 pt-28">
     <div className="flex min-h-screen">
 
     <main className="flex-1">
@@ -537,7 +537,7 @@ export default function Profile() {
               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
                 <h1 className="text-3xl font-black text-gray-900">{form.name || 'Your profile'}</h1>
               </div>
-              <p className="text-gray-500 font-medium">{handleLabel}</p>
+              {handleLabel && <p className="text-gray-500 font-medium">{handleLabel}</p>}
             </div>
             <div className="flex flex-wrap justify-center md:justify-start gap-y-2 gap-x-6 text-sm text-gray-500 font-medium">
               <div className="flex items-center gap-1.5">
@@ -595,12 +595,25 @@ export default function Profile() {
               <p className="text-gray-600 leading-relaxed font-medium">
                 {form.bio || 'Add a short bio so people understand your background, interests, and the kind of opportunities you want to explore.'}
               </p>
-              <div className="flex flex-wrap gap-2 pt-2">
-                <span className="px-3 py-1.5 bg-purple-50 text-purple-700 font-bold text-xs rounded-lg">Problem Solver</span>
-                <span className="px-3 py-1.5 bg-blue-50 text-blue-700 font-bold text-xs rounded-lg">Builder</span>
-                <span className="px-3 py-1.5 bg-indigo-50 text-indigo-700 font-bold text-xs rounded-lg">AI Explorer</span>
-                <span className="px-3 py-1.5 bg-orange-50 text-orange-700 font-bold text-xs rounded-lg">Open Source</span>
-              </div>
+              {Array.isArray(form.interests) && form.interests.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {form.interests.map((interest, idx) => {
+                    const isOrange = interest.toLowerCase() === 'open source';
+                    return (
+                      <span
+                        key={idx}
+                        className={`px-3 py-1.5 font-bold text-xs rounded-lg ${
+                          isOrange
+                            ? 'bg-orange-50 text-orange-700'
+                            : 'bg-purple-50 text-purple-700'
+                        }`}
+                      >
+                        {interest}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </section>
 
             {/* Skills Section */}
@@ -613,8 +626,8 @@ export default function Profile() {
                 <div className="flex items-center gap-3"><button className="p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors"></button><button className="text-indigo-600 font-bold text-xs hover:underline">View all</button></div>
               </div>
               <div className="flex flex-wrap gap-2">
-                {String(form.skills || '').trim() ? (
-                  form.skills.split(',').map(skill => skill.trim()).filter(Boolean).map((skill, index) => (
+                {Array.isArray(form.skills) && form.skills.length > 0 ? (
+                  form.skills.map((skill, index) => (
                     <span key={index} className="px-4 py-2 border border-gray-100 bg-gray-50 text-gray-700 font-bold text-xs rounded-xl">{skill}</span>
                   ))
                 ) : (

@@ -64,6 +64,9 @@ export default function OrganizerDashboard() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [announcements, setAnnouncements] = useState([]);
+  const [announcementEventId, setAnnouncementEventId] = useState('');
+  const [announcementText, setAnnouncementText] = useState('');
   const scannerRef = useRef(null);
   const scannerRegionId = 'orgx-team-qr-scanner';
 
@@ -316,6 +319,10 @@ export default function OrganizerDashboard() {
           <button type="button" className={activeTab === 'overview' ? 'is-active' : ''} onClick={() => setActiveTab('overview')}>Analytics</button>
           <button type="button" className={activeTab === 'credentials' ? 'is-active' : ''} onClick={() => setActiveTab('credentials')}>Certificates</button>
           <button type="button" className={activeTab === 'registrations' ? 'is-active' : ''} onClick={() => setActiveTab('registrations')}>Registrations</button>
+          <button type="button" className={activeTab === 'approvals' ? 'is-active' : ''} onClick={() => setActiveTab('approvals')}>Approvals</button>
+          <button type="button" className={activeTab === 'teams' ? 'is-active' : ''} onClick={() => setActiveTab('teams')}>Teams</button>
+          <button type="button" className={activeTab === 'submissions' ? 'is-active' : ''} onClick={() => setActiveTab('submissions')}>Submissions</button>
+          <button type="button" className={activeTab === 'announcements' ? 'is-active' : ''} onClick={() => setActiveTab('announcements')}>Announcements</button>
         </div>
 
         {activeTab === 'notifications' && (
@@ -518,16 +525,244 @@ export default function OrganizerDashboard() {
           </section>
         )}
 
-        {activeTab === 'registrations' && (
+        {activeTab === 'registrations' && (() => {
+          const allRegs = myEvents.flatMap((ev) => getEventRegistrations(ev.id).map((reg) => ({ ...reg, eventTitle: ev.title, eventId: ev.id })));
+          return (
+            <section className="orgx-panel animate-fade-in">
+              <header className="orgx-panel__head">
+                <h2>All Registrations ({allRegs.length})</h2>
+                {allRegs.length > 0 && <Button variant="ghost" size="sm" icon={Download} onClick={() => {
+                  const csvData = allRegs.map((r) => ({ Event: r.eventTitle, Name: r.name || r.userName || '', Email: r.email || r.userEmail || '', Team: r.teamName || '-', Date: r.registeredAt || r.createdAt || '', Status: r.checkedIn ? 'Checked In' : 'Registered' }));
+                  downloadCSV(csvData, 'all-registrations');
+                }}>Export All CSV</Button>}
+              </header>
+              {allRegs.length === 0 ? (
+                <div className="orgx-empty">
+                  <Users size={34} />
+                  <h3>No registration data</h3>
+                  <p>When participants register for your programs, their data will populate here.</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                        <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#94a3b8', fontWeight: 600 }}>Event</th>
+                        <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#94a3b8', fontWeight: 600 }}>Name</th>
+                        <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#94a3b8', fontWeight: 600 }}>Email</th>
+                        <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#94a3b8', fontWeight: 600 }}>Team</th>
+                        <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#94a3b8', fontWeight: 600 }}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allRegs.map((reg, idx) => (
+                        <tr key={`reg-${idx}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <td style={{ padding: '0.55rem 0.75rem', color: 'var(--color-text)' }}>{reg.eventTitle}</td>
+                          <td style={{ padding: '0.55rem 0.75rem', color: 'var(--color-text)' }}>{reg.name || reg.userName || '-'}</td>
+                          <td style={{ padding: '0.55rem 0.75rem', color: 'var(--color-text-muted)' }}>{reg.email || reg.userEmail || '-'}</td>
+                          <td style={{ padding: '0.55rem 0.75rem', color: 'var(--color-text-muted)' }}>{reg.teamName || '-'}</td>
+                          <td style={{ padding: '0.55rem 0.75rem' }}>
+                            <Badge variant={reg.checkedIn ? 'success' : 'default'} size="sm">{reg.checkedIn ? 'Checked In' : 'Registered'}</Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          );
+        })()}
+
+        {activeTab === 'approvals' && (() => {
+          const inviteEvents = myEvents.filter((ev) => ev.accessType === 'Invite');
+          return (
+            <section className="orgx-panel animate-fade-in">
+              <header className="orgx-panel__head">
+                <h2>Approvals</h2>
+              </header>
+              {inviteEvents.length === 0 ? (
+                <div className="orgx-empty">
+                  <CheckCircle size={34} />
+                  <h3>No invite-only events</h3>
+                  <p>Events with &ldquo;Invite Only&rdquo; access type will show pending approvals here.</p>
+                </div>
+              ) : (
+                <div className="orgx-list">
+                  {inviteEvents.map((ev) => {
+                    const regs = getEventRegistrations(ev.id);
+                    const pending = regs.filter((r) => !r.approved && !r.rejected);
+                    return (
+                      <article key={ev.id} className="orgx-event-card">
+                        <div className="orgx-event-card__main">
+                          <h3>{ev.title}</h3>
+                          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>{pending.length} pending approval{pending.length !== 1 ? 's' : ''}, {regs.length} total registrations</p>
+                        </div>
+                        {pending.length > 0 ? (
+                          <div style={{ marginTop: '0.5rem' }}>
+                            {pending.slice(0, 10).map((reg, idx) => (
+                              <div key={`pend-${idx}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.4rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div>
+                                  <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{reg.name || reg.userName || 'Participant'}</span>
+                                  <span style={{ marginLeft: '0.75rem', fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>{reg.email || reg.userEmail || ''}</span>
+                                  {reg.teamName ? <span style={{ marginLeft: '0.75rem', fontSize: '0.82rem', color: '#ff6b00' }}>Team: {reg.teamName}</span> : null}
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <Button variant="primary" size="sm" icon={CheckCircle}>Approve</Button>
+                                  <Button variant="ghost" size="sm" icon={XCircle}>Reject</Button>
+                                </div>
+                              </div>
+                            ))}
+                            {pending.length > 10 ? <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>+{pending.length - 10} more pending</p> : null}
+                          </div>
+                        ) : (
+                          <p style={{ fontSize: '0.85rem', color: '#10b981', marginTop: '0.4rem' }}>✓ All registrations processed</p>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          );
+        })()}
+
+        {activeTab === 'teams' && (() => {
+          const teamRegs = myEvents.flatMap((ev) => getEventRegistrations(ev.id).filter((r) => r.teamName).map((r) => ({ ...r, eventTitle: ev.title })));
+          const teamGroups = {};
+          teamRegs.forEach((r) => {
+            const key = `${r.eventTitle}__${r.teamName}`;
+            if (!teamGroups[key]) teamGroups[key] = { eventTitle: r.eventTitle, teamName: r.teamName, members: [] };
+            teamGroups[key].members.push(r.name || r.userName || r.email || r.userEmail || 'Member');
+          });
+          const teamList = Object.values(teamGroups);
+          return (
+            <section className="orgx-panel animate-fade-in">
+              <header className="orgx-panel__head">
+                <h2>Teams ({teamList.length})</h2>
+              </header>
+              {teamList.length === 0 ? (
+                <div className="orgx-empty">
+                  <Users size={34} />
+                  <h3>No team registrations</h3>
+                  <p>Team registrations from your events will appear here.</p>
+                </div>
+              ) : (
+                <div className="orgx-list">
+                  {teamList.map((team, idx) => (
+                    <article key={`team-${idx}`} className="orgx-event-card">
+                      <div className="orgx-event-card__main">
+                        <div className="orgx-event-card__title-row">
+                          <h3>{team.teamName}</h3>
+                          <Badge variant="accent" size="sm">{team.members.length} members</Badge>
+                        </div>
+                        <div className="orgx-event-card__meta">
+                          <span><Calendar size={14} /> {team.eventTitle}</span>
+                        </div>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.3rem' }}>{team.members.join(', ')}</p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })()}
+
+        {activeTab === 'submissions' && (
           <section className="orgx-panel animate-fade-in">
             <header className="orgx-panel__head">
-              <h2>All Registrations</h2>
+              <h2>Submissions</h2>
             </header>
-            <div className="orgx-empty">
-              <Users size={34} />
-              <h3>No registration data</h3>
-              <p>When participants register for your programs, their data will populate here.</p>
+            {myEvents.filter((ev) => Array.isArray(ev.rounds) && ev.rounds.length > 0).length === 0 ? (
+              <div className="orgx-empty">
+                <Award size={34} />
+                <h3>No multi-round events</h3>
+                <p>Events with configured rounds will show submission tracking here.</p>
+              </div>
+            ) : (
+              <div className="orgx-list">
+                {myEvents.filter((ev) => Array.isArray(ev.rounds) && ev.rounds.length > 0).map((ev) => (
+                  <article key={ev.id} className="orgx-event-card">
+                    <div className="orgx-event-card__main">
+                      <h3>{ev.title}</h3>
+                      <div style={{ marginTop: '0.5rem' }}>
+                        {ev.rounds.map((round, idx) => (
+                          <div key={`sub-round-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.35rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            <Badge variant="default" size="sm">Round {idx + 1}</Badge>
+                            <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{round.name}</span>
+                            {round.submissionTypes?.length > 0 ? <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>({round.submissionTypes.join(', ')})</span> : null}
+                          </div>
+                        ))}
+                      </div>
+                      <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>Submissions will appear here when participants submit their work.</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === 'announcements' && (
+          <section className="orgx-panel animate-fade-in">
+            <header className="orgx-panel__head">
+              <h2>Announcements</h2>
+            </header>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>Select Event</label>
+                  <select
+                    style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: 'var(--color-text)', fontSize: '0.88rem' }}
+                    value={announcementEventId}
+                    onChange={(e) => setAnnouncementEventId(e.target.value)}
+                  >
+                    <option value="">Choose an event...</option>
+                    {myEvents.map((ev) => <option key={ev.id} value={ev.id}>{ev.title}</option>)}
+                  </select>
+                </div>
+              </div>
+              <textarea
+                style={{ padding: '0.65rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: 'var(--color-text)', fontSize: '0.88rem', resize: 'vertical', minHeight: '80px', fontFamily: 'inherit' }}
+                placeholder="Type your announcement here..."
+                value={announcementText}
+                onChange={(e) => setAnnouncementText(e.target.value)}
+              />
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={!announcementEventId || !announcementText.trim()}
+                onClick={() => {
+                  const ev = myEvents.find((e) => e.id === announcementEventId);
+                  setAnnouncements((prev) => [{ id: Date.now(), eventId: announcementEventId, eventTitle: ev?.title || '', text: announcementText.trim(), postedAt: new Date().toISOString() }, ...prev]);
+                  setAnnouncementText('');
+                }}
+              >
+                Post Announcement
+              </Button>
             </div>
+            {announcements.length === 0 ? (
+              <div className="orgx-empty">
+                <Bell size={34} />
+                <h3>No announcements yet</h3>
+                <p>Select an event and post an announcement to notify participants.</p>
+              </div>
+            ) : (
+              <div className="orgx-list">
+                {announcements.map((ann) => (
+                  <article key={ann.id} className="orgx-event-card">
+                    <div className="orgx-event-card__main">
+                      <div className="orgx-event-card__title-row">
+                        <h3>{ann.eventTitle}</h3>
+                        <Badge variant="default" size="sm">{formatDate(ann.postedAt)}</Badge>
+                      </div>
+                      <p style={{ fontSize: '0.9rem', color: 'var(--color-text)', marginTop: '0.35rem', lineHeight: 1.5 }}>{ann.text}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
         )}
 

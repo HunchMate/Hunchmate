@@ -114,6 +114,7 @@
 }
 
 @media (max-width: 420px) {
+  
   .sm-toggle {
     height: 44px;
     min-height: 44px;

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from '@/utils/router';
-import { ArrowLeft, HelpCircle, Link2, ListPlus, Mail, MapPin, Phone, Plus, Trash2, Tag, Type, Network, CheckSquare, Code, Rocket, Trophy, Briefcase, GraduationCap, Award, MoreHorizontal, MonitorPlay, Layers, Clock, DollarSign, Calendar } from 'lucide-react';
+import { ArrowLeft, HelpCircle, Link2, ListPlus, Mail, MapPin, Phone, Plus, Trash2, Tag, Type, Network, CheckSquare, Code, Rocket, Trophy, Briefcase, GraduationCap, Award, MoreHorizontal, MonitorPlay, Layers, Clock, DollarSign, Calendar, Users, Eye, Palette, Globe, ExternalLink, Shield, FileText, Star, CircleDot } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useEvents } from '@/context/EventContext';
 import { eventCategories, eventModes } from '@/utils/sampleData';
@@ -63,10 +63,26 @@ export default function CreateEvent() {
     themes: '',
     organizerContactEmail: user?.email || '',
     organizerContactPhone: user?.phoneNumber || '',
-    faq1q: '',
-    faq1a: '',
-    faq2q: '',
-    faq2a: '',
+    organizerContactRole: '',
+    organizerLinkedin: '',
+    organizerTwitter: '',
+    organizerWebsite: '',
+    venueAddress: '',
+    venueInstructions: '',
+    eligibility: '',
+    participationGuidelines: '',
+    codeOfConduct: '',
+    visibility: 'public',
+    primaryColor: '#5227FF',
+    paymentType: 'free',
+    paymentAmount: '',
+    paymentCurrency: 'INR',
+    internships: '',
+    goodies: '',
+    sponsorPerks: '',
+    commOnRegistration: true,
+    commOnDeadline: true,
+    commOnResults: true,
     credentialEnabled: true,
     credentialTemplate: 'Classic',
     credentialTitle: 'Certificate of Achievement',
@@ -79,11 +95,19 @@ export default function CreateEvent() {
     mapLink: '',
   });
   const [sections, setSections] = useState({
+    about: true,
     timeline: true,
     rules: true,
     problems: true,
     maps: true,
     media: true,
+    faqs: true,
+    sponsors: true,
+    judges: true,
+    mentors: true,
+    prizes: true,
+    tracks: true,
+    contacts: true,
   });
   const [timelineItems, setTimelineItems] = useState([
     { title: 'Registration Opens', date: '', description: '' },
@@ -92,8 +116,15 @@ export default function CreateEvent() {
   const [problemStatements, setProblemStatements] = useState([{ psId: '', psDescription: '', psStatement: '' }]);
   const [subEvents, setSubEvents] = useState([]);
   const [prizes, setPrizes] = useState([{ rank: '1st Place', reward: '' }]);
+  const [judges, setJudges] = useState([]);
+  const [mentors, setMentors] = useState([]);
+  const [rounds, setRounds] = useState([]);
+  const [faqs, setFaqs] = useState([{ q: '', a: '' }]);
+  const [judgingCriteriaList, setJudgingCriteriaList] = useState([]);
+  const [coupons, setCoupons] = useState([]);
   const [posterImage, setPosterImage] = useState('');
   const [showcaseImage, setShowcaseImage] = useState('');
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [validationToast, setValidationToast] = useState({ visible: false, message: '' });
   const [showSuspendedModal, setShowSuspendedModal] = useState(false);
 
@@ -270,10 +301,26 @@ export default function CreateEvent() {
         targetEvent.organizer?.phone ||
         user?.phoneNumber ||
         '',
-      faq1q: targetEvent.faqs?.[0]?.q || '',
-      faq1a: targetEvent.faqs?.[0]?.a || '',
-      faq2q: targetEvent.faqs?.[1]?.q || '',
-      faq2a: targetEvent.faqs?.[1]?.a || '',
+      organizerContactRole: targetEvent.organizer?.contactRole || targetEvent.organiser?.contactRole || '',
+      organizerLinkedin: targetEvent.organizer?.linkedin || targetEvent.organiser?.linkedin || '',
+      organizerTwitter: targetEvent.organizer?.twitter || targetEvent.organiser?.twitter || '',
+      organizerWebsite: targetEvent.organizer?.website || targetEvent.organiser?.website || '',
+      venueAddress: targetEvent.venueAddress || '',
+      venueInstructions: targetEvent.venueInstructions || '',
+      eligibility: targetEvent.eligibility || '',
+      participationGuidelines: targetEvent.participationGuidelines || '',
+      codeOfConduct: targetEvent.codeOfConduct || '',
+      visibility: targetEvent.visibility || 'public',
+      primaryColor: targetEvent.primaryColor || '#5227FF',
+      paymentType: targetEvent.paymentConfig?.type || 'free',
+      paymentAmount: targetEvent.paymentConfig?.amount || '',
+      paymentCurrency: targetEvent.paymentConfig?.currency || 'INR',
+      internships: targetEvent.internships || '',
+      goodies: targetEvent.goodies || '',
+      sponsorPerks: targetEvent.sponsorPerks || '',
+      commOnRegistration: targetEvent.communicationPrefs?.onRegistration !== false,
+      commOnDeadline: targetEvent.communicationPrefs?.onDeadline !== false,
+      commOnResults: targetEvent.communicationPrefs?.onResults !== false,
       credentialEnabled: Boolean(targetEvent.credentialEnabled),
       credentialTemplate: targetEvent.credentialTemplate || 'Classic',
       credentialTitle: credentialConfig.title || 'Certificate of Achievement',
@@ -287,11 +334,19 @@ export default function CreateEvent() {
     });
 
     setSections({
+      about: targetEvent.sections?.about ?? true,
       timeline: targetEvent.sections?.timeline ?? true,
       rules: targetEvent.sections?.rules ?? true,
       problems: targetEvent.sections?.problems ?? true,
       maps: targetEvent.sections?.maps ?? true,
       media: targetEvent.sections?.media ?? true,
+      faqs: targetEvent.sections?.faqs ?? true,
+      sponsors: targetEvent.sections?.sponsors ?? true,
+      judges: targetEvent.sections?.judges ?? true,
+      mentors: targetEvent.sections?.mentors ?? true,
+      prizes: targetEvent.sections?.prizes ?? true,
+      tracks: targetEvent.sections?.tracks ?? true,
+      contacts: targetEvent.sections?.contacts ?? true,
     });
 
     setTimelineItems(
@@ -309,6 +364,12 @@ export default function CreateEvent() {
       normalizeProblemStatements(targetEvent.problemStatements)
     );
     setSubEvents(normalizeSubEvents(targetEvent.subEvents));
+    setFaqs(Array.isArray(targetEvent.faqs) && targetEvent.faqs.length ? targetEvent.faqs : [{ q: '', a: '' }]);
+    setJudges(Array.isArray(targetEvent.judges) ? targetEvent.judges : []);
+    setMentors(Array.isArray(targetEvent.mentors) ? targetEvent.mentors : []);
+    setRounds(Array.isArray(targetEvent.rounds) ? targetEvent.rounds : []);
+    setJudgingCriteriaList(Array.isArray(targetEvent.judgingCriteria) ? targetEvent.judgingCriteria : []);
+    setCoupons(Array.isArray(targetEvent.paymentConfig?.coupons) ? targetEvent.paymentConfig.coupons : []);
     setPosterImage(
       targetEvent.posterImage ||
       targetEvent.bannerImages?.[0] ||
@@ -470,164 +531,186 @@ export default function CreateEvent() {
   };
 
   const handleSubmit = async () => {
-    const normalizedPosterImage = String(posterImage || '').trim();
-    const normalizedShowcaseImage = String(showcaseImage || '').trim();
+    try {
+      const normalizedPosterImage = String(posterImage || '').trim();
+      const normalizedShowcaseImage = String(showcaseImage || '').trim();
 
-    const posterBytes = estimateDataUrlBytes(normalizedPosterImage);
-    if (posterBytes > MAX_IMAGE_BYTES) {
-      showValidationToast('Poster image must be 1MB or smaller.');
-      return false;
-    }
+      // Ensure images are not massive base64 strings if possible, or restrict their size
+      const isPosterMassive = isDataImageSrc(normalizedPosterImage) && normalizedPosterImage.length > 500000;
+      const isShowcaseMassive = isDataImageSrc(normalizedShowcaseImage) && normalizedShowcaseImage.length > 500000;
 
-    const showcaseBytes = estimateDataUrlBytes(normalizedShowcaseImage);
-    if (showcaseBytes > MAX_IMAGE_BYTES) {
-      showValidationToast('Showcase image must be 1MB or smaller.');
-      return false;
-    }
-
-    const includePosterInLegacyCollections = normalizedPosterImage && !isDataImageSrc(normalizedPosterImage);
-    const includeShowcaseInLegacyCollections = normalizedShowcaseImage && !isDataImageSrc(normalizedShowcaseImage);
-
-    const organiser = {
-      name: String(form.organizerName || '').trim() || user?.organizationName || user?.name || '',
-      logo: String(form.organizerLogo || '').trim() || '',
-      id: user?.id,
-      email: String(form.organizerContactEmail || '').trim(),
-      phone: String(form.organizerContactPhone || '').trim(),
-    };
-
-    const eventPayload = {
-      title: form.title,
-      category: form.category,
-      mode: form.mode,
-      status: targetEvent?.status || 'open',
-      description: form.description,
-      shortDescription: form.shortDescription,
-      tagline: form.tagline,
-      logo: form.logo,
-      sponsors: form.sponsors.split(',').map(s => s.trim()).filter(Boolean),
-      partners: form.partners.split(',').map(p => p.trim()).filter(Boolean),
-      organiser,
-      organizer: organiser,
-      accessType: form.accessType,
-      inviteApprovals: form.inviteApprovals,
-      inviteShortlist: form.inviteShortlist,
-      inviteRestricted: form.inviteRestricted,
-      invitePrivateLinks: form.invitePrivateLinks,
-      participationType: form.participationType,
-      teamInviteSystem: form.teamInviteSystem,
-      maxRegistrations: parseInt(form.maxRegistrations, 10) || 100,
-      enableWaitlist: form.enableWaitlist,
-      enableCustomFields: form.enableCustomFields,
-      enableDocUploads: form.enableDocUploads,
-      requireSocialProfiles: form.requireSocialProfiles,
-      requireConsent: form.requireConsent,
-      timeline: {
-        registrationStart: form.regStart,
-        registrationEnd: form.regEnd,
-        eventStart: form.eventStart,
-        eventEnd: form.eventEnd,
-      },
-      venue: form.venue,
-      fee: form.fee,
-      prizes: prizes.map(p => ({ rank: String(p.rank || '').trim(), reward: String(p.reward || '').trim() })).filter(p => p.rank || p.reward),
-      maxParticipants: parseInt(form.maxParticipants, 10) || 100,
-      teamSize:
-        form.teamMin && form.teamMax
-          ? { min: parseInt(form.teamMin, 10), max: parseInt(form.teamMax, 10) }
-          : null,
-      tags: form.themes
-        .split(',')
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-      themes: form.themes
-        .split(',')
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-      sections,
-      mapLink: form.mapLink,
-      location: form.venue,
-      timelineItems: sections.timeline
-        ? timelineItems.filter((item) => item.title || item.date || item.description)
-        : [],
-      rules: sections.rules ? rules.map((item) => item.trim()).filter(Boolean) : [],
-      problemStatements: sections.problems
-        ? problemStatements
-            .map((item) => ({
-              psId: String(item.psId || '').trim(),
-              psDescription: String(item.psDescription || '').trim(),
-              psStatement: String(item.psStatement || '').trim(),
-            }))
-            .filter((item) => item.psId || item.psDescription || item.psStatement)
-        : [],
-      subEvents: subEvents
-        .map((subEvent) => ({
-          title: String(subEvent.title || '').trim(),
-          startDate: String(subEvent.startDate || '').trim(),
-          endDate: String(subEvent.endDate || '').trim(),
-          time: String(subEvent.time || '').trim(),
-          entryFee: String(subEvent.entryFee || '').trim(),
-          prizeMoney: String(subEvent.prizeMoney || '').trim(),
-          description: String(subEvent.description || '').trim(),
-          milestones: (subEvent.milestones || [])
-            .map((milestone) => ({
-              title: String(milestone.title || '').trim(),
-              date: String(milestone.date || '').trim(),
-              description: String(milestone.description || '').trim(),
-            }))
-            .filter((milestone) => milestone.title || milestone.date || milestone.description),
-        }))
-        .filter((subEvent) => subEvent.title || subEvent.startDate || subEvent.endDate || subEvent.description || subEvent.milestones.length > 0),
-      bannerImages: includePosterInLegacyCollections ? [normalizedPosterImage] : [],
-      galleryImages: includeShowcaseInLegacyCollections ? [normalizedShowcaseImage] : [],
-      posterImage: normalizedPosterImage,
-      showcaseImage: normalizedShowcaseImage,
-      media: sections.media
-        ? {
-            banners: includePosterInLegacyCollections ? [normalizedPosterImage] : [],
-            gallery: includeShowcaseInLegacyCollections ? [normalizedShowcaseImage] : [],
-          }
-        : { banners: [], gallery: [] },
-      faqs: [
-        form.faq1q && form.faq1a ? { q: form.faq1q, a: form.faq1a } : null,
-        form.faq2q && form.faq2a ? { q: form.faq2q, a: form.faq2a } : null,
-      ].filter(Boolean),
-      imageUrl: '',
-      credentialEnabled: form.credentialEnabled,
-      credentialTemplate: form.credentialTemplate,
-      credentialConfig: {
-        title: form.credentialTitle,
-        subtitle: form.credentialSubtitle,
-        description: form.credentialDescription,
-        signatoryName: form.credentialSignatoryName,
-        signatoryRole: form.credentialSignatoryRole,
-        logoUrl: form.credentialLogoUrl,
-        sponsorLogoUrl: form.credentialSponsorLogoUrl,
-      },
-    };
-
-    const estimatedDocBytes = estimateJsonBytes(eventPayload);
-    if (estimatedDocBytes > MAX_EVENT_DOC_BYTES) {
-      showValidationToast('Event payload is too large for Firestore. Use smaller images or external image URLs.');
-      return false;
-    }
-
-    if (isEditMode && targetEvent) {
-      updateEvent(targetEvent.id, eventPayload);
-      navigate('/organizer/dashboard');
-      return true;
-    } else {
-      const result = await createEvent(eventPayload);
-      if (!result?.success) {
-        if (result?.suspended) {
-          setShowSuspendedModal(true);
-          return false;
-        }
-        showValidationToast(result?.error || 'Unable to create event.');
+      if (isPosterMassive) {
+        showValidationToast('Poster image is too large (must be < 500KB). Please use a smaller image or a URL link.');
         return false;
       }
-      navigate('/organizer/dashboard');
-      return true;
+      if (isShowcaseMassive) {
+        showValidationToast('Showcase image is too large (must be < 500KB). Please use a smaller image or a URL link.');
+        return false;
+      }
+
+      const includePosterInLegacyCollections = normalizedPosterImage && !isDataImageSrc(normalizedPosterImage);
+      const includeShowcaseInLegacyCollections = normalizedShowcaseImage && !isDataImageSrc(normalizedShowcaseImage);
+
+      const organiser = {
+        name: String(form.organizerName || '').trim() || user?.organizationName || user?.name || '',
+        logo: String(form.organizerLogo || '').trim() || '',
+        id: user?.id,
+        email: String(form.organizerContactEmail || '').trim(),
+        phone: String(form.organizerContactPhone || '').trim(),
+        contactRole: String(form.organizerContactRole || '').trim(),
+        linkedin: String(form.organizerLinkedin || '').trim(),
+        twitter: String(form.organizerTwitter || '').trim(),
+        website: String(form.organizerWebsite || '').trim(),
+      };
+
+      const eventPayload = {
+        title: form.title,
+        category: form.category,
+        mode: form.mode,
+        status: targetEvent?.status || 'open',
+        description: form.description,
+        shortDescription: form.shortDescription,
+        tagline: form.tagline,
+        logo: form.logo,
+        sponsors: form.sponsors.split(',').map(s => s.trim()).filter(Boolean),
+        partners: form.partners.split(',').map(p => p.trim()).filter(Boolean),
+        organiser,
+        organizer: organiser,
+        accessType: form.accessType,
+        inviteApprovals: form.inviteApprovals,
+        inviteShortlist: form.inviteShortlist,
+        inviteRestricted: form.inviteRestricted,
+        invitePrivateLinks: form.invitePrivateLinks,
+        participationType: form.participationType,
+        teamInviteSystem: form.teamInviteSystem,
+        maxRegistrations: parseInt(form.maxRegistrations, 10) || 100,
+        enableWaitlist: form.enableWaitlist,
+        enableCustomFields: form.enableCustomFields,
+        enableDocUploads: form.enableDocUploads,
+        requireSocialProfiles: form.requireSocialProfiles,
+        requireConsent: form.requireConsent,
+        timeline: {
+          registrationStart: form.regStart,
+          registrationEnd: form.regEnd,
+          eventStart: form.eventStart,
+          eventEnd: form.eventEnd,
+        },
+        venue: form.venue,
+        venueAddress: form.venueAddress,
+        venueInstructions: form.venueInstructions,
+        fee: form.fee,
+        prizes: prizes.map(p => ({ rank: String(p.rank || '').trim(), reward: String(p.reward || '').trim() })).filter(p => p.rank || p.reward),
+        maxParticipants: parseInt(form.maxParticipants, 10) || 100,
+        teamSize:
+          form.teamMin && form.teamMax
+            ? { min: parseInt(form.teamMin, 10), max: parseInt(form.teamMax, 10) }
+            : null,
+        tags: form.themes
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+        themes: form.themes
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+        sections,
+        mapLink: form.mapLink,
+        location: form.venue,
+        timelineItems: sections.timeline
+          ? timelineItems.filter((item) => item.title || item.date || item.description)
+          : [],
+        rules: sections.rules ? rules.map((item) => item.trim()).filter(Boolean) : [],
+        problemStatements: sections.problems
+          ? problemStatements
+              .map((item) => ({
+                psId: String(item.psId || '').trim(),
+                psDescription: String(item.psDescription || '').trim(),
+                psStatement: String(item.psStatement || '').trim(),
+              }))
+              .filter((item) => item.psId || item.psDescription || item.psStatement)
+          : [],
+        subEvents: subEvents
+          .map((subEvent) => ({
+            title: String(subEvent.title || '').trim(),
+            startDate: String(subEvent.startDate || '').trim(),
+            endDate: String(subEvent.endDate || '').trim(),
+            time: String(subEvent.time || '').trim(),
+            entryFee: String(subEvent.entryFee || '').trim(),
+            prizeMoney: String(subEvent.prizeMoney || '').trim(),
+            description: String(subEvent.description || '').trim(),
+            milestones: (subEvent.milestones || [])
+              .map((milestone) => ({
+                title: String(milestone.title || '').trim(),
+                date: String(milestone.date || '').trim(),
+                description: String(milestone.description || '').trim(),
+              }))
+              .filter((milestone) => milestone.title || milestone.date || milestone.description),
+          }))
+          .filter((subEvent) => subEvent.title || subEvent.startDate || subEvent.endDate || subEvent.description || subEvent.milestones.length > 0),
+        bannerImages: [],
+        galleryImages: [],
+        posterImage: isPosterMassive ? '' : normalizedPosterImage,
+        showcaseImage: isShowcaseMassive ? '' : normalizedShowcaseImage,
+        media: { banners: [], gallery: [] },
+        faqs: faqs.filter((faq) => faq.q && faq.a),
+        judges: judges.filter((j) => j.name),
+        mentors: mentors.filter((m) => m.name),
+        rounds: rounds.filter((r) => r.name),
+        judgingCriteria: judgingCriteriaList.filter((jc) => jc.criterion),
+        eligibility: form.eligibility,
+        participationGuidelines: form.participationGuidelines,
+        codeOfConduct: form.codeOfConduct,
+        visibility: form.visibility,
+        primaryColor: form.primaryColor,
+        paymentConfig: {
+          type: form.paymentType,
+          amount: form.paymentAmount,
+          currency: form.paymentCurrency,
+          coupons: coupons.filter((c) => c.code),
+        },
+        communicationPrefs: {
+          onRegistration: form.commOnRegistration,
+          onDeadline: form.commOnDeadline,
+          onResults: form.commOnResults,
+        },
+        internships: form.internships,
+        goodies: form.goodies,
+        sponsorPerks: form.sponsorPerks,
+        imageUrl: '',
+        credentialEnabled: form.credentialEnabled,
+        credentialTemplate: form.credentialTemplate,
+        credentialConfig: {
+          title: form.credentialTitle,
+          subtitle: form.credentialSubtitle,
+          description: form.credentialDescription,
+          signatoryName: form.credentialSignatoryName,
+          signatoryRole: form.credentialSignatoryRole,
+          logoUrl: form.credentialLogoUrl,
+          sponsorLogoUrl: form.credentialSponsorLogoUrl,
+        },
+      };
+
+      if (isEditMode && targetEvent) {
+        updateEvent(targetEvent.id, eventPayload);
+        navigate('/organizer/dashboard');
+        return true;
+      } else {
+        const result = await createEvent(eventPayload);
+        if (!result?.success) {
+          if (result?.suspended) {
+            setShowSuspendedModal(true);
+            return false;
+          }
+          showValidationToast(result?.error || 'Unable to create event.');
+          return false;
+        }
+        navigate('/organizer/dashboard');
+        return true;
+      }
+    } catch (err) {
+      console.error('Submit crash:', err);
+      showValidationToast(err.message || 'An unexpected error occurred during submission.');
+      return false;
     }
   };
 
@@ -929,28 +1012,6 @@ export default function CreateEvent() {
                 />
 
                 <div className="create-event__row">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.36rem', width: '100%' }}>
-                    <label className="input-label">Program Logo</label>
-                    <label className="create-event__upload-field" style={{ margin: 0 }}>
-                      <span>Upload Program Logo (Square, 512 x 512)</span>
-                      <input type="file" accept="image/*" onChange={(event) => handleSingleImageUpload(event, 'logo')} />
-                    </label>
-                    {form.logo && (
-                      <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <img src={form.logo} alt="Program Logo Preview" style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #dce5f2' }} />
-                        <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600 }}>Uploaded successfully</span>
-                      </div>
-                    )}
-                  </div>
-                  <Input
-                    label="Program Logo URL (optional)"
-                    placeholder="https://example.com/logo.png"
-                    value={form.logo}
-                    onChange={(e) => update('logo', e.target.value)}
-                  />
-                </div>
-
-                <div className="create-event__row">
                   <div className="create-event__select-group" style={{ width: '100%' }}>
                     <label className="input-label">Mode</label>
                     <select className="create-event__select" value={form.mode} onChange={(e) => update('mode', e.target.value)}>
@@ -959,6 +1020,13 @@ export default function CreateEvent() {
                       ))}
                     </select>
                   </div>
+                  <Input
+                    label="Themes / Tracks (comma-separated)"
+                    icon={Tag}
+                    placeholder="AI/ML, Web3, Healthcare, FinTech"
+                    value={form.themes}
+                    onChange={(e) => update('themes', e.target.value)}
+                  />
                 </div>
 
                 <Input
@@ -976,6 +1044,27 @@ export default function CreateEvent() {
                   onChange={(e) => update('description', e.target.value)}
                 />
 
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.36rem', width: '100%', marginTop: '0.5rem' }}>
+                  <label className="input-label">Program Logo</label>
+                  <label className="create-event__upload-field" style={{ margin: 0 }}>
+                    <span>Upload Program Logo (Square, 512 x 512)</span>
+                    <input type="file" accept="image/*" onChange={(event) => handleSingleImageUpload(event, 'logo')} />
+                  </label>
+                  {form.logo && (
+                    <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <img src={form.logo} alt="Program Logo Preview" style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #dce5f2' }} />
+                      <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600 }}>Uploaded successfully</span>
+                    </div>
+                  )}
+                </div>
+
+                <Input
+                  label="Program Logo URL (optional)"
+                  placeholder="https://example.com/logo.png"
+                  value={form.logo}
+                  onChange={(e) => update('logo', e.target.value)}
+                />
+
                 <div className="create-event__row">
                   <Input
                     label="Sponsors (comma separated)"
@@ -991,36 +1080,36 @@ export default function CreateEvent() {
                   />
                 </div>
 
-                <div className="create-event__row">
-                  <Input
-                    label="Organizer Name"
-                    placeholder="e.g. Google Developer Student Clubs"
-                    value={form.organizerName}
-                    onChange={(e) => update('organizerName', e.target.value)}
-                  />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.36rem', width: '100%' }}>
-                    <label className="input-label">Organizer Logo</label>
-                    <label className="create-event__upload-field" style={{ margin: 0 }}>
-                      <span>Upload Organizer Logo (Square, 512 x 512)</span>
-                      <input type="file" accept="image/*" onChange={(event) => handleSingleImageUpload(event, 'organizerLogo')} />
-                    </label>
-                    {form.organizerLogo && (
-                      <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <img src={form.organizerLogo} alt="Organizer Logo Preview" style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #dce5f2' }} />
-                        <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600 }}>Uploaded successfully</span>
-                      </div>
-                    )}
-                  </div>
+                <div className="create-event__divider" style={{ margin: '1.5rem 0 1rem' }} />
+                <h3 style={{ margin: '0 0 1rem 0', color: '#1f3658', fontSize: '1.1rem', fontFamily: 'Space Grotesk, sans-serif' }}>Organizer Details</h3>
+
+                <Input
+                  label="Organizer Name"
+                  placeholder="e.g. Google Developer Student Clubs"
+                  value={form.organizerName}
+                  onChange={(e) => update('organizerName', e.target.value)}
+                />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.36rem', width: '100%' }}>
+                  <label className="input-label">Organizer Logo</label>
+                  <label className="create-event__upload-field" style={{ margin: 0 }}>
+                    <span>Upload Organizer Logo (Square, 512 x 512)</span>
+                    <input type="file" accept="image/*" onChange={(event) => handleSingleImageUpload(event, 'organizerLogo')} />
+                  </label>
+                  {form.organizerLogo && (
+                    <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <img src={form.organizerLogo} alt="Organizer Logo Preview" style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #dce5f2' }} />
+                      <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600 }}>Uploaded successfully</span>
+                    </div>
+                  )}
                 </div>
 
-                <div className="create-event__row">
-                  <Input
-                    label="Organizer Logo URL (optional)"
-                    placeholder="https://example.com/org-logo.png"
-                    value={form.organizerLogo}
-                    onChange={(e) => update('organizerLogo', e.target.value)}
-                  />
-                </div>
+                <Input
+                  label="Organizer Logo URL (optional)"
+                  placeholder="https://example.com/org-logo.png"
+                  value={form.organizerLogo}
+                  onChange={(e) => update('organizerLogo', e.target.value)}
+                />
 
                 <div className="create-event__row">
                   <Input
@@ -1040,6 +1129,37 @@ export default function CreateEvent() {
                     required
                   />
                 </div>
+
+                <Input
+                  label="Contact Role / Designation"
+                  placeholder="Event Lead, Technical Coordinator, etc."
+                  value={form.organizerContactRole}
+                  onChange={(e) => update('organizerContactRole', e.target.value)}
+                />
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <Input
+                    label="LinkedIn"
+                    icon={ExternalLink}
+                    placeholder="https://linkedin.com/in/..."
+                    value={form.organizerLinkedin}
+                    onChange={(e) => update('organizerLinkedin', e.target.value)}
+                  />
+                  <Input
+                    label="Twitter / X"
+                    icon={ExternalLink}
+                    placeholder="https://twitter.com/..."
+                    value={form.organizerTwitter}
+                    onChange={(e) => update('organizerTwitter', e.target.value)}
+                  />
+                  <Input
+                    label="Website"
+                    icon={Globe}
+                    placeholder="https://..."
+                    value={form.organizerWebsite}
+                    onChange={(e) => update('organizerWebsite', e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </Step>
@@ -1056,8 +1176,88 @@ export default function CreateEvent() {
                   onChange={(e) => update('venue', e.target.value)}
                 />
 
+                <Input
+                  label="Venue Address"
+                  placeholder="Full address including city, state, ZIP"
+                  value={form.venueAddress}
+                  onChange={(e) => update('venueAddress', e.target.value)}
+                />
+
+                <div className="create-event__textarea-group">
+                  <label className="input-label">Venue Instructions (parking, entry gate, etc.)</label>
+                  <textarea
+                    className="create-event__textarea"
+                    placeholder="Parking available at Gate 2. Enter through the main lobby..."
+                    value={form.venueInstructions}
+                    onChange={(e) => update('venueInstructions', e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                {/* Payment Setup */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.62rem', marginTop: '1.5rem', marginBottom: '1rem' }}>
+                  <label className="input-label" style={{ color: '#ff6b00' }}>Payment Setup</label>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    {['free', 'paid'].map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        className={`create-event__pill ${form.paymentType === type ? 'is-active' : ''}`}
+                        onClick={() => update('paymentType', type)}
+                      >
+                        {type === 'free' ? '🆓 Free' : '💰 Paid'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {form.paymentType === 'paid' && (
+                  <>
+                    <div className="create-event__row">
+                      <Input
+                        label="Registration Amount"
+                        type="number"
+                        placeholder="500"
+                        value={form.paymentAmount}
+                        onChange={(e) => update('paymentAmount', e.target.value)}
+                      />
+                      <div className="create-event__select-group">
+                        <label className="input-label">Currency</label>
+                        <select className="create-event__select" value={form.paymentCurrency} onChange={(e) => update('paymentCurrency', e.target.value)}>
+                          <option value="INR">INR (₹)</option>
+                          <option value="USD">USD ($)</option>
+                          <option value="EUR">EUR (€)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Coupon Codes */}
+                    <div className="create-event__dynamic-list mt-4 mb-4" style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                      <div className="create-event__optional-head">
+                        <h3>Coupon Codes (Optional)</h3>
+                        <button type="button" className="create-event__mini-btn" onClick={() => addListItem(setCoupons, { code: '', discount: '' })}>
+                          <Plus size={14} /> Add Coupon
+                        </button>
+                      </div>
+                      {coupons.map((coupon, index) => (
+                        <div key={index} className="create-event__optional-card mt-2 p-4 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] rounded-xl flex gap-4">
+                          <div className="flex-1">
+                            <Input placeholder="Code (e.g. EARLY50)" value={coupon.code} onChange={(e) => updateListItem(setCoupons, index, { ...coupon, code: e.target.value })} />
+                          </div>
+                          <div className="flex-1">
+                            <Input placeholder="Discount % (e.g. 50)" value={coupon.discount} onChange={(e) => updateListItem(setCoupons, index, { ...coupon, discount: e.target.value })} />
+                          </div>
+                          <button type="button" className="create-event__remove-btn opacity-50 hover:opacity-100" onClick={() => removeListItem(setCoupons, index)}>
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
                 <div className="create-event__row z-[20]">
-                  <Input label="Entry Fee (Optional)" placeholder="e.g. Free, INR 500" value={form.fee} onChange={(e) => update('fee', e.target.value)} />
+                  <Input label="Entry Fee Label (Optional)" placeholder="e.g. Free, INR 500" value={form.fee} onChange={(e) => update('fee', e.target.value)} />
                   <Input
                     label="Max Participants"
                     type="number"
@@ -1067,9 +1267,9 @@ export default function CreateEvent() {
                   />
                 </div>
 
-                <div className="create-event__dynamic-list mt-8 mb-6 z-[20]">
-                  <div className="flex items-center justify-between mb-4">
-                    <label className="font-semibold text-sm">Prize Money / Rewards</label>
+                <div className="create-event__dynamic-list mt-8 mb-6 z-[20]" style={{ marginTop: '2rem', marginBottom: '1.5rem' }}>
+                  <div className="create-event__optional-head">
+                    <h3>Prize Money / Rewards</h3>
                     <button type="button" className="create-event__mini-btn" onClick={() => addListItem(setPrizes, { rank: '', reward: '' })}>
                       <Plus size={14} /> Add Tier
                     </button>
@@ -1097,6 +1297,51 @@ export default function CreateEvent() {
                   ))}
                 </div>
 
+                {/* Prize Sub-types */}
+                <div className="create-event__row">
+                  <Input label="Internship Opportunities" placeholder="e.g. 3-month internship at XYZ Corp" value={form.internships} onChange={(e) => update('internships', e.target.value)} />
+                  <Input label="Goodies / Swag" placeholder="e.g. T-shirts, stickers, tech kits" value={form.goodies} onChange={(e) => update('goodies', e.target.value)} />
+                </div>
+                <Input label="Sponsor Perks" placeholder="e.g. Cloud credits, premium subscriptions" value={form.sponsorPerks} onChange={(e) => update('sponsorPerks', e.target.value)} />
+
+                {/* Judging Criteria */}
+                <div className="create-event__dynamic-list mt-8 mb-6" style={{ marginTop: '2rem', marginBottom: '1.5rem' }}>
+                  <div className="create-event__optional-head">
+                    <h3>Judging Criteria</h3>
+                    <button type="button" className="create-event__mini-btn" onClick={() => addListItem(setJudgingCriteriaList, { criterion: '', weight: '' })}>
+                      <Plus size={14} /> Add Criterion
+                    </button>
+                  </div>
+                  {judgingCriteriaList.map((item, index) => (
+                    <div key={index} className="create-event__optional-card mt-2 p-4 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] rounded-xl flex gap-4">
+                      <div className="flex-1">
+                        <Input placeholder="Criterion (e.g. Innovation)" value={item.criterion} onChange={(e) => updateListItem(setJudgingCriteriaList, index, { ...item, criterion: e.target.value })} />
+                      </div>
+                      <div style={{ width: '120px' }}>
+                        <Input placeholder="Weight %" value={item.weight} onChange={(e) => updateListItem(setJudgingCriteriaList, index, { ...item, weight: e.target.value })} />
+                      </div>
+                      <button type="button" className="create-event__remove-btn opacity-50 hover:opacity-100" onClick={() => removeListItem(setJudgingCriteriaList, index)}>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Eligibility & Guidelines */}
+                <div className="create-event__textarea-group">
+                  <label className="input-label">Eligibility Criteria</label>
+                  <textarea className="create-event__textarea" placeholder="Open to all college students above 18 years..." value={form.eligibility} onChange={(e) => update('eligibility', e.target.value)} rows={3} />
+                </div>
+
+                <div className="create-event__textarea-group">
+                  <label className="input-label">Participation Guidelines</label>
+                  <textarea className="create-event__textarea" placeholder="All participants must attend the opening ceremony..." value={form.participationGuidelines} onChange={(e) => update('participationGuidelines', e.target.value)} rows={3} />
+                </div>
+
+                <div className="create-event__textarea-group">
+                  <label className="input-label">Code of Conduct</label>
+                  <textarea className="create-event__textarea" placeholder="We expect all participants to behave respectfully..." value={form.codeOfConduct} onChange={(e) => update('codeOfConduct', e.target.value)} rows={3} />
+                </div>
 
                 {/* Access Type Configuration */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.62rem', marginTop: '1.5rem', marginBottom: '1.5rem' }}>
@@ -1285,11 +1530,19 @@ export default function CreateEvent() {
 
                 <div className="create-event__section-builder">
                   {[
+                    { key: 'about', label: 'About Section' },
                     { key: 'timeline', label: 'Timeline' },
                     { key: 'rules', label: 'Rules' },
                     { key: 'problems', label: 'Problem Statements' },
                     { key: 'maps', label: 'Google Maps Link' },
                     { key: 'media', label: 'Banners & Images' },
+                    { key: 'faqs', label: 'FAQs' },
+                    { key: 'sponsors', label: 'Sponsors' },
+                    { key: 'judges', label: 'Judges' },
+                    { key: 'mentors', label: 'Mentors' },
+                    { key: 'prizes', label: 'Prizes' },
+                    { key: 'tracks', label: 'Themes / Tracks' },
+                    { key: 'contacts', label: 'Contact Info' },
                   ].map((section) => (
                     <button
                       key={section.key}
@@ -1564,35 +1817,179 @@ export default function CreateEvent() {
                   </div>
                 )}
 
-                <Input
-                  label="FAQ 1 - Question"
-                  icon={HelpCircle}
-                  placeholder="Common question"
-                  value={form.faq1q}
-                  onChange={(e) => update('faq1q', e.target.value)}
-                />
-                <Input
-                  label="FAQ 1 - Answer"
-                  placeholder="Your answer"
-                  value={form.faq1a}
-                  onChange={(e) => update('faq1a', e.target.value)}
-                />
+                {/* Dynamic FAQs */}
+                <div className="create-event__dynamic-list mt-4 mb-6" style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
+                  <div className="create-event__optional-head">
+                    <h3>Frequently Asked Questions</h3>
+                    <button type="button" className="create-event__mini-btn" onClick={() => addListItem(setFaqs, { q: '', a: '' })}>
+                      <Plus size={14} /> Add FAQ
+                    </button>
+                  </div>
+                  {faqs.map((faq, index) => (
+                    <div key={index} className="create-event__optional-card mt-2 p-4 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] rounded-xl">
+                      <Input
+                        label={`FAQ ${index + 1} - Question`}
+                        icon={HelpCircle}
+                        placeholder="Common question"
+                        value={faq.q}
+                        onChange={(e) => updateListItem(setFaqs, index, { ...faq, q: e.target.value })}
+                      />
+                      <Input
+                        label={`FAQ ${index + 1} - Answer`}
+                        placeholder="Your answer"
+                        value={faq.a}
+                        onChange={(e) => updateListItem(setFaqs, index, { ...faq, a: e.target.value })}
+                      />
+                      <button type="button" className="create-event__remove-btn opacity-50 hover:opacity-100 mt-2" onClick={() => removeListItem(setFaqs, index)}>
+                        <Trash2 size={14} /> Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
 
                 <div className="create-event__divider" />
 
-                <Input
-                  label="FAQ 2 - Question"
-                  icon={HelpCircle}
-                  placeholder="Another question"
-                  value={form.faq2q}
-                  onChange={(e) => update('faq2q', e.target.value)}
-                />
-                <Input
-                  label="FAQ 2 - Answer"
-                  placeholder="Your answer"
-                  value={form.faq2a}
-                  onChange={(e) => update('faq2a', e.target.value)}
-                />
+                {/* Judges */}
+                <div className="create-event__dynamic-list mt-4 mb-6" style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
+                  <div className="create-event__optional-head">
+                    <h3>Judges</h3>
+                    <button type="button" className="create-event__mini-btn" onClick={() => addListItem(setJudges, { name: '', title: '', organization: '', bio: '' })}>
+                      <Plus size={14} /> Add Judge
+                    </button>
+                  </div>
+                  {judges.map((judge, index) => (
+                    <div key={index} className="create-event__optional-card mt-2 p-4 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] rounded-xl">
+                      <div className="create-event__row">
+                        <Input placeholder="Name" value={judge.name} onChange={(e) => updateListItem(setJudges, index, { ...judge, name: e.target.value })} />
+                        <Input placeholder="Title / Designation" value={judge.title} onChange={(e) => updateListItem(setJudges, index, { ...judge, title: e.target.value })} />
+                      </div>
+                      <div className="create-event__row">
+                        <Input placeholder="Organization" value={judge.organization} onChange={(e) => updateListItem(setJudges, index, { ...judge, organization: e.target.value })} />
+                        <Input placeholder="Short Bio" value={judge.bio} onChange={(e) => updateListItem(setJudges, index, { ...judge, bio: e.target.value })} />
+                      </div>
+                      <button type="button" className="create-event__remove-btn opacity-50 hover:opacity-100 mt-2" onClick={() => removeListItem(setJudges, index)}>
+                        <Trash2 size={14} /> Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Mentors */}
+                <div className="create-event__dynamic-list mt-4 mb-6" style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
+                  <div className="create-event__optional-head">
+                    <h3>Mentors</h3>
+                    <button type="button" className="create-event__mini-btn" onClick={() => addListItem(setMentors, { name: '', title: '', organization: '', bio: '' })}>
+                      <Plus size={14} /> Add Mentor
+                    </button>
+                  </div>
+                  {mentors.map((mentor, index) => (
+                    <div key={index} className="create-event__optional-card mt-2 p-4 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] rounded-xl">
+                      <div className="create-event__row">
+                        <Input placeholder="Name" value={mentor.name} onChange={(e) => updateListItem(setMentors, index, { ...mentor, name: e.target.value })} />
+                        <Input placeholder="Title / Designation" value={mentor.title} onChange={(e) => updateListItem(setMentors, index, { ...mentor, title: e.target.value })} />
+                      </div>
+                      <div className="create-event__row">
+                        <Input placeholder="Organization" value={mentor.organization} onChange={(e) => updateListItem(setMentors, index, { ...mentor, organization: e.target.value })} />
+                        <Input placeholder="Short Bio" value={mentor.bio} onChange={(e) => updateListItem(setMentors, index, { ...mentor, bio: e.target.value })} />
+                      </div>
+                      <button type="button" className="create-event__remove-btn opacity-50 hover:opacity-100 mt-2" onClick={() => removeListItem(setMentors, index)}>
+                        <Trash2 size={14} /> Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="create-event__divider" />
+
+                {/* Workflow & Round Setup */}
+                <div className="create-event__dynamic-list mt-4 mb-6" style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
+                  <div className="create-event__optional-head">
+                    <h3>Workflow & Rounds</h3>
+                    <button type="button" className="create-event__mini-btn" onClick={() => addListItem(setRounds, { name: '', startDate: '', endDate: '', submissionTypes: [], evaluationNotes: '', shortlistCount: '' })}>
+                      <Plus size={14} /> Add Round
+                    </button>
+                  </div>
+                  <p className="create-event__helper">{rounds.length === 0 ? 'Single round (default). Add rounds for multi-round workflows.' : `${rounds.length} round(s) configured.`}</p>
+                  {rounds.map((round, index) => (
+                    <div key={index} className="create-event__optional-card mt-3 p-4 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] rounded-xl">
+                      <Input
+                        label={`Round ${index + 1} Name`}
+                        placeholder="e.g. Idea Screening, Prototype Review, Finals"
+                        value={round.name}
+                        onChange={(e) => updateListItem(setRounds, index, { ...round, name: e.target.value })}
+                      />
+                      <div className="create-event__row">
+                        <Input label="Start Date" type="datetime-local" value={round.startDate} onChange={(e) => updateListItem(setRounds, index, { ...round, startDate: e.target.value })} />
+                        <Input label="End Date" type="datetime-local" value={round.endDate} onChange={(e) => updateListItem(setRounds, index, { ...round, endDate: e.target.value })} />
+                      </div>
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <label className="input-label">Submission Types</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.4rem' }}>
+                          {['File Upload', 'PDF', 'PPT', 'GitHub Repo', 'External Link', 'Video'].map((type) => (
+                            <button
+                              key={type}
+                              type="button"
+                              className={`create-event__section-pill ${(round.submissionTypes || []).includes(type) ? 'is-on' : ''}`}
+                              onClick={() => {
+                                const current = round.submissionTypes || [];
+                                const updated = current.includes(type) ? current.filter((t) => t !== type) : [...current, type];
+                                updateListItem(setRounds, index, { ...round, submissionTypes: updated });
+                              }}
+                            >
+                              {(round.submissionTypes || []).includes(type) ? '✓' : '+'} {type}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="create-event__row" style={{ marginTop: '0.5rem' }}>
+                        <Input label="Evaluation Notes" placeholder="Criteria for this round..." value={round.evaluationNotes} onChange={(e) => updateListItem(setRounds, index, { ...round, evaluationNotes: e.target.value })} />
+                        <Input label="Shortlist Count" type="number" placeholder="e.g. 50" value={round.shortlistCount} onChange={(e) => updateListItem(setRounds, index, { ...round, shortlistCount: e.target.value })} />
+                      </div>
+                      <button type="button" className="create-event__remove-btn opacity-50 hover:opacity-100 mt-2" onClick={() => removeListItem(setRounds, index)}>
+                        <Trash2 size={14} /> Remove Round
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="create-event__divider" />
+
+                {/* Visibility */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.62rem', marginTop: '1rem', marginBottom: '1rem' }}>
+                  <label className="input-label" style={{ color: '#ff6b00' }}>Program Visibility</label>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    {['public', 'private', 'unlisted'].map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        className={`create-event__pill ${form.visibility === v ? 'is-active' : ''}`}
+                        onClick={() => update('visibility', v)}
+                      >
+                        {v === 'public' ? '🌐 Public' : v === 'private' ? '🔒 Private' : '🔗 Unlisted'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Primary Color */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem', marginBottom: '1rem' }}>
+                  <label className="input-label">Branding Color</label>
+                  <input
+                    type="color"
+                    value={form.primaryColor}
+                    onChange={(e) => update('primaryColor', e.target.value)}
+                    style={{ width: '48px', height: '36px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
+                  />
+                  <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>{form.primaryColor}</span>
+                </div>
+
+                {/* Communication Preferences */}
+                <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                  <label className="input-label" style={{ color: '#ff6b00', marginBottom: '0.5rem', display: 'block' }}>Communication Preferences</label>
+                  <Checkbox label="Send email on new registration" checked={form.commOnRegistration} onChange={(checked) => update('commOnRegistration', checked)} />
+                  <Checkbox label="Send deadline reminder emails" checked={form.commOnDeadline} onChange={(checked) => update('commOnDeadline', checked)} />
+                  <Checkbox label="Send result announcement emails" checked={form.commOnResults} onChange={(checked) => update('commOnResults', checked)} />
+                </div>
 
                 <div className="create-event__divider" />
 
@@ -1688,9 +2085,21 @@ export default function CreateEvent() {
                 </div>
               </div>
 
+              {/* Preview Button */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem', marginBottom: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="create-event__mini-btn"
+                  style={{ padding: '0.6rem 1.5rem', fontSize: '0.9rem' }}
+                  onClick={() => setShowPreviewModal(true)}
+                >
+                  <Eye size={16} /> Preview Microsite
+                </button>
+              </div>
+
               <div className="create-event__final-note">
                 <p>
-                  You are on step {activeStep}/3. On Complete, your event will be published and visible in organizer dashboard.
+                  You are on step {activeStep}/3. On Complete, your event will be {form.visibility === 'public' ? 'publicly published' : form.visibility === 'private' ? 'published as private' : 'published as unlisted'} and visible in organizer dashboard.
                 </p>
               </div>
             </div>
@@ -1704,6 +2113,34 @@ export default function CreateEvent() {
           <p>{validationToast.message}</p>
         </div>
       ) : null}
+
+      {/* Preview Microsite Modal */}
+      <Modal
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        title="Microsite Preview"
+        size="lg"
+      >
+        <div style={{ padding: '1.5rem', maxHeight: '75vh', overflowY: 'auto', background: 'var(--color-bg)', borderRadius: '12px' }}>
+          <div style={{ borderBottom: `3px solid ${form.primaryColor}`, paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-text)' }}>{form.title || 'Event Title'}</h2>
+            {form.tagline && <p style={{ color: 'var(--color-text-muted)', fontSize: '1rem', marginTop: '0.3rem' }}>{form.tagline}</p>}
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+              <span style={{ background: `${form.primaryColor}22`, color: form.primaryColor, padding: '0.25rem 0.75rem', borderRadius: '99px', fontSize: '0.8rem', fontWeight: 600 }}>{form.category}</span>
+              <span style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--color-text-muted)', padding: '0.25rem 0.75rem', borderRadius: '99px', fontSize: '0.8rem' }}>{form.mode}</span>
+              {form.visibility !== 'public' && <span style={{ background: '#ef444422', color: '#ef4444', padding: '0.25rem 0.75rem', borderRadius: '99px', fontSize: '0.8rem' }}>{form.visibility}</span>}
+            </div>
+          </div>
+          {form.description && <div style={{ marginBottom: '1.5rem' }}><h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>About</h3><p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', lineHeight: 1.6 }}>{form.description}</p></div>}
+          {form.eligibility && <div style={{ marginBottom: '1rem' }}><h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Eligibility</h3><p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>{form.eligibility}</p></div>}
+          {judges.length > 0 && <div style={{ marginBottom: '1rem' }}><h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Judges ({judges.length})</h3>{judges.filter(j => j.name).map((j, i) => <p key={i} style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>• {j.name}{j.title ? ` — ${j.title}` : ''}{j.organization ? `, ${j.organization}` : ''}</p>)}</div>}
+          {mentors.length > 0 && <div style={{ marginBottom: '1rem' }}><h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Mentors ({mentors.length})</h3>{mentors.filter(m => m.name).map((m, i) => <p key={i} style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>• {m.name}{m.title ? ` — ${m.title}` : ''}{m.organization ? `, ${m.organization}` : ''}</p>)}</div>}
+          {rounds.length > 0 && <div style={{ marginBottom: '1rem' }}><h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Rounds ({rounds.length})</h3>{rounds.filter(r => r.name).map((r, i) => <p key={i} style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>Round {i + 1}: {r.name}</p>)}</div>}
+          {prizes.some(p => p.rank || p.reward) && <div style={{ marginBottom: '1rem' }}><h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Prizes</h3>{prizes.filter(p => p.rank || p.reward).map((p, i) => <p key={i} style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>🏆 {p.rank}: {p.reward}</p>)}</div>}
+          {faqs.some(f => f.q && f.a) && <div style={{ marginBottom: '1rem' }}><h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>FAQs</h3>{faqs.filter(f => f.q && f.a).map((f, i) => <div key={i} style={{ marginBottom: '0.5rem' }}><p style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-text)' }}>Q: {f.q}</p><p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>A: {f.a}</p></div>)}</div>}
+          <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', textAlign: 'center', marginTop: '2rem' }}>— End of Preview —</p>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={showSuspendedModal}

@@ -184,7 +184,13 @@ export default function Events() {
             </p>
           </div>
 
-          {carouselEvents.length ? (
+          {eventsLoading ? (
+            <div className="explore-carousel" style={{ minHeight: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="explore-carousel__empty" style={{ opacity: 0.5 }}>
+                <h2>Loading featured events...</h2>
+              </div>
+            </div>
+          ) : carouselEvents.length ? (
             <div className="explore-carousel">
               <div
                 className="explore-carousel__track"

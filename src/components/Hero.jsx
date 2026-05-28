@@ -69,14 +69,14 @@ export default function Hero() {
           className="text-white/65 text-base sm:text-lg max-w-lg mt-6 leading-relaxed"
           style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
         >
-          An end-to-end platform to run Hackathons, Manage challenges and Build Real-World Solutions
+          A comprehensive infrastructure that powers all your modern programs, Seamlessly.
         </Motion.p>
       ) : (
         <p
           className="text-white/65 text-base sm:text-lg max-w-lg mt-6 leading-relaxed"
           style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
         >
-          An end-to-end platform to run Hackathons, Manage challenges and Build Real-World Solutions
+          A comprehensive infrastructure that powers all your modern programs, Seamlessly.
         </p>
       )}
 

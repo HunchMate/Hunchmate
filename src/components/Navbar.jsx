@@ -80,8 +80,8 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate('/')
     setMobileOpen(false)
     setProfileOpen(false)
@@ -144,18 +144,18 @@ export default function Navbar() {
           WebkitBackdropFilter: 'blur(16px)',
           border: '1px solid rgba(255,255,255,0.1)',
           minWidth: 'min(420px, 100%)',
-          maxWidth: 'min(720px, calc(100vw - 48px))',
+          maxWidth: 'min(640px, calc(100vw - 48px))',
           width: '100%',
         }}
       >
         {/* Desktop Links */}
         <div className="absolute inset-0 hidden sm:flex items-center justify-center pointer-events-none">
-          <div className="flex items-center gap-6 pointer-events-auto">
+          <div className="flex items-center gap-4 pointer-events-auto">
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.label}
                 to={link.to}
-                className="text-white/70 hover:text-white/90 text-sm transition-colors duration-200 font-medium"
+                className="text-white/70 hover:text-white/90 text-[13px] transition-colors duration-200 font-medium"
                 style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
               >
                 {link.label}
@@ -165,7 +165,7 @@ export default function Navbar() {
         </div>
 
         {/* Right Side - Profile or Auth Buttons */}
-        <div className="hidden sm:flex items-center justify-end gap-4 flex-shrink-0 absolute right-4 top-1/2 -translate-y-1/2 w-[176px]">
+        <div className="hidden sm:flex items-center justify-end gap-3 flex-shrink-0 absolute right-4 top-1/2 -translate-y-1/2 w-[150px]">
           {user ? (
             <div className="relative" ref={profileMenuRef}>
               <button

@@ -25,6 +25,41 @@ import { useEvents } from '@/context/EventContext';
 import { buildEventDetailPath, formatDate } from '@/utils/helpers';
 import Modal from '@/components/ui/Modal';
 import '@/vite-pages/Profile.css';
+import '@/vite-pages/Onboarding.css';
+
+const SKILL_OPTIONS = [
+  'JavaScript',
+  'TypeScript',
+  'React',
+  'Node.js',
+  'Python',
+  'Java',
+  'C++',
+  'SQL',
+  'MongoDB',
+  'PostgreSQL',
+  'AWS',
+  'Azure',
+  'Docker',
+  'Kubernetes',
+  'Machine Learning',
+  'UI/UX',
+  'System Design',
+  'Cyber Security',
+  'Data Engineering',
+  'Product Strategy',
+];
+
+const INTEREST_OPTIONS = [
+  'Problem Solver',
+  'Builder',
+  'AI Explorer',
+  'Open Source',
+  'Designer',
+  'Researcher',
+  'Hustler',
+  'Speaker',
+];
 
 function buildForm(user) {
   return {
@@ -44,9 +79,10 @@ function buildForm(user) {
     techProficiency: user?.techProficiency || '',
     currentDesignation: user?.currentDesignation || '',
     workSummary: user?.workSummary || '',
-    skills: Array.isArray(user?.skills) ? user.skills.join(', ') : '',
+    skills: Array.isArray(user?.skills) ? user.skills : [],
     linkedin: user?.socials?.linkedin || '',
     github: user?.socials?.github || '',
+    interests: Array.isArray(user?.socials?.interests) ? user.socials.interests : [],
   };
 }
 
@@ -84,6 +120,8 @@ export default function Profile() {
   const [selectedRegistrationId, setSelectedRegistrationId] = useState('');
   const [selectedQrRegistration, setSelectedQrRegistration] = useState(null);
   const [urlFields, setUrlFields] = useState(['', '']);
+  const [error, setError] = useState('');
+  const [selectedSkill, setSelectedSkill] = useState('');
 
   useEffect(() => {
     setForm(buildForm(user));
@@ -320,15 +358,13 @@ export default function Profile() {
         currentDesignation: form.profileType === 'working_professional' ? form.currentDesignation : '',
         workSummary: form.profileType === 'working_professional' ? form.workSummary : '',
         headline: form.profileType === 'working_professional' ? form.currentDesignation : '',
-        skills: form.skills
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean),
+        skills: Array.isArray(form.skills) ? form.skills.map((item) => item.trim()).filter(Boolean) : [],
         socials: {
           linkedin: urlFields[0] || '',
           github: urlFields[1] || '',
           additionalUrls: urlFields.slice(2).map((item) => item.trim()).filter(Boolean),
           instagram: user.socials?.instagram || '',
+          interests: Array.isArray(form.interests) ? form.interests : [],
         },
       });
 
@@ -337,10 +373,10 @@ export default function Profile() {
       setSaved(true);
       window.setTimeout(() => {
         setSaved(false);
-        navigate('/dashboard');
-      }, 900);
-    } catch (error) {
-      console.error('Failed to save profile:', error);
+      }, 3000);
+    } catch (err) {
+      console.error('Failed to save profile:', err);
+      setError(err?.message || 'Failed to save profile');
     }
   };
 
@@ -366,6 +402,26 @@ export default function Profile() {
 
   const addUrlField = () => {
     setUrlFields((current) => [...current, '']);
+  };
+
+  const addSkill = () => {
+    const nextSkill = String(selectedSkill || '').trim();
+    if (!nextSkill) return;
+
+    const normalized = nextSkill.toLowerCase();
+    const currentSkills = Array.isArray(form.skills) ? form.skills : [];
+    const alreadyExists = currentSkills.some((skill) => String(skill || '').toLowerCase() === normalized);
+    if (alreadyExists) {
+      setSelectedSkill('');
+      return;
+    }
+
+    setForm((current) => ({ ...current, skills: [...currentSkills, nextSkill] }));
+    setSelectedSkill('');
+  };
+
+  const removeSkill = (skill) => {
+    setForm((current) => ({ ...current, skills: (current.skills || []).filter((item) => item !== skill) }));
   };
 
   const handleCopyProfileLink = async () => {
@@ -394,7 +450,7 @@ export default function Profile() {
 
   const isSettingsPage = location.pathname === '/dashboard/settings' || location.pathname === '/profile/settings';
 
-  const handleLabel = form.currentDesignation || (user.role === 'organizer' ? 'Event Host' : 'Project Manager');
+  const handleLabel = form.currentDesignation || (user.role === 'organizer' ? 'Event Host' : '');
 
   if (isSettingsPage) {
     return (
@@ -434,6 +490,12 @@ export default function Profile() {
                 </div>
               </div>
 
+              {error && (
+                <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '12px', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', marginBottom: '16px' }}>
+                  {error}
+                </div>
+              )}
+
               <div className="profile-page__settings-grid">
                 <label>
                   Full name
@@ -467,10 +529,78 @@ export default function Profile() {
                   <input value={form.institutionName} onChange={(event) => setForm({ ...form, institutionName: event.target.value })} />
                 </label>
 
-                <label>
-                  Skills
-                  <input value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} placeholder="React, UI Design, Product Strategy" />
-                </label>
+                <div className="onboarding__field onboarding__field--full" style={{ gridColumn: '1 / -1' }}>
+                  <label>Skills</label>
+                  <div className="onboarding__skills-row">
+                    <label className="onboarding__field mb-0">
+                      <input
+                        value={selectedSkill}
+                        onChange={(event) => setSelectedSkill(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            addSkill();
+                          }
+                        }}
+                        placeholder="Search or type your own skill"
+                        list="settings-skill-options"
+                        className="w-full"
+                      />
+                      <datalist id="settings-skill-options">
+                        {SKILL_OPTIONS
+                          .filter((skill) => !(form.skills || []).some((selected) => selected.toLowerCase() === skill.toLowerCase()))
+                          .map((skill) => (
+                            <option key={skill} value={skill} />
+                          ))}
+                      </datalist>
+                    </label>
+                    <button type="button" className="onboarding__add-btn" onClick={addSkill}>Add</button>
+                  </div>
+                  <div className="onboarding__chips mt-3">
+                    {(form.skills || []).length ? (form.skills || []).map((skill) => (
+                      <button key={skill} type="button" className="onboarding__chip" onClick={() => removeSkill(skill)}>
+                        {skill} x
+                      </button>
+                    )) : <p className="onboarding__no-skill">No skills selected yet.</p>}
+                  </div>
+                </div>
+
+                <div className="onboarding__field onboarding__field--full" style={{ gridColumn: '1 / -1' }}>
+                  <label>Interests</label>
+                  <span className="profile-page__field-note">Select the capsules that best describe you.</span>
+                  <div className="onboarding__chips mt-3">
+                    {INTEREST_OPTIONS.map((interest) => {
+                      const isSelected = (form.interests || []).includes(interest);
+                      return (
+                        <button
+                          key={interest}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setForm({ ...form, interests: form.interests.filter((i) => i !== interest) });
+                            } else {
+                              setForm({ ...form, interests: [...(form.interests || []), interest] });
+                            }
+                          }}
+                          className="onboarding__chip"
+                          style={{
+                            background: isSelected ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' : '#f1f5f9',
+                            color: isSelected ? '#fff' : '#475569',
+                            border: isSelected ? '1px solid #4338ca' : '1px solid #cbd5e1',
+                            borderRadius: '999px',
+                            padding: '0.45rem 1rem',
+                            fontWeight: '700',
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.18s ease',
+                          }}
+                        >
+                          {interest} {isSelected ? '✓' : '+'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 <label className="profile-page__span-2">
                   Social URLs
@@ -492,7 +622,14 @@ export default function Profile() {
               <div className="profile-page__settings-actions-row">
                 <button type="button" className="profile-page__btn-secondary" onClick={addUrlField}>Add URL</button>
                 <button type="submit" className="profile-page__settings-submit">Save changes</button>
-                {saved ? <span className="profile-page__saved">Saved</span> : null}
+                {saved && (
+                  <div className="fixed bottom-4 right-4 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 z-[9999] animate-in slide-in-from-bottom-5 duration-300">
+                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
+                      <Check size={14} className="text-white font-bold" />
+                    </div>
+                    <span className="font-medium text-sm tracking-wide">Changes are saved</span>
+                  </div>
+                )}
                 <button className="profile-page__dropdown-close" type="button" onClick={() => navigate('/dashboard')}>
                   Close
                 </button>
@@ -506,7 +643,7 @@ export default function Profile() {
 
   return (
     <>
-    <div className="bg-background text-on-surface font-body pb-20 md:pb-0">
+    <div className="bg-[#EEF0F8] font-['DM_Sans',sans-serif] w-full min-h-[100vh] pb-20 md:pb-0 pt-28">
     <div className="flex min-h-screen">
 
     <main className="flex-1">
@@ -537,7 +674,7 @@ export default function Profile() {
               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
                 <h1 className="text-3xl font-black text-gray-900">{form.name || 'Your profile'}</h1>
               </div>
-              <p className="text-gray-500 font-medium">{handleLabel}</p>
+              {handleLabel && <p className="text-gray-500 font-medium">{handleLabel}</p>}
             </div>
             <div className="flex flex-wrap justify-center md:justify-start gap-y-2 gap-x-6 text-sm text-gray-500 font-medium">
               <div className="flex items-center gap-1.5">
@@ -613,8 +750,8 @@ export default function Profile() {
                 <div className="flex items-center gap-3"><button className="p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors"></button><button className="text-indigo-600 font-bold text-xs hover:underline">View all</button></div>
               </div>
               <div className="flex flex-wrap gap-2">
-                {String(form.skills || '').trim() ? (
-                  form.skills.split(',').map(skill => skill.trim()).filter(Boolean).map((skill, index) => (
+                {Array.isArray(form.skills) && form.skills.length > 0 ? (
+                  form.skills.map((skill, index) => (
                     <span key={index} className="px-4 py-2 border border-gray-100 bg-gray-50 text-gray-700 font-bold text-xs rounded-xl">{skill}</span>
                   ))
                 ) : (

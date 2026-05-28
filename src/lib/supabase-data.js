@@ -140,11 +140,60 @@ function mapProfileToDb(app) {
 
 function mapEventToApp(row) {
   if (!row) return null;
+  // The organizer JSONB column stores both organizer info AND extended metadata
+  const org = row.organizer || {};
   return {
     ...row,
     id: String(row.id),
-    organizer: row.organizer || {},
-    organiser: row.organizer || {},
+    organizer: org,
+    organiser: org,
+    // Extract extended metadata from organizer JSONB to top-level
+    venue: org.venue || row.venue || '',
+    venueAddress: org.venueAddress || row.venue_address || '',
+    venueInstructions: org.venueInstructions || row.venue_instructions || '',
+    fee: org.fee || row.fee || '',
+    prizes: org.prizes || row.prizes || [],
+    faqs: org.faqs || row.faqs || [],
+    judges: org.judges || row.judges || [],
+    mentors: org.mentors || row.mentors || [],
+    rounds: org.rounds || row.rounds || [],
+    judgingCriteria: org.judgingCriteria || row.judging_criteria || [],
+    rules: org.rules || row.rules || [],
+    sections: org.sections || row.sections || {},
+    mapLink: org.mapLink || row.map_link || '',
+    eligibility: org.eligibility || row.eligibility || '',
+    participationGuidelines: org.participationGuidelines || row.participation_guidelines || '',
+    codeOfConduct: org.codeOfConduct || row.code_of_conduct || '',
+    visibility: org.visibility || row.visibility || 'public',
+    primaryColor: org.primaryColor || row.primary_color || '#5227FF',
+    paymentConfig: org.paymentConfig || row.payment_config || { type: 'free' },
+    communicationPrefs: org.communicationPrefs || row.communication_prefs || {},
+    internships: org.internships || row.internships || '',
+    goodies: org.goodies || row.goodies || '',
+    sponsorPerks: org.sponsorPerks || row.sponsor_perks || '',
+    sponsors: org.sponsors || row.sponsors || [],
+    partners: org.partners || row.partners || [],
+    tagline: org.tagline || row.tagline || '',
+    logo: org.logo || row.logo || '',
+    accessType: org.accessType || row.access_type || 'Open',
+    maxParticipants: org.maxParticipants || row.max_participants || 100,
+    maxRegistrations: org.maxRegistrations || row.max_registrations || 100,
+    participationType: org.participationType || row.participation_type || 'Both',
+    credentialEnabled: org.credentialEnabled || row.credential_enabled || false,
+    credentialTemplate: org.credentialTemplate || row.credential_template || 'Classic',
+    credentialConfig: row.credential_config || row.credentialConfig || {},
+    programStructure: org.programStructure || row.program_structure || 'single',
+    // Existing snake_case → camelCase mappings
+    shortDescription: row.short_description || row.shortDescription || '',
+    posterImage: row.poster_image || row.posterImage || '',
+    showcaseImage: row.showcase_image || row.showcaseImage || '',
+    bannerImages: row.banner_images || row.bannerImages || [],
+    galleryImages: row.gallery_images || row.galleryImages || [],
+    timelineItems: row.timeline_items || row.timelineItems || [],
+    problemStatements: row.problem_statements || row.problemStatements || [],
+    subEvents: row.sub_events || row.subEvents || [],
+    teamSize: row.team_size || row.teamSize || null,
+    registeredCount: row.registered_count || row.registeredCount || 0,
   };
 }
 
@@ -308,7 +357,9 @@ export async function getUserProfile(uid) {
     .maybeSingle();
 
   if (error) {
-    console.error('getUserProfile error:', error.message);
+    if (error.message !== 'JWT expired') {
+      console.error('getUserProfile error:', error.message);
+    }
     return null;
   }
   return mapProfileToApp(data);
@@ -343,48 +394,77 @@ export async function listEvents() {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('listEvents error:', error.message);
+    if (error.message !== 'JWT expired') {
+      console.error('listEvents error:', error.message);
+    }
     return [];
   }
   return data.map(mapEventToApp);
 }
 
 export async function createEventRecord(eventData) {
-  const { data, error } = await supabase
-    .from('events')
-    .insert({
-      title: eventData.title,
-      description: eventData.description,
-      short_description: eventData.shortDescription || eventData.short_description,
-      category: eventData.category,
-      mode: eventData.mode,
-      status: eventData.status || 'upcoming',
-      timeline: eventData.timeline,
-      tags: eventData.tags || [],
-      team_size: eventData.teamSize || eventData.team_size,
-      poster_image: eventData.posterImage || eventData.poster_image,
-      showcase_image: eventData.showcaseImage || eventData.showcase_image,
-      banner_images: eventData.bannerImages || eventData.banner_images || [],
-      gallery_images: eventData.galleryImages || eventData.gallery_images || [],
-      media: eventData.media || { banners: [], gallery: [] },
-      credential_config: eventData.credentialConfig || eventData.credential_config || {},
-      organizer: eventData.organizer || eventData.organiser || {},
-      timeline_items: eventData.timelineItems || eventData.timeline_items || [],
-      problem_statements: eventData.problemStatements || eventData.problem_statements || [],
-      sub_events: eventData.subEvents || eventData.sub_events || [],
-      registered_count: eventData.registeredCount || eventData.registered_count || 0,
-    })
-    .select()
-    .single();
+  // Route creation through server-side API route which has correct auth.uid() context
+  // and handles role upgrade + insert atomically, bypassing all client-side RLS issues.
+  const res = await fetch('/api/events/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ eventData }),
+  });
 
-  if (error) {
-    console.error('createEventRecord error:', error.message);
-    throw error;
+  const json = await res.json();
+
+  if (!res.ok || !json.success) {
+    const message = json?.error || 'Failed to create event on server';
+    console.error('createEventRecord server error:', message);
+    throw new Error(message);
   }
-  return mapEventToApp(data);
+
+  console.log('Event created successfully via server route!');
+  return mapEventToApp(json.event);
 }
 
+
 export async function updateEventRecord(eventId, updates) {
+  // Pack extended metadata into organizer JSONB, same as create route
+  const organizerPayload = {
+    ...(updates.organizer || updates.organiser || {}),
+    venue: updates.venue || '',
+    venueAddress: updates.venueAddress || '',
+    venueInstructions: updates.venueInstructions || '',
+    fee: updates.fee || '',
+    prizes: updates.prizes || [],
+    faqs: updates.faqs || [],
+    judges: updates.judges || [],
+    mentors: updates.mentors || [],
+    rounds: updates.rounds || [],
+    judgingCriteria: updates.judgingCriteria || [],
+    rules: updates.rules || [],
+    sections: updates.sections || {},
+    mapLink: updates.mapLink || '',
+    eligibility: updates.eligibility || '',
+    participationGuidelines: updates.participationGuidelines || '',
+    codeOfConduct: updates.codeOfConduct || '',
+    visibility: updates.visibility || 'public',
+    primaryColor: updates.primaryColor || '#5227FF',
+    paymentConfig: updates.paymentConfig || { type: 'free' },
+    communicationPrefs: updates.communicationPrefs || {},
+    internships: updates.internships || '',
+    goodies: updates.goodies || '',
+    sponsorPerks: updates.sponsorPerks || '',
+    sponsors: updates.sponsors || [],
+    partners: updates.partners || [],
+    tagline: updates.tagline || '',
+    logo: updates.logo || '',
+    accessType: updates.accessType || 'Open',
+    maxParticipants: updates.maxParticipants || 100,
+    maxRegistrations: updates.maxRegistrations || 100,
+    participationType: updates.participationType || 'Both',
+    credentialEnabled: updates.credentialEnabled || false,
+    credentialTemplate: updates.credentialTemplate || 'Classic',
+    programStructure: updates.programStructure || 'single',
+  };
+
   const { data, error } = await supabase
     .from('events')
     .update({
@@ -403,7 +483,7 @@ export async function updateEventRecord(eventId, updates) {
       gallery_images: updates.galleryImages || updates.gallery_images,
       media: updates.media,
       credential_config: updates.credentialConfig || updates.credential_config,
-      organizer: updates.organizer || updates.organiser,
+      organizer: organizerPayload,
       timeline_items: updates.timelineItems || updates.timeline_items,
       problem_statements: updates.problemStatements || updates.problem_statements,
       sub_events: updates.subEvents || updates.sub_events,
@@ -443,7 +523,9 @@ export async function listRegistrations() {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('listRegistrations error:', error.message);
+    if (error.message !== 'JWT expired') {
+      console.error('listRegistrations error:', error.message);
+    }
     return [];
   }
   return data.map(mapRegistrationToApp);

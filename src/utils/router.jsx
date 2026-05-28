@@ -15,7 +15,7 @@ export function Link({ to, href, children, ...props }) {
 
 export function useNavigate() {
   const router = useRouter();
-  return (to, options) => {
+  return React.useCallback((to, options) => {
     if (typeof to === 'number') {
       if (to === -1) {
         if (typeof window !== 'undefined') window.history.back();
@@ -27,7 +27,7 @@ export function useNavigate() {
     } else {
       router.push(to);
     }
-  };
+  }, [router]);
 }
 
 

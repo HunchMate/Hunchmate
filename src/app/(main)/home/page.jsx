@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@/utils/router';
 import {
   ArrowRight,
@@ -29,6 +30,10 @@ import '@/vite-pages/Home.css';
 export default function Home() {
   const { events } = useEvents();
   const navigate = useNavigate();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
   const featuredEvents = events.slice(0, 3);
 
   const trustedOrganizations = [
@@ -84,11 +89,11 @@ export default function Home() {
   ];
 
   const categories = [
-    { name: 'Hackathons', count: `${events.filter(e => e.category === 'Hackathon').length || 10}+`, icon: Trophy },
-    { name: 'Innovation', count: `${events.filter(e => e.category === 'Innovation').length || 8}+`, icon: Lightbulb },
-    { name: 'Competitions', count: `${events.filter(e => e.category === 'Competition').length || 12}+`, icon: Target },
-    { name: 'Programs', count: `${events.filter(e => e.category === 'Program').length || 6}+`, icon: Briefcase },
-    { name: 'Opportunities', count: `${events.filter(e => !['Hackathon','Innovation','Competition','Program'].includes(e.category)).length || 20}+`, icon: Users },
+    { name: 'Hackathons', count: `${events.filter(e => e.category === 'Hackathon').length || 10}+`, fallback: '10+', icon: Trophy },
+    { name: 'Innovation', count: `${events.filter(e => e.category === 'Innovation').length || 8}+`, fallback: '8+', icon: Lightbulb },
+    { name: 'Competitions', count: `${events.filter(e => e.category === 'Competition').length || 12}+`, fallback: '12+', icon: Target },
+    { name: 'Programs', count: `${events.filter(e => e.category === 'Program').length || 6}+`, fallback: '6+', icon: Briefcase },
+    { name: 'Opportunities', count: `${events.filter(e => !['Hackathon','Innovation','Competition','Program'].includes(e.category)).length || 20}+`, fallback: '20+', icon: Users },
   ];
 
   const testimonials = [
@@ -118,7 +123,7 @@ export default function Home() {
           </h1>
 
           <p className="home-hero__subtitle">
-            An end-to-end platform to own hackathons, manage challenges, and build real-world solutions
+            A comprehensive infrastructure that powers all your modern programs, Seamlessly.
           </p>
 
           <div className="home-hero__ctas">
@@ -205,7 +210,7 @@ export default function Home() {
             <p className="section-subtitle">Discover the latest hackathons, challenges, and workshops curated for innovators.</p>
           </div>
           <div className="home-featured__grid">
-            {featuredEvents.map((event, i) => (
+            {mounted && featuredEvents.map((event, i) => (
               <div 
                 key={event.id} 
                 className="explore-card-wrapper cursor-pointer" 
@@ -254,7 +259,7 @@ export default function Home() {
                     <IconComponent size={24} />
                   </div>
                   <h3>{cat.name}</h3>
-                  <p>{cat.count}</p>
+                  <p>{mounted ? cat.count : cat.fallback}</p>
                 </div>
               );
             })}

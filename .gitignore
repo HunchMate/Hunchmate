@@ -28,3 +28,6 @@ server/.local-db/
 *.njsproj
 *.sln
 *.sw?
+
+.next/
+scratch/

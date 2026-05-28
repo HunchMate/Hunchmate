@@ -89,16 +89,17 @@ export default function EventDetail() {
   const [inviteNotice, setInviteNotice] = useState(null);
   const [regStatus, setRegStatus] = useState(null);
   const [showSuspendedModal, setShowSuspendedModal] = useState(false);
-  const [now] = useState(() => Date.now());
+  const [now, setNow] = useState(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    setNow(Date.now());
+  }, []);
 
   const event = getEventById(eventParam);
   const resolvedEventId = String(event?.id || '').trim();
   const currentRegistration = user && resolvedEventId ? getEventRegistrationForUser(resolvedEventId, user) : null;
-
-  // Show skeleton while Firebase data is loading and event hasn't been found yet
-  if (eventsLoading && !event) {
-    return <EventDetailSkeleton />;
-  }
 
   useEffect(() => {
     if (!event || !eventParam) return;
@@ -106,6 +107,12 @@ export default function EventDetail() {
     if (!canonicalSegment || canonicalSegment === eventParam) return;
     navigate(`/events/${canonicalSegment}`, { replace: true });
   }, [event, eventParam, navigate]);
+
+  // Show skeleton during SSR and initial hydration to prevent mismatch, 
+  // or while Firebase data is loading and event hasn't been found yet
+  if (!mounted || (eventsLoading && !event)) {
+    return <EventDetailSkeleton />;
+  }
   const teamLeadId = String(currentRegistration?.teamLeadId || currentRegistration?.userId || '').trim();
   const canManageTeam = Boolean(
     currentRegistration && String(user?.id || '').trim() && teamLeadId === String(user?.id || '').trim()
@@ -435,7 +442,7 @@ export default function EventDetail() {
         <article className="event-detail__metric-card"><p>Team Size</p><strong>{event.teamSize ? `${event.teamSize.min}-${event.teamSize.max} members` : 'Solo'}</strong></article>
         <article className="event-detail__metric-card"><p>Location</p><strong>{venueLabel}</strong></article>
         <article className="event-detail__metric-card"><p>Deadline</p><strong>{formatDate(event.timeline.registrationEnd)}</strong></article>
-        <article className="event-detail__metric-card"><p>Prize / Fee</p><strong>{event.prize || 'Free'}</strong></article>
+        <article className="event-detail__metric-card"><p>Prize / Fee</p><strong>{event.paymentConfig?.type === 'paid' ? `${event.paymentConfig.currency} ${event.paymentConfig.amount}` : event.prize || 'Free'}</strong></article>
         <article className="event-detail__metric-card"><p>Registrations</p><strong>{event.registeredCount}</strong></article>
         <article className="event-detail__metric-card"><p>Views</p><strong>{viewsCount.toLocaleString()}</strong></article>
       </section>
@@ -455,6 +462,8 @@ export default function EventDetail() {
                 <div>
                   <h3>Location</h3>
                   <p>{venueLabel}</p>
+                  {event.venueAddress ? <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>{event.venueAddress}</p> : null}
+                  {event.venueInstructions ? <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginTop: '0.25rem', fontStyle: 'italic' }}>📋 {event.venueInstructions}</p> : null}
                 </div>
                 {mapsOpenUrl ? (
                   <a className="event-detail__map-link" href={mapsOpenUrl} target="_blank" rel="noreferrer">
@@ -518,6 +527,68 @@ export default function EventDetail() {
                   <li key={`${rule}-${index}`}>{rule}</li>
                 ))}
               </ul>
+            </div>
+          ) : null}
+
+          {event.eligibility ? (
+            <div className="event-detail__custom-group">
+              <h3>Eligibility</h3>
+              <p style={{ fontSize: '0.92rem', color: 'var(--color-text-muted)', lineHeight: 1.6 }}>{event.eligibility}</p>
+            </div>
+          ) : null}
+
+          {event.participationGuidelines ? (
+            <div className="event-detail__custom-group">
+              <h3>Participation Guidelines</h3>
+              <p style={{ fontSize: '0.92rem', color: 'var(--color-text-muted)', lineHeight: 1.6 }}>{event.participationGuidelines}</p>
+            </div>
+          ) : null}
+
+          {Array.isArray(event.judgingCriteria) && event.judgingCriteria.length > 0 ? (
+            <div className="event-detail__custom-group">
+              <h3>Judging Criteria</h3>
+              <div className="event-detail__custom-list">
+                {event.judgingCriteria.map((jc, index) => (
+                  <article key={`jc-${index}`} className="event-detail__custom-item">
+                    <span>{jc.weight ? `${jc.weight}%` : String(index + 1).padStart(2, '0')}</span>
+                    <div><strong>{jc.criterion}</strong></div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {event.codeOfConduct ? (
+            <div className="event-detail__custom-group">
+              <h3>Code of Conduct</h3>
+              <p style={{ fontSize: '0.92rem', color: 'var(--color-text-muted)', lineHeight: 1.6 }}>{event.codeOfConduct}</p>
+            </div>
+          ) : null}
+
+          {(event.internships || event.goodies || event.sponsorPerks) ? (
+            <div className="event-detail__custom-group">
+              <h3>Additional Benefits</h3>
+              {event.internships ? <p style={{ fontSize: '0.92rem', color: 'var(--color-text-muted)' }}>🎓 <strong>Internships:</strong> {event.internships}</p> : null}
+              {event.goodies ? <p style={{ fontSize: '0.92rem', color: 'var(--color-text-muted)' }}>🎁 <strong>Goodies:</strong> {event.goodies}</p> : null}
+              {event.sponsorPerks ? <p style={{ fontSize: '0.92rem', color: 'var(--color-text-muted)' }}>⭐ <strong>Sponsor Perks:</strong> {event.sponsorPerks}</p> : null}
+            </div>
+          ) : null}
+
+          {Array.isArray(event.rounds) && event.rounds.length > 0 ? (
+            <div className="event-detail__custom-group">
+              <h3>Rounds & Workflow</h3>
+              <div className="event-detail__custom-list">
+                {event.rounds.map((round, index) => (
+                  <article key={`round-${index}`} className="event-detail__custom-item">
+                    <span>{String(index + 1).padStart(2, '0')}</span>
+                    <div>
+                      <strong>{round.name}</strong>
+                      {round.startDate ? <p>{formatDate(round.startDate)}{round.endDate ? ` — ${formatDate(round.endDate)}` : ''}</p> : null}
+                      {round.submissionTypes?.length > 0 ? <small>Submissions: {round.submissionTypes.join(', ')}</small> : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
           ) : null}
 
@@ -668,7 +739,7 @@ export default function EventDetail() {
     });
   }
 
-  if (Array.isArray(event.judges) && event.judges.length > 0) {
+  if (Array.isArray(event.judges) && event.judges.length > 0 && sections.judges !== false) {
     animatedTabs.splice(event.prize ? 3 : 2, 0, {
       title: 'Judges',
       value: 'judges',
@@ -677,10 +748,36 @@ export default function EventDetail() {
           <h2>Judges</h2>
           <div className="event-detail__custom-list">
             {event.judges.map((judge, index) => (
-              <article key={`${judge}-${index}`} className="event-detail__custom-item">
+              <article key={`judge-${index}`} className="event-detail__custom-item">
                 <span>{String(index + 1).padStart(2, '0')}</span>
                 <div>
-                  <h4>{judge}</h4>
+                  <h4>{typeof judge === 'string' ? judge : judge.name}</h4>
+                  {typeof judge !== 'string' && judge.title ? <p>{judge.title}{judge.organization ? ` — ${judge.organization}` : ''}</p> : null}
+                  {typeof judge !== 'string' && judge.bio ? <small>{judge.bio}</small> : null}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ),
+    });
+  }
+
+  if (Array.isArray(event.mentors) && event.mentors.length > 0 && sections.mentors !== false) {
+    animatedTabs.push({
+      title: 'Mentors',
+      value: 'mentors',
+      content: (
+        <section className="event-detail__panel event-detail__tab-content-scroll">
+          <h2>Mentors</h2>
+          <div className="event-detail__custom-list">
+            {event.mentors.map((mentor, index) => (
+              <article key={`mentor-${index}`} className="event-detail__custom-item">
+                <span>{String(index + 1).padStart(2, '0')}</span>
+                <div>
+                  <h4>{mentor.name}</h4>
+                  {mentor.title ? <p>{mentor.title}{mentor.organization ? ` — ${mentor.organization}` : ''}</p> : null}
+                  {mentor.bio ? <small>{mentor.bio}</small> : null}
                 </div>
               </article>
             ))}
@@ -1055,6 +1152,7 @@ export default function EventDetail() {
             {(organizerContactEmail || organizerContactPhone) ? (
               <div className="event-detail__side-contact">
                 <p>Contact Organizer</p>
+                {organiserDetails.contactRole ? <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginTop: '-0.25rem' }}>{organiserDetails.contactRole}</p> : null}
                 {organizerContactEmail ? (
                   <a href={`mailto:${organizerContactEmail}`} className="event-detail__side-contact-link">
                     <Mail size={14} /> {organizerContactEmail}
@@ -1063,6 +1161,21 @@ export default function EventDetail() {
                 {organizerContactPhone ? (
                   <a href={`tel:${organizerContactPhone}`} className="event-detail__side-contact-link">
                     <Phone size={14} /> {organizerContactPhone}
+                  </a>
+                ) : null}
+                {organiserDetails.linkedin ? (
+                  <a href={organiserDetails.linkedin} target="_blank" rel="noreferrer" className="event-detail__side-contact-link">
+                    🔗 LinkedIn
+                  </a>
+                ) : null}
+                {organiserDetails.twitter ? (
+                  <a href={organiserDetails.twitter} target="_blank" rel="noreferrer" className="event-detail__side-contact-link">
+                    🔗 Twitter / X
+                  </a>
+                ) : null}
+                {organiserDetails.website ? (
+                  <a href={organiserDetails.website} target="_blank" rel="noreferrer" className="event-detail__side-contact-link">
+                    🌐 Website
                   </a>
                 ) : null}
               </div>

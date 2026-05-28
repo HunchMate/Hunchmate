@@ -318,7 +318,7 @@
   position: fixed;
   left: 18px;
   bottom: 18px;
-  z-index: 120;
+  z-index: 9999;
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
@@ -368,6 +368,70 @@
   font-size: 0.88rem;
   font-weight: 700;
   padding: 0.62rem 0.9rem;
+}
+
+.create-event__textarea-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.36rem;
+}
+
+.create-event__textarea {
+  border: 1px solid #d5deeb;
+  border-radius: 10px;
+  background: #f9fcff;
+  color: #1f3957;
+  font-size: 0.88rem;
+  font-weight: 500;
+  padding: 0.62rem 0.78rem;
+  resize: vertical;
+  min-height: 72px;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.create-event__textarea:focus {
+  outline: none;
+  border-color: #86a8df;
+  box-shadow: 0 0 0 3px rgba(125, 158, 216, 0.18);
+}
+
+.create-event__pill {
+  border: 1px solid #c7d5ea;
+  border-radius: 999px;
+  background: #fff;
+  color: #4b6387;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.create-event__pill.is-active {
+  border-color: #5227FF;
+  background: linear-gradient(135deg, #eef3ff 0%, #f4edff 100%);
+  color: #243a6d;
+  box-shadow: 0 0 0 2px rgba(82, 39, 255, 0.12);
+}
+
+.create-event__remove-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: none;
+  background: none;
+  color: #ef4444;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: opacity 150ms;
+}
+
+.create-event__remove-btn:hover {
+  background: rgba(239, 68, 68, 0.06);
 }
 
 @keyframes createEventToastIn {

@@ -108,7 +108,7 @@
   gap: 12px;
 }
 
-.auth-modern__form label {
+.auth-modern__form label:not(.hm-cbx) {
   display: grid;
   gap: 6px;
   color: #e6ebf9;
@@ -178,16 +178,22 @@
   transition: background 180ms ease, color 180ms ease, border-color 180ms ease, transform 120ms ease;
 }
 
-.auth-modern__roles button.active {
-  background: #f5f7ff;
-  color: #0b0d14;
+.auth-modern__roles button.active--participant {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: #3b82f6;
+  color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+.auth-modern__roles button.active--host {
+  background: rgba(249, 115, 22, 0.15);
+  border-color: #f97316;
+  color: #fdba74;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.18);
 }
 
 .auth-modern__roles button:active {
   transform: scale(0.98);
-  background: #7bb7ff;
-  border-color: #9ec9ff;
-  color: #071022;
 }
 
 .auth-modern__submit {
@@ -337,4 +343,56 @@
     transform: translateY(0) scale(1);
     filter: saturate(1);
   }
+}
+
+/* ── StatefulButton ── */
+.sb-btn {
+  margin-top: 2px;
+  min-height: 42px;
+  min-width: 120px;
+  width: 100%;
+  border: 1px solid #ffffff;
+  border-radius: 10px;
+  background: #f4f6fb;
+  color: #101219;
+  font-family: inherit;
+  font-size: 0.98rem;
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: background 220ms ease, color 220ms ease, transform 120ms ease, box-shadow 220ms ease, border-radius 200ms ease;
+}
+
+.sb-btn:hover:not(:disabled) {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
+}
+
+.sb-btn:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.sb-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.sb-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Google variant — dark button matching the existing socials style */
+.sb-btn--google {
+  background: #f6f8fc;
+  color: #11131a;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.sb-btn--google:hover:not(:disabled) {
+  background: #ffffff;
+  box-shadow: none;
 }

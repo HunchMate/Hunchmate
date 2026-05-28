@@ -134,23 +134,13 @@ function SearchableDropdown({
   error = '',
 }) {
   const containerRef = useRef(null);
-  const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
 
-  const selectedOption = useMemo(
-    () => options.find((option) => option.value === value) || null,
-    [options, value]
-  );
-
-  useEffect(() => {
-    setQuery(selectedOption?.label || '');
-  }, [selectedOption]);
-
   const filtered = useMemo(() => {
-    const normalized = String(query || '').trim().toLowerCase();
+    const normalized = String(value || '').trim().toLowerCase();
     if (!normalized) return options;
     return options.filter((option) => option.label.toLowerCase().includes(normalized));
-  }, [options, query]);
+  }, [options, value]);
 
   useEffect(() => {
     const onOutsideClick = (event) => {
@@ -167,9 +157,9 @@ function SearchableDropdown({
     <label className="onboarding__field" ref={containerRef}>
       <span>{label}</span>
       <input
-        value={query}
+        value={value}
         onChange={(event) => {
-          setQuery(event.target.value);
+          onChange(event.target.value);
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
@@ -187,7 +177,6 @@ function SearchableDropdown({
               className={`onboarding__option ${value === option.value ? 'is-active' : ''}`}
               onClick={() => {
                 onChange(option.value);
-                setQuery(option.label);
                 setOpen(false);
               }}
             >
@@ -239,6 +228,17 @@ function getOnboardingCacheKey(user) {
   return identity ? `hm_onboarding_completed_${identity}` : '';
 }
 
+const INTEREST_OPTIONS = [
+  'Problem Solver',
+  'Builder',
+  'AI Explorer',
+  'Open Source',
+  'Designer',
+  'Researcher',
+  'Hustler',
+  'Speaker',
+];
+
 export default function Onboarding() {
   const { user, updateProfile } = useAuth();
   const navigate = useNavigate();
@@ -257,9 +257,11 @@ export default function Onboarding() {
   const [currentDesignation, setCurrentDesignation] = useState('');
   const [selectedSkill, setSelectedSkill] = useState('');
   const [skills, setSkills] = useState([]);
+  const [interests, setInterests] = useState([]);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const initializedRef = useRef(false);
 
   const graduationYearOptions = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -284,19 +286,23 @@ export default function Onboarding() {
       return;
     }
 
-    setName(user.name || '');
-    setBio(user.bio || '');
-    setProfileType(user.profileType || 'student');
-    setStream(user.stream || '');
-    setGraduationYear(user.graduationYear || '');
-    setInstitutionName(user.institutionName || user.institution || '');
-    setState(user.state || '');
-    setCity(user.city || '');
-    setExperience(user.experience || '');
-    setTechProficiency(user.techProficiency || '');
-    setWorkSummary(user.workSummary || '');
-    setCurrentDesignation(user.currentDesignation || user.headline || '');
-    setSkills(Array.isArray(user.skills) ? user.skills : []);
+    if (!initializedRef.current) {
+      setName(user.name || '');
+      setBio(user.bio || '');
+      setProfileType(user.profileType || 'student');
+      setStream(user.stream || '');
+      setGraduationYear(user.graduationYear || '');
+      setInstitutionName(user.institutionName || user.institution || '');
+      setState(user.state || '');
+      setCity(user.city || '');
+      setExperience(user.experience || '');
+      setTechProficiency(user.techProficiency || '');
+      setWorkSummary(user.workSummary || '');
+      setCurrentDesignation(user.currentDesignation || user.headline || '');
+      setSkills(Array.isArray(user.skills) ? user.skills : []);
+      setInterests(Array.isArray(user.socials?.interests) ? user.socials.interests : []);
+      initializedRef.current = true;
+    }
   }, [navigate, user]);
 
   const bioWords = wordCount(bio);
@@ -406,6 +412,10 @@ export default function Onboarding() {
         currentDesignation: isWorkingProfessional ? currentDesignation : '',
         headline: isWorkingProfessional ? currentDesignation : '',
         skills,
+        socials: {
+          ...(user?.socials || {}),
+          interests,
+        },
         onboardingCompleted: true,
       });
 
@@ -659,6 +669,46 @@ export default function Onboarding() {
                 </label>
               </>
             ) : null}
+
+            <div className="onboarding__section-title onboarding__field--full">
+              <h3>Interests</h3>
+              <p>Select the capsules that best describe you.</p>
+            </div>
+
+            <div className="onboarding__field onboarding__field--full">
+              <div className="onboarding__chips mt-1">
+                {INTEREST_OPTIONS.map((interest) => {
+                  const isSelected = interests.includes(interest);
+                  return (
+                    <button
+                      key={interest}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          setInterests(interests.filter((i) => i !== interest));
+                        } else {
+                          setInterests([...interests, interest]);
+                        }
+                      }}
+                      className="onboarding__chip"
+                      style={{
+                        background: isSelected ? 'linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)' : '#e2e8f0',
+                        color: isSelected ? '#fff' : '#1e293b',
+                        border: isSelected ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                        borderRadius: '999px',
+                        padding: '0.45rem 1rem',
+                        fontWeight: '700',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.18s ease',
+                      }}
+                    >
+                      {interest} {isSelected ? '✓' : '+'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             <div className="onboarding__section-title onboarding__field--full">
               <h3>Skills</h3>

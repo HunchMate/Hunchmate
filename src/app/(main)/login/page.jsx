@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Link, useNavigate } from '@/utils/router';
 import { Mail, Lock, AlertCircle, X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import StatefulButton from '@/components/ui/StatefulButton';
 import '@/vite-pages/Auth.css';
 
 export default function Login() {
@@ -31,7 +32,7 @@ export default function Login() {
   }, []);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     setError('');
     setLoading(true);
 
@@ -43,15 +44,24 @@ export default function Login() {
       const path = hasValidInvite
         ? `/invites/${pendingInvite}`
         : getPostAuthPath(result.user);
-      if (pendingInvite) {
-        localStorage.removeItem('hm_pending_invite');
-      }
+      if (pendingInvite) localStorage.removeItem('hm_pending_invite');
       navigate(path, { replace: true });
     } else {
       setError(result.error);
     }
     setLoading(false);
   };
+
+  // Returns a Promise so StatefulButton can show the loading + check animation
+  const handleSubmitPromise = () => new Promise((resolve, reject) => {
+    handleSubmit()
+      .then(resolve)
+      .catch((err) => {
+        console.error("Login unhandled error:", err);
+        setError(err?.message || "An unexpected error occurred");
+        reject(err);
+      });
+  });
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -64,16 +74,18 @@ export default function Login() {
       const path = hasValidInvite
         ? `/invites/${pendingInvite}`
         : getPostAuthPath(result.user);
-      if (pendingInvite) {
-        localStorage.removeItem('hm_pending_invite');
-      }
+      if (pendingInvite) localStorage.removeItem('hm_pending_invite');
       navigate(path, { replace: true });
     } else {
       setError(result.error);
     }
-
     setLoading(false);
   };
+
+  const handleGoogleLoginPromise = () => new Promise(async (resolve) => {
+    await handleGoogleLogin();
+    resolve();
+  });
 
   return (
     <main className="auth-modern">
@@ -139,17 +151,23 @@ export default function Login() {
             </div>
           </label>
 
-          <button type="submit" className="auth-modern__submit" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign in'}
-          </button>
+          <StatefulButton onClick={handleSubmitPromise} disabled={loading}>
+            Sign in
+          </StatefulButton>
         </form>
 
         <div className="auth-modern__divider"><span>OR</span></div>
 
         <div className="auth-modern__socials">
-          <button type="button" onClick={handleGoogleLogin} disabled={loading}>
+          <StatefulButton onClick={handleGoogleLoginPromise} disabled={loading} className="sb-btn--google">
+            <svg width="18" height="18" viewBox="0 0 48 48" style={{flexShrink:0}}>
+              <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.6 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.6 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
+              <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.5 18.9 12 24 12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.6 29.4 4 24 4 16.3 4 9.7 8.4 6.3 14.7z"/>
+              <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.3 35.3 26.8 36 24 36c-5.3 0-9.7-3.2-11.4-7.7l-6.5 5C9.5 39.4 16.2 44 24 44z"/>
+              <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.4 4.3-4.4 5.7l6.2 5.2C42 35.2 44 30 44 24c0-1.3-.1-2.6-.4-3.9z"/>
+            </svg>
             Continue with Google
-          </button>
+          </StatefulButton>
         </div>
 
         <p className="auth-modern__switch">

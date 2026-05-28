@@ -82,9 +82,7 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     await logout()
-    navigate('/')
-    setMobileOpen(false)
-    setProfileOpen(false)
+    window.location.href = '/'
   }
 
   const closeProfileMenu = () => {

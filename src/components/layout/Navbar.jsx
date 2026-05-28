@@ -28,7 +28,7 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    window.location.href = '/';
   };
 
   const getDashboardPath = () => {

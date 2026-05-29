@@ -6,6 +6,7 @@ import Hero from '@/components/Hero';
 import GrainyGradient from '@/components/GrainyGradient';
 import FeaturesSection from '@/components/FeaturesSection';
 import LogoLoop from '@/components/LogoLoop';
+import Footer from '@/components/layout/Footer';
 
 const DUMMY_LOGOS = [
   { node: <span className="font-bold text-lg text-white/60 font-sans tracking-wide">ACME CORP</span> },
@@ -98,6 +99,7 @@ export default function Landing() {
           <FeaturesSection />
         </div>
       </div>
+      <Footer />
     </>
   );
 }

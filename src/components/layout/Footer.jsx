@@ -48,7 +48,7 @@ export default function Footer() {
         {/* Bottom Section */}
         <div className="site-footer__bottom">
           <p className="site-footer__copyright">
-            © Hunchmate Labs
+            © Hunchmate
           </p>
 
           <div className="site-footer__socials" aria-label="Social links">

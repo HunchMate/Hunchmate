@@ -81,9 +81,10 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
-  const handleLogout = async () => {
-    await logout()
-    window.location.href = '/'
+  const handleLogout = () => {
+    // Start logout in background and navigate immediately for a snappy UX
+    logout();
+    navigate('/');
   }
 
   const closeProfileMenu = () => {

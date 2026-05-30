@@ -332,7 +332,11 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     setLoading(true);
     try {
-      await supabase.auth.signOut();
+      // Add a 2-second timeout to prevent hanging if Supabase API is unresponsive
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((resolve) => setTimeout(resolve, 2000))
+      ]);
     } catch (err) {
       console.error('Logout failed:', err);
     } finally {

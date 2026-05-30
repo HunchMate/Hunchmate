@@ -26,9 +26,9 @@ export default function Navbar() {
     { label: 'Contact Us', path: '/contact' },
   ];
 
-  const handleLogout = async () => {
-    await logout();
-    window.location.href = '/';
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
   const getDashboardPath = () => {

@@ -6,6 +6,7 @@ import { Mail, Lock, User, AlertCircle, X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import Checkbox from '@/components/ui/Checkbox';
 import StatefulButton from '@/components/ui/StatefulButton';
+import { ShinyButton } from '@/components/ui/ShinyButton';
 import '@/vite-pages/Auth.css';
 
 export default function Signup() {
@@ -191,9 +192,9 @@ export default function Signup() {
             </div>
           </label>
 
-          <StatefulButton onClick={handleSubmitPromise} disabled={loading}>
-            Sign up
-          </StatefulButton>
+          <ShinyButton type="submit" disabled={loading}>
+            {loading ? 'Creating account…' : 'Create Account'}
+          </ShinyButton>
 
           <div className="auth-modern__consent">
             <Checkbox

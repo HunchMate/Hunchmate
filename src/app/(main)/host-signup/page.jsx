@@ -5,6 +5,7 @@ import { Link, Navigate, useNavigate } from '@/utils/router';
 import { Mail, Lock, User, AlertCircle, X, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import Checkbox from '@/components/ui/Checkbox';
+import { ShinyButton } from '@/components/ui/ShinyButton';
 import '@/vite-pages/Auth.css';
 import hunchmateLogo from '@/../HUNCHMATE - Logo Pack (2).png';
 
@@ -20,7 +21,6 @@ export default function HostSignup() {
     if (nextUser?.role === 'admin') {
       return '/admin/dashboard';
     }
-
     if (!nextUser?.onboardingCompleted) {
       return nextUser?.role === 'organizer' ? '/host-onboarding' : '/onboarding';
     }
@@ -41,14 +41,6 @@ export default function HostSignup() {
     return (
       <main className="auth-modern">
         <section className="auth-modern__card">
-        <div className="flex justify-center w-full mb-6 relative left-[-8px]">
-          <img
-            src={hunchmateLogo?.src || hunchmateLogo}
-            alt="HunchMate Dashboard"
-            className="h-10 object-contain drop-shadow-md"
-            style={{ transform: 'scale(1.4)' }}
-          />
-        </div>
           <h1>Create a Host Account</h1>
           <p className="auth-modern__subtitle">
             Your current account is set up as a Participant. To host events, you'll need to create a separate Host account.
@@ -70,7 +62,7 @@ export default function HostSignup() {
               <br />
               2. Sign up again with the same or different email
               <br />
-              3. Select "Host" during registration
+              3. Select &quot;Host&quot; during registration
               <br />
               4. Complete host onboarding
             </p>
@@ -163,14 +155,6 @@ export default function HostSignup() {
   return (
     <main className="auth-modern">
       <section className="auth-modern__card">
-        <div className="flex justify-center w-full mb-6 relative left-[-8px]">
-          <img
-            src={hunchmateLogo?.src || hunchmateLogo}
-            alt="HunchMate Dashboard"
-            className="h-10 object-contain drop-shadow-md"
-            style={{ transform: 'scale(1.4)' }}
-          />
-        </div>
         <h1>Host Events</h1>
         <p className="auth-modern__subtitle">Create your host account and start organizing amazing events.</p>
 
@@ -234,12 +218,9 @@ export default function HostSignup() {
             </div>
           </label>
 
-          <button type="submit" className="auth-modern__submit auth-modern__submit--icon" disabled={loading}>
-            <span className="auth-modern__submit-label">
-              {loading ? 'Creating account...' : 'Create Host Account'}
-            </span>
-            {!loading && <ArrowRight size={16} className="auth-modern__submit-icon" />}
-          </button>
+          <ShinyButton type="submit" disabled={loading}>
+            {loading ? 'Creating account…' : 'Create Host Account'}
+          </ShinyButton>
 
           <div className="auth-modern__divider">or continue with</div>
           <div className="auth-modern__socials">

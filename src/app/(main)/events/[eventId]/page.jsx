@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from '@/utils/router';
 import {
   ArrowLeft,
+  Bookmark,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -12,6 +14,7 @@ import {
   Mail,
   MapPin,
   Phone,
+  Trophy,
   UserPlus,
   Share2,
   Users,
@@ -19,6 +22,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useEvents } from '@/context/EventContext';
+import { getUserProfile } from '@/lib/supabase-data';
+import { isEventBookmarked, toggleEventBookmark } from '@/utils/bookmarks';
+import { toast } from '@/utils/toast';
 import { buildEventPathSegment, formatDate } from '@/utils/helpers';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -66,9 +72,10 @@ export default function EventDetail() {
   const { eventId: eventParam } = useParams();
   const navigate = useNavigate();
   const { getEventById, getEventRegistrationForUser, registerForEvent, updateTeamRegistration, createTeamInvitation, eventsLoading } = useEvents();
-  const { user, findRegisteredUserByEmail } = useAuth();
+  const { user, findRegisteredUserByEmail, logout } = useAuth();
 
   const [showRegModal, setShowRegModal] = useState(false);
+  const [showHostWarningModal, setShowHostWarningModal] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
   const [regForm, setRegForm] = useState({
     teamName: '',
@@ -88,9 +95,11 @@ export default function EventDetail() {
   const [isTeamEditMode, setIsTeamEditMode] = useState(false);
   const [inviteNotice, setInviteNotice] = useState(null);
   const [regStatus, setRegStatus] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const [showSuspendedModal, setShowSuspendedModal] = useState(false);
   const [now, setNow] = useState(null);
   const [mounted, setMounted] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -98,6 +107,21 @@ export default function EventDetail() {
   }, []);
 
   const event = getEventById(eventParam);
+  const [hostProfile, setHostProfile] = useState(null);
+
+  useEffect(() => {
+    const hostId = event?.organiser?.id || event?.organizer?.id;
+    if (!hostId) return;
+    let active = true;
+    getUserProfile(hostId).then((profile) => {
+      if (active && profile) {
+        setHostProfile(profile);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [event?.organiser?.id, event?.organizer?.id]);
   const resolvedEventId = String(event?.id || '').trim();
   const currentRegistration = user && resolvedEventId ? getEventRegistrationForUser(resolvedEventId, user) : null;
 
@@ -107,6 +131,53 @@ export default function EventDetail() {
     if (!canonicalSegment || canonicalSegment === eventParam) return;
     navigate(`/events/${canonicalSegment}`, { replace: true });
   }, [event, eventParam, navigate]);
+
+  const handleShare = async () => {
+    if (typeof window === 'undefined') return;
+    const shareData = {
+      title: event?.title || 'HunchMate Event',
+      text: event?.tagline || event?.shortDescription || 'Check out this event on HunchMate!',
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (err) {
+      console.log('Share error or cancellation:', err);
+    }
+  };
+
+  const [isBookmarked, setIsBookmarked] = useState(false);
+
+  useEffect(() => {
+    if (!resolvedEventId) return;
+    setIsBookmarked(isEventBookmarked(resolvedEventId));
+
+    const handleUpdate = () => {
+      setIsBookmarked(isEventBookmarked(resolvedEventId));
+    };
+    window.addEventListener('bookmarks-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('bookmarks-updated', handleUpdate);
+    };
+  }, [resolvedEventId]);
+
+  const toggleBookmark = async () => {
+    if (!resolvedEventId) return;
+    const added = await toggleEventBookmark(resolvedEventId);
+    setIsBookmarked(added);
+    const title = event?.title || 'This event';
+    if (added) {
+      toast.bookmarkAdd('Saved to your bookmarked events!', title);
+    } else {
+      toast.bookmarkRemove('Removed from your bookmarks.', title);
+    }
+  };
 
   // Show skeleton during SSR and initial hydration to prevent mismatch, 
   // or while Firebase data is loading and event hasn't been found yet
@@ -234,8 +305,7 @@ export default function EventDetail() {
   const isWaitlistActive = event.enableWaitlist && isFull;
 
   const isTeamReg =
-    event.participationType === 'Team' ||
-    (event.participationType === 'Both' && regForm.registrationType === 'Team') ||
+    ((event.participationType === 'Team' || event.participationType === 'Both') && regForm.registrationType === 'Team') ||
     (!event.participationType && event.teamSize && regForm.participantType !== 'student');
 
   const sections = event.sections || {};
@@ -793,6 +863,11 @@ export default function EventDetail() {
       return;
     }
 
+    if (user.role === 'organizer' || user.role === 'admin') {
+      setShowHostWarningModal(true);
+      return;
+    }
+
     if (currentRegistration) {
       if (canManageTeam) {
         openTeamEditor();
@@ -909,12 +984,13 @@ export default function EventDetail() {
   };
 
   const submitRegistration = async () => {
+    if (submitting) return;
     if (currentRegistration && !isTeamEditMode) {
       setRegStatus({ success: false, error: 'You are already registered for this event.' });
       return;
     }
 
-    // Custom validations
+    // Custom validations (run before setSubmitting so early returns don't stick)
     if (event.requireSocialProfiles) {
       if (!regForm.linkedinUrl?.trim() || !regForm.githubUrl?.trim()) {
         setRegStatus({ success: false, error: 'LinkedIn and GitHub profiles are required for registration.' });
@@ -954,8 +1030,13 @@ export default function EventDetail() {
           teamLeadName: regForm.teamLeadName,
           members,
           teamSize: members.length,
+          registrationType: 'Team',
         }
-      : { participantType: regForm.participantType, members: [leadLabel || user.name] };
+      : {
+          participantType: regForm.participantType,
+          members: [leadLabel || user.name],
+          registrationType: 'Individual',
+        };
 
     // Inject waitlisted or pending approval status
     if (isWaitlistActive) {
@@ -1000,34 +1081,44 @@ export default function EventDetail() {
       }
     }
 
-    const result = isTeamEditMode && currentRegistration && canManageTeam
-      ? await updateTeamRegistration({
-          registrationId: currentRegistration.id,
-          eventId: event.id,
-          teamName: regForm.teamName,
-          teamLeadName: regForm.teamLeadName,
-          participantType: regForm.participantType,
-          members: members.slice(1),
-          removedMemberLabels: teamMembersBaseline.filter(
-            (member) => !teamMembers.some((currentMember) => String(currentMember || '').trim().toLowerCase() === String(member || '').trim().toLowerCase())
-          ),
-        })
-      : await registerForEvent(event.id, user.id, teamData, user);
+    // All validations passed — lock the button and perform the async registration
+    setSubmitting(true);
+    try {
+      const result = isTeamEditMode && currentRegistration && canManageTeam
+        ? await updateTeamRegistration({
+            registrationId: currentRegistration.id,
+            eventId: event.id,
+            teamName: regForm.teamName,
+            teamLeadName: regForm.teamLeadName,
+            participantType: regForm.participantType,
+            members: members.slice(1),
+            removedMemberLabels: teamMembersBaseline.filter(
+              (member) => !teamMembers.some((currentMember) => String(currentMember || '').trim().toLowerCase() === String(member || '').trim().toLowerCase())
+            ),
+          })
+        : await registerForEvent(event.id, user.id, teamData, user);
 
-    if (result?.suspended) {
-      setShowRegModal(false);
-      setShowSuspendedModal(true);
-      setRegStatus(null);
-      return;
-    }
+      if (result?.suspended) {
+        setShowRegModal(false);
+        setShowSuspendedModal(true);
+        setRegStatus(null);
+        return;
+      }
 
-    setRegStatus(result);
-    setInviteNotice(null);
+      setRegStatus(result);
+      setInviteNotice(null);
 
-    if (result.success) {
-      setTimeout(() => {
-        resetRegistrationModal();
-      }, 1800);
+      if (result.success) {
+        setTimeout(() => {
+          resetRegistrationModal();
+        }, 1800);
+      }
+    } catch (err) {
+      const message = err?.message || 'Registration failed. Please try again.';
+      const isDuplicate = message.includes('duplicate') || message.includes('unique') || message.includes('already exists');
+      setRegStatus({ success: false, error: isDuplicate ? 'You are already registered for this event.' : message });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -1046,9 +1137,6 @@ export default function EventDetail() {
               </div>
 
                <div className="event-detail__hero-info">
-                {event.logo && (
-                  <img src={event.logo} alt={`${event.title} logo`} style={{ width: '64px', height: '64px', borderRadius: '12px', marginBottom: '0.75rem', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.15)', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }} />
-                )}
                 <h1 className="event-detail__title">{event.title}</h1>
                 {event.tagline && (
                   <p className="event-detail__tagline" style={{ margin: '0.5rem 0 0.75rem 0', fontSize: '1.05rem', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>
@@ -1095,24 +1183,77 @@ export default function EventDetail() {
         <aside className="event-detail__side-card">
           <div className="event-detail__side-noise-inner">
             <div className="event-detail__side-social">
-              <button aria-label="share"><Share2 size={15} /></button>
-              <button aria-label="community"><Users size={15} /></button>
-              <button aria-label="site"><Globe size={15} /></button>
+              <button 
+                aria-label="share" 
+                onClick={handleShare}
+                style={{ position: 'relative', cursor: 'pointer' }}
+              >
+                {copied ? <Check size={15} style={{ color: '#10b981' }} /> : <Share2 size={15} />}
+                {copied && (
+                  <span style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '50%',
+                    transform: 'translateX(-50%) translateY(-8px)',
+                    background: '#0f172a',
+                    color: '#ffffff',
+                    fontSize: '0.7rem',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                    pointerEvents: 'none',
+                    fontWeight: 'bold',
+                    zIndex: 10
+                  }}>
+                    Link Copied!
+                  </span>
+                )}
+              </button>
+              <button 
+                aria-label="bookmark" 
+                onClick={toggleBookmark}
+                style={{ cursor: 'pointer' }}
+                title={isBookmarked ? "Remove Bookmark" : "Bookmark Event"}
+              >
+                <Bookmark size={15} style={{ fill: isBookmarked ? '#ff6b00' : 'none', color: isBookmarked ? '#ff6b00' : '#4c69a4' }} />
+              </button>
+              {organiserDetails.website ? (
+                <button 
+                  aria-label="site" 
+                  onClick={() => window.open(organiserDetails.website.startsWith('http') ? organiserDetails.website : `https://${organiserDetails.website}`, '_blank')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <Globe size={15} />
+                </button>
+              ) : null}
             </div>
             
-            <div className="event-detail__side-organizer" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.75rem' }}>
-              {organiserDetails.logo ? (
-                <img src={organiserDetails.logo} alt={`${organiserDetails.name} logo`} style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(255,255,255,0.1)' }} />
-              ) : (
-                <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, #ff6b00 0%, #ff8c3a 100%)', display: 'grid', placeItems: 'center', fontWeight: 'bold', color: '#fff', fontSize: '1.1rem' }}>
-                  {String(organiserDetails.name || 'H').charAt(0).toUpperCase()}
+            {(() => {
+              const hostNameToShow =
+                hostProfile?.institutionName ||
+                hostProfile?.organizationName ||
+                hostProfile?.companyName ||
+                hostProfile?.organisationName ||
+                organiserDetails.name ||
+                'HunchMate Host';
+
+              return (
+                <div className="event-detail__side-organizer" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', borderBottom: '1px solid rgba(0,0,0,0.08)', paddingBottom: '0.75rem' }}>
+                  {organiserDetails.logo ? (
+                    <img src={organiserDetails.logo} alt={`${hostNameToShow} logo`} style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(0,0,0,0.08)' }} />
+                  ) : (
+                    <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, #ff6b00 0%, #ff8c3a 100%)', display: 'grid', placeItems: 'center', fontWeight: 'bold', color: '#fff', fontSize: '1.1rem' }}>
+                      {String(hostNameToShow).charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b', opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Hosted by</p>
+                    <strong style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: 600 }}>{hostNameToShow}</strong>
+                  </div>
                 </div>
-              )}
-              <div>
-                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Hosted by</p>
-                <strong style={{ fontSize: '0.92rem', color: '#fff', fontWeight: 600 }}>{organiserDetails.name || 'HunchMate Host'}</strong>
-              </div>
-            </div>
+              );
+            })()}
 
             <h3>{event.title}</h3>
             <div className="event-detail__side-row">
@@ -1251,7 +1392,7 @@ export default function EventDetail() {
               </div>
               <div>
                 <span>Entry Type</span>
-                <strong>{event.teamSize ? 'Team Registration' : 'Individual Registration'}</strong>
+                <strong>{isTeamReg ? 'Team Registration' : 'Individual Registration'}</strong>
               </div>
             </div>
 
@@ -1262,7 +1403,7 @@ export default function EventDetail() {
               </div>
             ) : null}
 
-            {event.participationType === 'Both' && (
+            {(event.participationType === 'Both' || event.participationType === 'Team') && (
               <div className="reg-form__section">
                 <p className="reg-form__section-title">Registration Mode</p>
                 <div className="reg-form__button-group">
@@ -1469,18 +1610,7 @@ export default function EventDetail() {
                       value={regForm.customField || ''}
                       onChange={(e) => setRegForm({ ...regForm, customField: e.target.value })}
                       rows={3}
-                      style={{
-                        width: '100%',
-                        background: 'rgba(255,255,255,0.02)',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        borderRadius: '8px',
-                        padding: '0.5rem 0.75rem',
-                        fontSize: '0.9rem',
-                        color: '#fff',
-                        outline: 'none',
-                        resize: 'vertical',
-                        fontFamily: 'inherit'
-                      }}
+                      className="reg-form__textarea"
                     />
                   </div>
                 )}
@@ -1498,8 +1628,8 @@ export default function EventDetail() {
               </div>
             )}
 
-            <Button variant="primary" size="lg" fullWidth onClick={submitRegistration} icon={Zap}>
-              {isWaitlistActive ? 'Join Waitlist' : (event.accessType === 'Invite' && (event.inviteApprovals || event.inviteShortlist) ? 'Submit Request' : 'Confirm Registration')}
+            <Button variant="primary" size="lg" fullWidth onClick={submitRegistration} icon={Zap} disabled={submitting}>
+              {submitting ? 'Registering...' : isWaitlistActive ? 'Join Waitlist' : (event.accessType === 'Invite' && (event.inviteApprovals || event.inviteShortlist) ? 'Submit Request' : 'Confirm Registration')}
             </Button>
 
             <p className="reg-form__footnote">
@@ -1532,6 +1662,43 @@ export default function EventDetail() {
           >
             Open Help Center
           </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showHostWarningModal}
+        onClose={() => setShowHostWarningModal(false)}
+        title="Participant Account Required"
+        size="sm"
+      >
+        <div className="reg-form" style={{ textAlign: 'center', padding: '1rem 0' }}>
+          <div className="reg-form__error" style={{ marginBottom: '1.5rem', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '1rem', borderRadius: '8px', color: '#f87171' }}>
+            Hosts and Administrators cannot register for events.
+          </div>
+          <p style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '2rem' }}>
+            You are currently logged in as a <strong>{user?.role === 'admin' ? 'Administrator' : 'Host/Organizer'}</strong>.
+            To register for this event, please log out and sign in using a <strong>Participant</strong> account.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={async () => {
+                setShowHostWarningModal(false);
+                await logout();
+                navigate('/login');
+              }}
+            >
+              Log Out & Sign In
+            </Button>
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => setShowHostWarningModal(false)}
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>

@@ -1,6 +1,5 @@
 import { motion as Motion } from 'motion/react'
-// Updated: force HMR reload v2
-import { BarChart3, ClipboardCheck, FolderKanban, QrCode, Search, Trophy, Award, Briefcase } from 'lucide-react'
+import { BarChart3, FolderKanban, QrCode, Search, Trophy, Award, Briefcase } from 'lucide-react'
 import LogoLoop from './LogoLoop';
 
 const organizerFeatures = [
@@ -57,19 +56,6 @@ const participantFeatures = [
   },
 ]
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 40 },
-  visible: (i) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: 0.08 * i,
-      duration: 0.6,
-      ease: [0.25, 0.4, 0.25, 1],
-    },
-  }),
-}
-
 const ORGANIZATION_LOGOS = [
   { src: '/logos/organizations/9.png', alt: 'Lovable' },
   { src: '/logos/organizations/10.png', alt: 'Axibator' },
@@ -92,7 +78,6 @@ const INSTITUTION_LOGOS = [
   { src: '/logos/institutions/3.png', alt: 'Geenovate Foundation' },
 ];
 
-// Custom render function: uses background-image div to bypass .logoloop__item img CSS constraints
 const renderLogoItem = (item) => (
   <div
     style={{
@@ -124,11 +109,9 @@ export default function FeaturesSection() {
   return (
     <section id="features-section" className="relative">
 
+      {/* White Background Wrapper */}
+      <div className="relative w-full overflow-visible bg-white pt-10 pb-24 border-t border-white/5">
 
-      {/* White Background Wrapper beginning behind the grids */}
-      <div
-        className="relative w-full overflow-visible bg-white pt-10 pb-24 border-t border-white/5"
-      >
         {/* Soft edge masking the transition */}
         <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent to-white -mt-48 pointer-events-none" />
 
@@ -184,154 +167,222 @@ export default function FeaturesSection() {
           />
         </div>
 
-        {/* Feature Cards Grid — split organizer and participant */}
-        <div className="max-w-7xl mx-auto px-6 py-16 relative z-10">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-extrabold text-slate-800 tracking-tight uppercase" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', letterSpacing: '2px' }}>
-              FEATURED PROGRAMS
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8">
+        {/* ── Platform Features Section ── */}
+        <div className="max-w-6xl mx-auto px-6 py-20 relative z-10">
 
-            {/* Organisers Column */}
-            <div>
-              <div className="mb-10 text-center">
-                <h3 className="text-2xl font-extrabold tracking-widest text-slate-800 mb-3 uppercase">
-                  For Organisers
-                </h3>
-                <div className="h-1 w-16 bg-amber-500 rounded-full mx-auto opacity-80" />
-              </div>
-
-              <div className="grid grid-cols-1 gap-6">
-                {organizerFeatures.map((feature, i) => {
-                  const Icon = feature.icon;
-                  return (
-                    <Motion.div
-                      key={feature.title}
-                      custom={i}
-                      variants={cardVariants}
-                      initial="hidden"
-                      whileInView="visible"
-                      viewport={{ once: true, margin: '-50px' }}
-                      className="group bg-white rounded-xl p-6 transition-all duration-300 hover:-translate-y-1"
-                      style={{
-                        border: '1px solid #e2e8f0',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 24px 48px -12px rgba(0,0,0,0.02)'
-                      }}
-                    >
-                      <div className="flex items-center gap-4 mb-4">
-                        <div
-                          className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 text-white"
-                          style={{ background: `linear-gradient(135deg, ${feature.color}, ${feature.color}99)` }}
-                        >
-                          <Icon size={24} strokeWidth={2} />
-                        </div>
-                        <h3
-                          className="font-bold text-base leading-tight uppercase tracking-wide transition-colors duration-300 group-hover:text-amber-500"
-                          style={{ color: '#4B6BF5' }}
-                        >
-                          {feature.title}
-                        </h3>
-                      </div>
-                      <p className="text-sm text-slate-500 leading-relaxed font-medium">
-                        {feature.desc}
-                      </p>
-                    </Motion.div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Participants Column */}
-            <div>
-              <div className="mb-10 text-center">
-                <h3 className="text-2xl font-extrabold tracking-widest text-slate-800 mb-3 uppercase">
-                  For Participants
-                </h3>
-                <div className="h-1 w-16 bg-indigo-500 rounded-full mx-auto opacity-80" />
-              </div>
-
-              <div className="grid grid-cols-1 gap-6">
-                {participantFeatures.map((feature, i) => {
-                  const Icon = feature.icon;
-                  return (
-                    <Motion.div
-                      key={feature.title}
-                      custom={i + organizerFeatures.length}
-                      variants={cardVariants}
-                      initial="hidden"
-                      whileInView="visible"
-                      viewport={{ once: true, margin: '-50px' }}
-                      className="group bg-white rounded-xl p-6 transition-all duration-300 hover:-translate-y-1"
-                      style={{
-                        border: '1px solid #e2e8f0',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 24px 48px -12px rgba(0,0,0,0.02)'
-                      }}
-                    >
-                      <div className="flex items-center gap-4 mb-4">
-                        <div
-                          className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 text-white"
-                          style={{ background: `linear-gradient(135deg, ${feature.color}, ${feature.color}99)` }}
-                        >
-                          <Icon size={24} strokeWidth={2} />
-                        </div>
-                        <h3
-                          className="font-bold text-base leading-tight uppercase tracking-wide transition-colors duration-300 group-hover:text-indigo-500"
-                          style={{ color: '#4B6BF5' }}
-                        >
-                          {feature.title}
-                        </h3>
-                      </div>
-                      <p className="text-sm text-slate-500 leading-relaxed font-medium">
-                        {feature.desc}
-                      </p>
-                    </Motion.div>
-                  );
-                })}
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Impact Stats */}
-        <div className="max-w-7xl mx-auto px-6 py-16 border-t border-gray-100 mt-8">
+          {/* Section header */}
           <Motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-50px' }}
-            transition={{ duration: 0.6 }}
-            className="grid grid-cols-2 lg:grid-cols-4 gap-6"
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-16"
+          >
+            <span
+              className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-indigo-500 mb-3"
+              style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+            >
+              Everything you need
+            </span>
+            <h2
+              className="text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight"
+              style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+            >
+              Platform Features
+            </h2>
+            <p
+              className="mt-4 text-slate-500 text-lg max-w-2xl mx-auto leading-relaxed"
+              style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+            >
+              Two powerful experiences — one for those who build programs, one for those who compete in them.
+            </p>
+          </Motion.div>
+
+          {/* Two-column feature panels */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* Organisers Panel */}
+            <Motion.div
+              initial={{ opacity: 0, x: -24 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="rounded-3xl p-8 flex flex-col gap-7"
+              style={{
+                background: 'linear-gradient(160deg, #fffbf5 0%, #fff7ed 100%)',
+                border: '1px solid #fde8c8',
+              }}
+            >
+              {/* Panel header */}
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #FF6A00, #F59E0B)' }}
+                >
+                  <FolderKanban size={20} color="white" strokeWidth={2} />
+                </div>
+                <div>
+                  <p
+                    className="text-xs font-bold tracking-widest uppercase text-amber-500"
+                    style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+                  >
+                    For Organisers
+                  </p>
+                  <h3
+                    className="text-xl font-bold text-slate-800"
+                    style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+                  >
+                    Run events end-to-end
+                  </h3>
+                </div>
+              </div>
+
+              <div className="h-px bg-amber-100" />
+
+              {/* Feature rows */}
+              <div className="flex flex-col gap-5">
+                {organizerFeatures.map((f, i) => {
+                  const Icon = f.icon;
+                  return (
+                    <Motion.div
+                      key={f.title}
+                      initial={{ opacity: 0, y: 16 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: i * 0.07 }}
+                      className="flex gap-4 items-start group"
+                    >
+                      <div
+                        className="mt-0.5 w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105"
+                        style={{
+                          background: `linear-gradient(135deg, ${f.color}22, ${f.color}44)`,
+                          border: `1px solid ${f.color}33`,
+                        }}
+                      >
+                        <Icon size={18} style={{ color: f.color }} strokeWidth={2} />
+                      </div>
+                      <div>
+                        <p
+                          className="text-sm font-bold text-slate-800 leading-snug"
+                          style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+                        >
+                          {f.title}
+                        </p>
+                        <p className="text-sm text-slate-500 mt-1 leading-relaxed">{f.desc}</p>
+                      </div>
+                    </Motion.div>
+                  );
+                })}
+              </div>
+            </Motion.div>
+
+            {/* Participants Panel */}
+            <Motion.div
+              initial={{ opacity: 0, x: 24 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="rounded-3xl p-8 flex flex-col gap-7"
+              style={{
+                background: 'linear-gradient(160deg, #f8f9ff 0%, #eef2ff 100%)',
+                border: '1px solid #dde3f9',
+              }}
+            >
+              {/* Panel header */}
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)' }}
+                >
+                  <Trophy size={20} color="white" strokeWidth={2} />
+                </div>
+                <div>
+                  <p
+                    className="text-xs font-bold tracking-widest uppercase text-indigo-500"
+                    style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+                  >
+                    For Participants
+                  </p>
+                  <h3
+                    className="text-xl font-bold text-slate-800"
+                    style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+                  >
+                    Compete, grow, get recognised
+                  </h3>
+                </div>
+              </div>
+
+              <div className="h-px bg-indigo-100" />
+
+              {/* Feature rows */}
+              <div className="flex flex-col gap-5">
+                {participantFeatures.map((f, i) => {
+                  const Icon = f.icon;
+                  return (
+                    <Motion.div
+                      key={f.title}
+                      initial={{ opacity: 0, y: 16 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: i * 0.07 }}
+                      className="flex gap-4 items-start group"
+                    >
+                      <div
+                        className="mt-0.5 w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105"
+                        style={{
+                          background: `linear-gradient(135deg, ${f.color}22, ${f.color}44)`,
+                          border: `1px solid ${f.color}33`,
+                        }}
+                      >
+                        <Icon size={18} style={{ color: f.color }} strokeWidth={2} />
+                      </div>
+                      <div>
+                        <p
+                          className="text-sm font-bold text-slate-800 leading-snug"
+                          style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+                        >
+                          {f.title}
+                        </p>
+                        <p className="text-sm text-slate-500 mt-1 leading-relaxed">{f.desc}</p>
+                      </div>
+                    </Motion.div>
+                  );
+                })}
+              </div>
+            </Motion.div>
+
+          </div>
+
+          {/* Stats strip */}
+          <Motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4"
           >
             {[
-              { value: '50,000+', label: 'Active Innovators across the ecosystem' },
-              { value: '250+', label: 'Enterprise hackathons and programs powered' },
-              { value: '35,000+', label: 'Verified credentials issued to participants' },
-              { value: '100%', label: 'Skill validated talent discovery pipeline' },
+              { value: '50,000+', label: 'Active Innovators' },
+              { value: '250+', label: 'Programs Powered' },
+              { value: '35,000+', label: 'Credentials Issued' },
+              { value: '100%', label: 'Skill-Validated Hiring' },
             ].map((stat, i) => (
               <div
                 key={i}
-                className="text-center p-6 rounded-2xl"
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                }}
+                className="rounded-2xl px-5 py-4 text-center"
+                style={{ background: '#f8fafc', border: '1px solid #e8ecf4' }}
               >
                 <div
-                  className="text-2xl sm:text-3xl font-bold text-slate-800 mb-1"
+                  className="text-2xl font-extrabold text-slate-800"
                   style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
                 >
                   {stat.value}
                 </div>
-                <div
-                  className="text-xs sm:text-sm leading-snug"
-                  style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', color: '#64748b' }}
-                >
-                  {stat.label}
-                </div>
+                <div className="text-xs text-slate-500 mt-1 font-medium">{stat.label}</div>
               </div>
             ))}
           </Motion.div>
+
         </div>
       </div>
     </section>

@@ -5,6 +5,7 @@ import { Link, useNavigate } from '@/utils/router';
 import { Mail, Lock, AlertCircle, X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import StatefulButton from '@/components/ui/StatefulButton';
+import { ShinyButton } from '@/components/ui/ShinyButton';
 import '@/vite-pages/Auth.css';
 
 export default function Login() {
@@ -151,9 +152,9 @@ export default function Login() {
             </div>
           </label>
 
-          <StatefulButton onClick={handleSubmitPromise} disabled={loading}>
-            Sign in
-          </StatefulButton>
+          <ShinyButton type="submit" disabled={loading}>
+            {loading ? 'Signing in…' : 'Sign In'}
+          </ShinyButton>
         </form>
 
         <div className="auth-modern__divider"><span>OR</span></div>

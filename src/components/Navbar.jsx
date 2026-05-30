@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Send,
   ChevronRight,
+  Bookmark,
 } from 'lucide-react'
 import { Link, useNavigate, useLocation } from '@/utils/router'
 import { useAuth } from '../context/AuthContext'
@@ -225,6 +226,16 @@ export default function Navbar() {
                       ) : null}
                     </Link>
 
+                    <Link
+                      to="/bookmarks"
+                      className="flex items-center justify-between gap-3 px-3 py-2 text-white/80 hover:text-white hover:bg-white/10 transition-colors text-sm"
+                      onClick={closeProfileMenu}
+                    >
+                      <span className="inline-flex items-center gap-2.5">
+                        <Bookmark size={16} /> Bookmarks
+                      </span>
+                    </Link>
+
                     {user?.role === 'organizer' ? (
                       <Link
                         to="/organizer/dashboard"
@@ -375,6 +386,13 @@ export default function Navbar() {
                     onClick={() => setMobileOpen(false)}
                   >
                     <LayoutDashboard size={16} /> {getDashboardLabel()}
+                  </Link>
+                  <Link
+                    to="/bookmarks"
+                    className="text-white/80 hover:text-white text-base transition-colors font-medium flex items-center gap-2"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Bookmark size={16} /> Bookmarks
                   </Link>
                   {user?.role === 'organizer' ? (
                     <Link

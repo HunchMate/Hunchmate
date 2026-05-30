@@ -24,6 +24,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { useEvents } from '@/context/EventContext';
 import { downloadCSV, formatDate } from '@/utils/helpers';
+import { toast } from '@/utils/toast';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
@@ -281,6 +282,8 @@ export default function OrganizerDashboard() {
       setDeleteError(result?.error || 'Failed to delete event. Please try again.');
       return;
     }
+
+    toast.success('Event deleted successfully.', eventName);
 
     setDeleteEventCandidate(null);
     setDeleteConfirmText('');

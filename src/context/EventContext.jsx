@@ -530,7 +530,9 @@ export function EventProvider({ children }) {
     const maxTeamSize = Number.parseInt(teamSize?.max, 10);
     const hasValidTeamRange = Number.isInteger(minTeamSize) && Number.isInteger(maxTeamSize) && minTeamSize > 0 && maxTeamSize >= minTeamSize;
 
-    if (hasValidTeamRange) {
+    const isTeamRegistration = teamData.registrationType === 'Team' || (!teamData.registrationType && hasTeam);
+
+    if (isTeamRegistration && hasValidTeamRange) {
       if (!hasTeam) {
         return { success: false, error: `This event requires a team of ${minTeamSize}-${maxTeamSize} members.` };
       }
@@ -538,7 +540,7 @@ export function EventProvider({ children }) {
       if (memberList.length < minTeamSize || memberList.length > maxTeamSize) {
         return { success: false, error: `Team size must be between ${minTeamSize} and ${maxTeamSize} members.` };
       }
-    } else if (memberList.length > 1) {
+    } else if (!isTeamRegistration && memberList.length > 1) {
       return { success: false, error: 'This event only allows individual registration.' };
     }
 

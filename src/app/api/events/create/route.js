@@ -53,6 +53,7 @@ export async function POST(request) {
     // since the DB schema only has a fixed set of columns.
     const organizerPayload = {
       ...(eventData.organizer || eventData.organiser || {}),
+      id: user.id, // FORCE OWNER ID!
       // Extended metadata stored inside organizer JSONB
       venue: eventData.venue || '',
       venueAddress: eventData.venueAddress || '',

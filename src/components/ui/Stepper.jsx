@@ -22,6 +22,7 @@ export default function Stepper({
   nextButtonText = 'Continue',
   disableStepIndicators = false,
   renderStepIndicator,
+  renderFooter,
   ...rest
 }) {
   const [currentStep, setCurrentStep] = useState(initialStep);
@@ -93,14 +94,14 @@ export default function Stepper({
     }
   };
 
-  const handleComplete = async () => {
+  const handleComplete = async (submitArg) => {
 
     if (isSubmitting) return;
     if (!canMoveToStep(totalSteps + 1)) return;
 
     try {
       setIsSubmitting(true);
-      const result = await onFinalStepCompleted?.();
+      const result = await onFinalStepCompleted?.(submitArg);
 
       // Treat explicit false as failed submit; keep user on current step.
       if (result === false) {
@@ -161,29 +162,31 @@ export default function Stepper({
         </StepContentWrapper>
 
         {!isCompleted && (
-          <div className={`footer-container ${footerClassName}`}>
-            <div className={`footer-nav ${currentStep !== 1 ? 'spread' : 'end'}`}>
-              {currentStep !== 1 && (
-                <button
-                  onClick={handleBack}
-                  className={`back-button ${currentStep === 1 ? 'inactive' : ''}`}
-                  disabled={isSubmitting}
-                  {...backButtonProps}
-                >
-                  {backButtonText}
-                </button>
-              )}
+          renderFooter ? renderFooter({ currentStep, totalSteps, isLastStep, handleBack, handleNext, handleComplete, isSubmitting }) : (
+            <div className={`footer-container ${footerClassName}`}>
+              <div className={`footer-nav ${currentStep !== 1 ? 'spread' : 'end'}`}>
+                {currentStep !== 1 && (
+                  <button
+                    onClick={handleBack}
+                    className={`back-button ${currentStep === 1 ? 'inactive' : ''}`}
+                    disabled={isSubmitting}
+                    {...backButtonProps}
+                  >
+                    {backButtonText}
+                  </button>
+                )}
 
-              <button
-                onClick={isLastStep ? handleComplete : handleNext}
-                className="next-button"
-                disabled={isSubmitting}
-                {...nextButtonProps}
-              >
-                {isLastStep ? 'Complete' : nextButtonText}
-              </button>
+                <button
+                  onClick={isLastStep ? handleComplete : handleNext}
+                  className="next-button"
+                  disabled={isSubmitting}
+                  {...nextButtonProps}
+                >
+                  {isLastStep ? 'Complete' : nextButtonText}
+                </button>
+              </div>
             </div>
-          </div>
+          )
         )}
       </div>
     </div>
@@ -191,45 +194,32 @@ export default function Stepper({
 }
 
 function StepContentWrapper({ isCompleted, currentStep, direction, children, className }) {
-  const [parentHeight, setParentHeight] = useState(0);
-
   return (
-    <MotionDiv
+    <div
       className={className}
-      style={{ position: 'relative', overflow: 'hidden' }}
-      animate={{ height: isCompleted ? 0 : parentHeight }}
-      transition={{ type: 'spring', duration: 0.4 }}
+      style={{ position: 'relative', overflow: 'visible', width: '100%' }}
     >
-      <AnimatePresence initial={false} mode="sync" custom={direction}>
+      <AnimatePresence initial={false} mode="wait" custom={direction}>
         {!isCompleted && (
-          <SlideTransition key={currentStep} direction={direction} onHeightReady={(h) => setParentHeight(h)}>
+          <SlideTransition key={currentStep} direction={direction}>
             {children}
           </SlideTransition>
         )}
       </AnimatePresence>
-    </MotionDiv>
+    </div>
   );
 }
 
-function SlideTransition({ children, direction, onHeightReady }) {
-  const containerRef = useRef(null);
-
-  useLayoutEffect(() => {
-    if (containerRef.current) {
-      onHeightReady(containerRef.current.offsetHeight);
-    }
-  }, [children, onHeightReady]);
-
+function SlideTransition({ children, direction }) {
   return (
     <MotionDiv
-      ref={containerRef}
       custom={direction}
       variants={stepVariants}
       initial="enter"
       animate="center"
       exit="exit"
-      transition={{ duration: 0.4 }}
-      style={{ position: 'absolute', left: 0, right: 0, top: 0 }}
+      transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
+      style={{ width: '100%' }}
     >
       {children}
     </MotionDiv>
@@ -238,15 +228,15 @@ function SlideTransition({ children, direction, onHeightReady }) {
 
 const stepVariants = {
   enter: (dir) => ({
-    x: dir >= 0 ? '-100%' : '100%',
+    x: dir >= 0 ? 15 : -15,
     opacity: 0,
   }),
   center: {
-    x: '0%',
+    x: 0,
     opacity: 1,
   },
   exit: (dir) => ({
-    x: dir >= 0 ? '50%' : '-50%',
+    x: dir >= 0 ? -15 : 15,
     opacity: 0,
   }),
 };

@@ -2,14 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from '@/utils/router';
-import { ArrowLeft, HelpCircle, Link2, ListPlus, Mail, MapPin, Phone, Plus, Trash2, Tag, Type, Network, CheckSquare, Code, Rocket, Trophy, Briefcase, GraduationCap, Award, MoreHorizontal, MonitorPlay, Layers, Clock, DollarSign, Calendar, Users, Eye, Palette, Globe, ExternalLink, Shield, FileText, Star, CircleDot } from 'lucide-react';
+import { motion } from 'motion/react';
+import { ArrowLeft, HelpCircle, Link2, ListPlus, Mail, MapPin, Phone, Plus, Trash2, Tag, Type, Network, CheckSquare, Code, Rocket, Trophy, Briefcase, GraduationCap, Award, MoreHorizontal, MonitorPlay, Layers, Clock, DollarSign, Calendar, Users, Eye, Palette, Globe, ExternalLink, Shield, FileText, Star, CircleDot, CheckCircle2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import Button from '@/components/ui/Button';
 import { useEvents } from '@/context/EventContext';
 import { eventCategories, eventModes } from '@/utils/sampleData';
 import Checkbox from '@/components/ui/Checkbox';
 import Input from '@/components/ui/Input';
 import Stepper, { Step } from '@/components/ui/Stepper';
 import Modal from '@/components/ui/Modal';
+import EventPreview from '@/components/ui/EventPreview';
 import '@/vite-pages/organizer/CreateEvent.css';
 
 const MAX_IMAGE_BYTES = 1 * 1024 * 1024;
@@ -20,6 +23,10 @@ export default function CreateEvent() {
   const { eventId } = useParams();
   const { user } = useAuth();
   const { createEvent, updateEvent, getEventById } = useEvents();
+  
+  const [successStatus, setSuccessStatus] = useState(null);
+  const [createdEventId, setCreatedEventId] = useState(null);
+
   const isEditMode = Boolean(eventId);
   const targetEvent = isEditMode ? getEventById(eventId) : null;
   const didInitializeRef = useRef(false);
@@ -34,7 +41,7 @@ export default function CreateEvent() {
     shortDescription: '',
     tagline: '',
     logo: '',
-    organizerName: user?.organizationName || user?.name || '',
+    organizerName: user?.institutionName || user?.organizationName || user?.companyName || user?.organisationName || user?.name || '',
     organizerLogo: '',
     sponsors: '',
     partners: '',
@@ -260,7 +267,7 @@ export default function CreateEvent() {
       shortDescription: targetEvent.shortDescription || '',
       tagline: targetEvent.tagline || '',
       logo: targetEvent.logo || '',
-      organizerName: targetEvent.organizer?.name || targetEvent.organiser?.name || user?.organizationName || user?.name || '',
+      organizerName: targetEvent.organizer?.name || targetEvent.organiser?.name || user?.institutionName || user?.organizationName || user?.companyName || user?.organisationName || user?.name || '',
       organizerLogo: targetEvent.organizer?.logo || targetEvent.organiser?.logo || '',
       sponsors: Array.isArray(targetEvent.sponsors) ? targetEvent.sponsors.join(', ') : '',
       partners: Array.isArray(targetEvent.partners) ? targetEvent.partners.join(', ') : '',
@@ -530,7 +537,7 @@ export default function CreateEvent() {
     return validateStep(currentStep);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (actionStatus = 'open') => {
     try {
       const normalizedPosterImage = String(posterImage || '').trim();
       const normalizedShowcaseImage = String(showcaseImage || '').trim();
@@ -567,7 +574,7 @@ export default function CreateEvent() {
         title: form.title,
         category: form.category,
         mode: form.mode,
-        status: targetEvent?.status || 'open',
+        status: actionStatus,
         description: form.description,
         shortDescription: form.shortDescription,
         tagline: form.tagline,
@@ -704,7 +711,8 @@ export default function CreateEvent() {
           showValidationToast(result?.error || 'Unable to create event.');
           return false;
         }
-        navigate('/organizer/dashboard');
+        setCreatedEventId(result.event.id);
+        setSuccessStatus(actionStatus);
         return true;
       }
     } catch (err) {
@@ -716,32 +724,136 @@ export default function CreateEvent() {
 
   return (
     <div className="create-event">
-      <section className="create-event__hero">
-        <div className="container">
-          <button className="create-event__back" onClick={() => navigate('/organizer/dashboard')}>
-            <ArrowLeft size={18} /> Back to Console
-          </button>
-          <h1>{isEditMode ? 'Edit Event' : 'Architect Your Event'}</h1>
-          <p>{isEditMode ? 'Update event details, media, and settings.' : 'Define the structural core of your event to unlock specialized management tools.'}</p>
-        </div>
-      </section>
+      {successStatus ? (
+        <section className="container create-event__success-wrapper animate-fade-in" style={{ padding: '4rem 1rem', textAlign: 'center' }}>
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', duration: 0.6 }}
+            style={{
+              maxWidth: '600px',
+              margin: '0 auto',
+              background: '#fff',
+              padding: '3rem 2rem',
+              borderRadius: '24px',
+              boxShadow: successStatus === 'draft' 
+                ? '0 0 60px rgba(79, 70, 229, 0.15)' 
+                : '0 0 80px rgba(255, 107, 0, 0.2), 0 0 40px rgba(138, 43, 226, 0.15)',
+              position: 'relative',
+              overflow: 'hidden',
+              border: successStatus === 'draft' ? '1px solid rgba(79, 70, 229, 0.2)' : '1px solid rgba(255, 107, 0, 0.3)'
+            }}
+          >
+            {successStatus === 'draft' ? (
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: 'linear-gradient(90deg, #4f46e5, #6366f1)' }} />
+            ) : (
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: 'linear-gradient(90deg, #ff6b00, #8a2be2)' }} />
+            )}
+            
+            <div style={{ 
+              width: '80px', 
+              height: '80px', 
+              borderRadius: '50%', 
+              background: successStatus === 'draft' ? 'rgba(79, 70, 229, 0.1)' : 'rgba(255, 107, 0, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem',
+              color: successStatus === 'draft' ? '#4f46e5' : '#ff6b00'
+            }}>
+              <CheckCircle size={40} />
+            </div>
 
-      <section className="container create-event__form-wrapper">
-        <Stepper
-          initialStep={1}
-          onStepChange={setActiveStep}
-          onFinalStepCompleted={handleSubmit}
-          onBeforeStepChange={handleBeforeStepChange}
-          onStepChangeBlocked={({ reason }) => {
-            showValidationToast(reason || 'Please complete required fields before continuing.');
-          }}
-          nextButtonText="Continue"
-          backButtonText="Back"
-          stepCircleContainerClassName="create-event__stepper"
-          contentClassName="create-event__content"
-          footerClassName="create-event__footer"
-        >
-          <Step>
+            <h2 style={{ fontSize: '2rem', color: '#1a1f36', marginBottom: '1rem', fontWeight: '700' }}>
+              {successStatus === 'draft' ? 'Event Drafted Successfully' : 'Event Published Successfully!'}
+            </h2>
+            <p style={{ color: '#4f566b', fontSize: '1.1rem', marginBottom: '2.5rem', lineHeight: 1.6 }}>
+              {successStatus === 'draft' 
+                ? 'Your event structure has been safely saved. You can continue refining it and publish it later from your dashboard.' 
+                : 'Your event is now live and ready to accept registrations. Share the microsite link to start gathering participants!'}
+            </p>
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <Button variant="primary" onClick={() => navigate('/organizer/dashboard')}>
+                Go to Mission Control
+              </Button>
+              <Button variant="secondary" onClick={() => navigate(`/events/${createdEventId}`)}>
+                {successStatus === 'draft' ? 'Preview Event' : 'View Microsite'}
+              </Button>
+            </div>
+          </motion.div>
+        </section>
+      ) : (
+        <>
+          <section className="create-event__hero">
+            <div className="container">
+              <button className="create-event__back" onClick={() => navigate('/organizer/dashboard')}>
+                <ArrowLeft size={18} /> Back to Console
+              </button>
+              <h1>{isEditMode ? 'Edit Event' : 'Architect Your Event'}</h1>
+              <p>{isEditMode ? 'Update event details, media, and settings.' : 'Define the structural core of your event to unlock specialized management tools.'}</p>
+            </div>
+          </section>
+
+          <section className="container create-event__form-wrapper">
+            <Stepper
+              initialStep={1}
+              onStepChange={setActiveStep}
+              onFinalStepCompleted={handleSubmit}
+              onBeforeStepChange={handleBeforeStepChange}
+              onStepChangeBlocked={({ reason }) => {
+                showValidationToast(reason || 'Please complete required fields before continuing.');
+              }}
+              nextButtonText="Continue"
+              backButtonText="Back"
+              stepCircleContainerClassName="create-event__stepper"
+              contentClassName="create-event__content"
+              footerClassName="create-event__footer"
+              renderFooter={({ currentStep, totalSteps, isLastStep, handleBack, handleNext, handleComplete, isSubmitting }) => (
+                <div className="create-event__footer">
+                  <div className={`footer-nav ${currentStep !== 1 ? 'spread' : 'end'}`}>
+                    {currentStep !== 1 && (
+                      <button
+                        onClick={handleBack}
+                        className={`back-button ${currentStep === 1 ? 'inactive' : ''}`}
+                        disabled={isSubmitting}
+                      >
+                        Back
+                      </button>
+                    )}
+
+                    {isLastStep ? (
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        <Button 
+                          variant="secondary" 
+                          disabled={isSubmitting} 
+                          onClick={() => handleComplete('draft')}
+                        >
+                          Save as Draft
+                        </Button>
+                        <Button 
+                          variant="primary" 
+                          icon={Sparkles}
+                          disabled={isSubmitting} 
+                          onClick={() => handleComplete('open')}
+                        >
+                          Publish Event
+                        </Button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleNext}
+                        className="next-button"
+                        disabled={isSubmitting}
+                      >
+                        Continue
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            >
+              <Step>
             <div className="create-event__step-content animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'left' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', marginTop: '1rem' }}>
                 <Layers size={20} style={{ color: '#ff6b00' }} />
@@ -2106,6 +2218,8 @@ export default function CreateEvent() {
           </Step>
         </Stepper>
       </section>
+      </>
+      )}
 
       {validationToast.visible ? (
         <div className="create-event__toast" role="status" aria-live="polite">
@@ -2119,26 +2233,10 @@ export default function CreateEvent() {
         isOpen={showPreviewModal}
         onClose={() => setShowPreviewModal(false)}
         title="Microsite Preview"
-        size="lg"
+        size="xl"
       >
-        <div style={{ padding: '1.5rem', maxHeight: '75vh', overflowY: 'auto', background: 'var(--color-bg)', borderRadius: '12px' }}>
-          <div style={{ borderBottom: `3px solid ${form.primaryColor}`, paddingBottom: '1rem', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-text)' }}>{form.title || 'Event Title'}</h2>
-            {form.tagline && <p style={{ color: 'var(--color-text-muted)', fontSize: '1rem', marginTop: '0.3rem' }}>{form.tagline}</p>}
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-              <span style={{ background: `${form.primaryColor}22`, color: form.primaryColor, padding: '0.25rem 0.75rem', borderRadius: '99px', fontSize: '0.8rem', fontWeight: 600 }}>{form.category}</span>
-              <span style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--color-text-muted)', padding: '0.25rem 0.75rem', borderRadius: '99px', fontSize: '0.8rem' }}>{form.mode}</span>
-              {form.visibility !== 'public' && <span style={{ background: '#ef444422', color: '#ef4444', padding: '0.25rem 0.75rem', borderRadius: '99px', fontSize: '0.8rem' }}>{form.visibility}</span>}
-            </div>
-          </div>
-          {form.description && <div style={{ marginBottom: '1.5rem' }}><h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>About</h3><p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', lineHeight: 1.6 }}>{form.description}</p></div>}
-          {form.eligibility && <div style={{ marginBottom: '1rem' }}><h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Eligibility</h3><p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>{form.eligibility}</p></div>}
-          {judges.length > 0 && <div style={{ marginBottom: '1rem' }}><h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Judges ({judges.length})</h3>{judges.filter(j => j.name).map((j, i) => <p key={i} style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>• {j.name}{j.title ? ` — ${j.title}` : ''}{j.organization ? `, ${j.organization}` : ''}</p>)}</div>}
-          {mentors.length > 0 && <div style={{ marginBottom: '1rem' }}><h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Mentors ({mentors.length})</h3>{mentors.filter(m => m.name).map((m, i) => <p key={i} style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>• {m.name}{m.title ? ` — ${m.title}` : ''}{m.organization ? `, ${m.organization}` : ''}</p>)}</div>}
-          {rounds.length > 0 && <div style={{ marginBottom: '1rem' }}><h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Rounds ({rounds.length})</h3>{rounds.filter(r => r.name).map((r, i) => <p key={i} style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>Round {i + 1}: {r.name}</p>)}</div>}
-          {prizes.some(p => p.rank || p.reward) && <div style={{ marginBottom: '1rem' }}><h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Prizes</h3>{prizes.filter(p => p.rank || p.reward).map((p, i) => <p key={i} style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>🏆 {p.rank}: {p.reward}</p>)}</div>}
-          {faqs.some(f => f.q && f.a) && <div style={{ marginBottom: '1rem' }}><h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>FAQs</h3>{faqs.filter(f => f.q && f.a).map((f, i) => <div key={i} style={{ marginBottom: '0.5rem' }}><p style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-text)' }}>Q: {f.q}</p><p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>A: {f.a}</p></div>)}</div>}
-          <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', textAlign: 'center', marginTop: '2rem' }}>— End of Preview —</p>
+        <div style={{ maxHeight: '75vh', overflowY: 'auto', background: 'var(--color-bg)', borderRadius: '12px' }}>
+          <EventPreview form={form} judges={judges} mentors={mentors} rounds={rounds} prizes={prizes} faqs={faqs} />
         </div>
       </Modal>
 

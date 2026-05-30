@@ -7,15 +7,15 @@ import Footer from '@/components/layout/Footer';
 
 export default function MainLayout({ children }) {
   const pathname = usePathname() || '';
-  const hideFooter = pathname.includes('/events/') && pathname.split('/').length > 2;
+  const isEventDetailPage = pathname.includes('/events/') && pathname.split('/').length > 2;
 
   return (
     <>
-      <SiteHeader />
+      {!isEventDetailPage && <SiteHeader />}
       <main className="page-transition" style={{ flex: 1 }}>
         {children}
       </main>
-      {!hideFooter && <Footer />}
+      {!isEventDetailPage && <Footer />}
     </>
   );
 }

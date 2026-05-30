@@ -5,6 +5,7 @@ import {
   updateUserProfile as updateUserProfileRecord,
   upsertUserProfileFromAuthUser,
 } from '../lib/supabase-data';
+import { migrateLocalBookmarksToSupabase } from '../utils/bookmarks';
 
 const AuthContext = createContext();
 const supabase = createClient();
@@ -47,9 +48,8 @@ export function AuthProvider({ children }) {
 
   const persistSession = useCallback((nextToken, nextUser) => {
     if (typeof window !== 'undefined') {
-      if (nextToken) {
-        localStorage.setItem('authToken', nextToken);
-      }
+      // Only cache user profile for UI flicker reduction; do NOT cache the JWT —
+      // Supabase already persists its own session via sb-*-auth-token cookies.
       if (nextUser) {
         localStorage.setItem('authUser', JSON.stringify(nextUser));
       }
@@ -62,16 +62,16 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let isMounted = true;
 
-    // Load initial session from local storage if available to avoid flicker
+    // Load initial user profile from localStorage for UI flicker reduction.
+    // This is NOT trusted for role-based decisions — the onAuthStateChange listener
+    // below will validate the session server-side and overwrite with authoritative data.
     if (typeof window !== 'undefined') {
       const storedUser = localStorage.getItem('authUser');
-      const storedToken = localStorage.getItem('authToken');
-      if (storedUser && storedToken) {
+      if (storedUser) {
         try {
           setUser(JSON.parse(storedUser));
-          setToken(storedToken);
         } catch (e) {
-          // Ignore
+          // Ignore malformed cache
         }
       }
     }
@@ -111,19 +111,14 @@ export function AuthProvider({ children }) {
               refreshToken: session.refresh_token,
             });
           } else if (!profile) {
-            // Check if there was a role stored during OAuth signup flow
-            const pendingRole = typeof window !== 'undefined'
-              ? (localStorage.getItem('hm_oauth_role') || intendedRole || 'participant')
-              : (intendedRole || 'participant');
+            // Use the intended role from user metadata for new profiles
+            const pendingRole = intendedRole || 'participant';
             profile = await upsertUserProfileFromAuthUser(session.user, {
               role: pendingRole,
               provider: session.user.app_metadata?.provider || 'supabase',
               accessToken: session.access_token,
               refreshToken: session.refresh_token,
             });
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem('hm_oauth_role');
-            }
           }
 
           if (profile?.status === 'suspended') {
@@ -136,6 +131,8 @@ export function AuthProvider({ children }) {
             }
             persistSession(nextToken, profile);
             setError(null);
+            // Migrate any localStorage bookmarks to the user's Supabase account
+            migrateLocalBookmarksToSupabase().catch(() => {});
           }
         } catch (authError) {
           console.error('Failed to bootstrap auth session profile:', authError);
@@ -275,10 +272,8 @@ export function AuthProvider({ children }) {
       ? { role: roleOverride, ...extraOptions } 
       : (tokenOrOptions || {});
 
-    // Save desired role to localStorage so the auth state change listener can apply it if it's a new profile signup
-    if (typeof window !== 'undefined' && options.role) {
-      localStorage.setItem('hm_oauth_role', options.role);
-    }
+    // Store desired role in user_metadata via signInWithOAuth options instead of localStorage
+    // to prevent tampering. The role is already passed through user_metadata for email signup.
 
     try {
       if (isTokenFlow) {
@@ -373,7 +368,7 @@ export function AuthProvider({ children }) {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         String(email || '').trim().toLowerCase(),
         {
-          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined,
+          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/reset-password?mode=recovery` : undefined,
         }
       );
       if (resetError) throw resetError;
@@ -393,20 +388,6 @@ export function AuthProvider({ children }) {
     const currentEmail = String(user?.email || '').trim().toLowerCase();
     if (normalized && currentEmail && normalized === currentEmail) {
       return user;
-    }
-
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('authUser');
-      if (!storedUser) return null;
-
-      try {
-        const parsed = JSON.parse(storedUser);
-        if (String(parsed?.email || '').trim().toLowerCase() === normalized) {
-          return parsed;
-        }
-      } catch {
-        return null;
-      }
     }
 
     return null;

@@ -227,6 +227,14 @@
   animation: authButtonFlash 280ms ease;
 }
 
+.auth-modern__submit--icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
 .auth-modern__consent {
   display: flex !important;
   align-items: flex-start;

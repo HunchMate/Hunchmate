@@ -22,7 +22,10 @@ export default function SiteHeader() {
   const mobileMenuItems = [
     ...BASE_MOBILE_MENU_ITEMS,
     ...(user
-      ? [{ label: 'Dashboard', ariaLabel: 'Go to dashboard', link: '/dashboard' }]
+      ? [
+          { label: 'Dashboard', ariaLabel: 'Go to dashboard', link: '/dashboard' },
+          { label: 'Bookmarks', ariaLabel: 'Go to bookmarks', link: '/bookmarks' }
+        ]
       : [{ label: 'Sign In', ariaLabel: 'Go to sign in page', link: '/login' }])
   ];
 

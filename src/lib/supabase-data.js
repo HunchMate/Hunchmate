@@ -77,6 +77,8 @@ function mapProfileToApp(row) {
     bio: row.bio || '',
     institution: row.institution || '',
     organizationName: row.organization_name || '',
+    organisationName: row.organization_name || '',
+    companyName: row.organization_name || '',
     location: row.location || '',
     headline: row.headline || '',
     website: row.website || '',
@@ -115,7 +117,13 @@ function mapProfileToDb(app) {
   if (app.avatarBackdrop !== undefined) db.avatar_backdrop = app.avatarBackdrop;
   if (app.bio !== undefined) db.bio = app.bio;
   if (app.institution !== undefined) db.institution = app.institution;
-  if (app.organizationName !== undefined) db.organization_name = app.organizationName;
+  if (app.organizationName !== undefined) {
+    db.organization_name = app.organizationName;
+  } else if (app.organisationName !== undefined) {
+    db.organization_name = app.organisationName;
+  } else if (app.companyName !== undefined) {
+    db.organization_name = app.companyName;
+  }
   if (app.location !== undefined) db.location = app.location;
   if (app.headline !== undefined) db.headline = app.headline;
   if (app.website !== undefined) db.website = app.website;
@@ -388,18 +396,78 @@ export async function updateUserProfile(uid, updates = {}) {
 // EVENTS
 // ==========================================
 export async function listEvents() {
-  const { data, error } = await supabase
-    .from('events')
-    .select('*')
-    .order('created_at', { ascending: false });
+  try {
+    // Fetch ALL events for EventContext bulk sync (backwards compat)
+    const cacheBuster = Date.now();
+    const res = await fetch(`/api/events?all=true&cb=${cacheBuster}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
 
-  if (error) {
-    if (error.message !== 'JWT expired') {
-      console.error('listEvents error:', error.message);
+    if (!res.ok) {
+      console.error('listEvents fetch error:', res.statusText);
+      return [];
     }
+
+    const json = await res.json();
+    if (json.error) {
+      console.error('listEvents api error:', json.error);
+      return [];
+    }
+
+    return (json.events || []).map(mapEventToApp);
+  } catch (error) {
+    console.error('listEvents unexpected error:', error.message);
     return [];
   }
-  return data.map(mapEventToApp);
+}
+
+/**
+ * Fetch a paginated page of events from the server.
+ * @param {Object} params
+ * @param {number} params.page - Page number (1-indexed)
+ * @param {number} params.limit - Events per page (default 16)
+ * @param {string} params.search - Search query
+ * @param {string} params.category - Category filter
+ * @param {string} params.status - Status filter (open, ongoing, etc.)
+ * @param {string} params.mode - Mode filter (Online, Offline, Hybrid)
+ * @returns {{ events: Array, pagination: { page, limit, total, totalPages, hasMore } }}
+ */
+export async function listEventsPaginated(params = {}) {
+  try {
+    const searchParams = new URLSearchParams();
+    searchParams.set('page', String(params.page || 1));
+    searchParams.set('limit', String(params.limit || 16));
+    if (params.search) searchParams.set('search', params.search);
+    if (params.category) searchParams.set('category', params.category);
+    if (params.status) searchParams.set('status', params.status);
+    if (params.mode) searchParams.set('mode', params.mode);
+    searchParams.set('cb', Date.now());
+
+    const res = await fetch(`/api/events?${searchParams.toString()}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!res.ok) {
+      console.error('listEventsPaginated fetch error:', res.statusText);
+      return { events: [], pagination: { page: 1, limit: 16, total: 0, totalPages: 0, hasMore: false } };
+    }
+
+    const json = await res.json();
+    if (json.error) {
+      console.error('listEventsPaginated api error:', json.error);
+      return { events: [], pagination: { page: 1, limit: 16, total: 0, totalPages: 0, hasMore: false } };
+    }
+
+    return {
+      events: (json.events || []).map(mapEventToApp),
+      pagination: json.pagination || { page: 1, limit: 16, total: 0, totalPages: 0, hasMore: false },
+    };
+  } catch (error) {
+    console.error('listEventsPaginated unexpected error:', error.message);
+    return { events: [], pagination: { page: 1, limit: 16, total: 0, totalPages: 0, hasMore: false } };
+  }
 }
 
 export async function createEventRecord(eventData) {
@@ -426,91 +494,47 @@ export async function createEventRecord(eventData) {
 
 
 export async function updateEventRecord(eventId, updates) {
-  // Pack extended metadata into organizer JSONB, same as create route
-  const organizerPayload = {
-    ...(updates.organizer || updates.organiser || {}),
-    venue: updates.venue || '',
-    venueAddress: updates.venueAddress || '',
-    venueInstructions: updates.venueInstructions || '',
-    fee: updates.fee || '',
-    prizes: updates.prizes || [],
-    faqs: updates.faqs || [],
-    judges: updates.judges || [],
-    mentors: updates.mentors || [],
-    rounds: updates.rounds || [],
-    judgingCriteria: updates.judgingCriteria || [],
-    rules: updates.rules || [],
-    sections: updates.sections || {},
-    mapLink: updates.mapLink || '',
-    eligibility: updates.eligibility || '',
-    participationGuidelines: updates.participationGuidelines || '',
-    codeOfConduct: updates.codeOfConduct || '',
-    visibility: updates.visibility || 'public',
-    primaryColor: updates.primaryColor || '#5227FF',
-    paymentConfig: updates.paymentConfig || { type: 'free' },
-    communicationPrefs: updates.communicationPrefs || {},
-    internships: updates.internships || '',
-    goodies: updates.goodies || '',
-    sponsorPerks: updates.sponsorPerks || '',
-    sponsors: updates.sponsors || [],
-    partners: updates.partners || [],
-    tagline: updates.tagline || '',
-    logo: updates.logo || '',
-    accessType: updates.accessType || 'Open',
-    maxParticipants: updates.maxParticipants || 100,
-    maxRegistrations: updates.maxRegistrations || 100,
-    participationType: updates.participationType || 'Both',
-    credentialEnabled: updates.credentialEnabled || false,
-    credentialTemplate: updates.credentialTemplate || 'Classic',
-    programStructure: updates.programStructure || 'single',
-  };
+  // Route update through server-side API route which has correct auth.uid() context
+  // and handles verification + update, bypassing all client-side RLS issues.
+  const res = await fetch('/api/events/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ eventId, updates }),
+  });
 
-  const { data, error } = await supabase
-    .from('events')
-    .update({
-      title: updates.title,
-      description: updates.description,
-      short_description: updates.shortDescription || updates.short_description,
-      category: updates.category,
-      mode: updates.mode,
-      status: updates.status,
-      timeline: updates.timeline,
-      tags: updates.tags,
-      team_size: updates.teamSize || updates.team_size,
-      poster_image: updates.posterImage || updates.poster_image,
-      showcase_image: updates.showcaseImage || updates.showcase_image,
-      banner_images: updates.bannerImages || updates.banner_images,
-      gallery_images: updates.galleryImages || updates.gallery_images,
-      media: updates.media,
-      credential_config: updates.credentialConfig || updates.credential_config,
-      organizer: organizerPayload,
-      timeline_items: updates.timelineItems || updates.timeline_items,
-      problem_statements: updates.problemStatements || updates.problem_statements,
-      sub_events: updates.subEvents || updates.sub_events,
-      registered_count: updates.registeredCount || updates.registered_count,
-    })
-    .eq('id', eventId)
-    .select()
-    .single();
+  const json = await res.json();
 
-  if (error) {
-    console.error('updateEventRecord error:', error.message);
-    throw error;
+  if (!res.ok || !json.success) {
+    const message = json?.error || 'Failed to update event on server';
+    console.error('updateEventRecord server error:', message);
+    throw new Error(message);
   }
-  return mapEventToApp(data);
+
+  console.log('Event updated successfully via server route!');
+  return mapEventToApp(json.event);
 }
 
 export async function deleteEventRecord(eventId) {
-  const { error } = await supabase
-    .from('events')
-    .delete()
-    .eq('id', eventId);
+  // Route deletion through server-side API route which has correct auth.uid() context
+  // and handles verification + delete, bypassing all client-side RLS issues.
+  const res = await fetch('/api/events/delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ eventId }),
+  });
 
-  if (error) {
-    console.error('deleteEventRecord error:', error.message);
-    throw error;
+  const json = await res.json();
+
+  if (!res.ok || !json.success) {
+    const message = json?.error || 'Failed to delete event on server';
+    console.error('deleteEventRecord server error:', message);
+    throw new Error(message);
   }
-  return { deletedEventId: eventId };
+
+  console.log('Event deleted successfully via server route!');
+  return { deletedEventId: json.deletedEventId };
 }
 
 // ==========================================

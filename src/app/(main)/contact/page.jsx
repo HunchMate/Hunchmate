@@ -87,7 +87,7 @@ export default function Contact() {
               <span className="contact-channel-card__icon"><Mail size={18} /></span>
               <h2>Email</h2>
               <p>Our friendly team is here to help.</p>
-              <a href="mailto:support@hunchmate.com">support@hunchmate.com</a>
+              <a href="mailto:hunchmate@gmail.com">hunchmate@gmail.com</a>
             </article>
 
             <article className="contact-channel-card">
@@ -101,14 +101,14 @@ export default function Contact() {
               <span className="contact-channel-card__icon"><Building2 size={18} /></span>
               <h2>Office</h2>
               <p>Come say hello at our office HQ.</p>
-              <p>Bengaluru, Karnataka, India</p>
+              <p>Geenovate TBI,<br/>Hyderabad, Telangana - 501301</p>
             </article>
 
             <article className="contact-channel-card">
               <span className="contact-channel-card__icon"><Phone size={18} /></span>
               <h2>Phone</h2>
               <p>Mon-Fri from 8am to 5pm.</p>
-              <a href="tel:+918000000000">+91 80000 00000</a>
+              <a href="tel:+917993662605">+91 79936 62605</a>
             </article>
           </aside>
 

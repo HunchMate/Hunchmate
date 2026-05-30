@@ -54,7 +54,7 @@ export default function Privacy() {
             <h2>5. Your Rights</h2>
             <p>
               You can request updates or deletion of personal information by contacting
-              support@hunchmate.com. Some records may be retained where legally required.
+              hunchmate@gmail.com. Some records may be retained where legally required.
             </p>
           </section>
         </article>

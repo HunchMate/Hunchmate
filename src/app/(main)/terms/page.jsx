@@ -53,7 +53,7 @@ export default function Terms() {
           <section className="legal-page__section">
             <h2>5. Contact</h2>
             <p>
-              For legal questions, reach us at support@hunchmate.com through the Contact page.
+              For legal questions, reach us at hunchmate@gmail.com through the Contact page.
             </p>
           </section>
         </article>

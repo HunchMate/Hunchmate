@@ -34,6 +34,7 @@ import Modal from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/tabs';
 import { HoverBorderGradient } from '@/components/ui/hover-border-gradient';
 import { EventDetailSkeleton } from '@/components/ui/Skeleton';
+import { QRCodeSVG } from 'qrcode.react';
 import '@/vite-pages/EventDetail.css';
 
 function isRenderableImageSrc(raw) {
@@ -202,12 +203,12 @@ export default function EventDetail() {
     setInviteEmail('');
     setRegForm({
       teamName: '',
-      participantType: 'student',
+      participantType: user?.profileType || 'student',
       teamLeadName: '',
       registrationType: 'Individual',
-      linkedinUrl: '',
-      githubUrl: '',
-      resumeUrl: '',
+      linkedinUrl: user?.socials?.linkedin || user?.linkedinUrl || '',
+      githubUrl: user?.socials?.github || user?.githubUrl || '',
+      resumeUrl: user?.resumeUrl || '',
       customField: '',
       consentAgreed: false
     });
@@ -223,12 +224,12 @@ export default function EventDetail() {
     setInviteEmail('');
     setRegForm({
       teamName: '',
-      participantType: 'student',
+      participantType: user?.profileType || 'student',
       teamLeadName: '',
       registrationType: event.participationType === 'Team' ? 'Team' : 'Individual',
-      linkedinUrl: '',
-      githubUrl: '',
-      resumeUrl: '',
+      linkedinUrl: user?.socials?.linkedin || user?.linkedinUrl || '',
+      githubUrl: user?.socials?.github || user?.githubUrl || '',
+      resumeUrl: user?.resumeUrl || '',
       customField: '',
       consentAgreed: false
     });
@@ -257,12 +258,12 @@ export default function EventDetail() {
     setInviteNotice(null);
     setRegForm({
       teamName: currentRegistration.teamName || '',
-      participantType: currentRegistration.participantType || 'student',
+      participantType: currentRegistration.participantType || user?.profileType || 'student',
       teamLeadName: leadLabel,
       registrationType: currentRegistration.teamName ? 'Team' : 'Individual',
-      linkedinUrl: currentRegistration.linkedinUrl || '',
-      githubUrl: currentRegistration.githubUrl || '',
-      resumeUrl: currentRegistration.resumeUrl || '',
+      linkedinUrl: currentRegistration.linkedinUrl || user?.socials?.linkedin || user?.linkedinUrl || '',
+      githubUrl: currentRegistration.githubUrl || user?.socials?.github || user?.githubUrl || '',
+      resumeUrl: currentRegistration.resumeUrl || user?.resumeUrl || '',
       customField: currentRegistration.customField || '',
       consentAgreed: currentRegistration.consentAgreed || false,
     });
@@ -990,7 +991,21 @@ export default function EventDetail() {
       return;
     }
 
-    // Custom validations (run before setSubmitting so early returns don't stick)
+    // Profile verification — ensure user has complete profile
+    if (!user?.name?.trim() && !user?.displayName?.trim()) {
+      setRegStatus({ success: false, error: 'Please complete your profile (name is required) before registering.' });
+      return;
+    }
+    if (!user?.email?.trim()) {
+      setRegStatus({ success: false, error: 'Please complete your profile (email is required) before registering.' });
+      return;
+    }
+    if (!user?.phoneNumber?.trim() && !user?.phone?.trim()) {
+      setRegStatus({ success: false, error: 'Please complete your profile (phone number is required) before registering.' });
+      return;
+    }
+
+    // Custom validations
     if (event.requireSocialProfiles) {
       if (!regForm.linkedinUrl?.trim() || !regForm.githubUrl?.trim()) {
         setRegStatus({ success: false, error: 'LinkedIn and GitHub profiles are required for registration.' });
@@ -1081,7 +1096,7 @@ export default function EventDetail() {
       }
     }
 
-    // All validations passed — lock the button and perform the async registration
+    // All validations passed — directly register (no payment step)
     setSubmitting(true);
     try {
       const result = isTeamEditMode && currentRegistration && canManageTeam
@@ -1111,7 +1126,7 @@ export default function EventDetail() {
       if (result.success) {
         setTimeout(() => {
           resetRegistrationModal();
-        }, 1800);
+        }, 3000);
       }
     } catch (err) {
       const message = err?.message || 'Registration failed. Please try again.';
@@ -1372,11 +1387,20 @@ export default function EventDetail() {
         size="md"
       >
         {regStatus?.success ? (
-          <div className="reg-success">
-            <div className="reg-success__icon">OK</div>
-            <h3>Registration Confirmed!</h3>
-            <p>Your QR pass has been generated. Check your dashboard.</p>
-            <p className="reg-success__token">Token: <code>{regStatus.registration.qrToken}</code></p>
+          <div className="reg-success text-center">
+            <div className="flex items-center justify-center mb-4">
+              <CheckCircle2 size={56} className="text-green-500" />
+            </div>
+            <h3 className="text-2xl font-black text-gray-900 mb-2">Registration Confirmed!</h3>
+            <p className="text-gray-500 font-medium text-sm max-w-sm mx-auto mb-6">Your QR pass has been generated. Show this code at the event check-in desk. Only this event&apos;s host can validate it.</p>
+            
+            <div className="flex justify-center p-6 bg-white border border-gray-100 rounded-2xl shadow-sm mx-auto w-fit mb-4">
+              <QRCodeSVG value={regStatus.registration?.qrToken || regStatus.registration?.id || 'ticket-id'} size={180} />
+            </div>
+            
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+              Ticket ID: <code className="text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{String(regStatus.registration?.id || 'N/A').split('-')[0].toUpperCase()}</code>
+            </p>
           </div>
         ) : (
           <div className="reg-form">
@@ -1421,21 +1445,23 @@ export default function EventDetail() {
               </div>
             )}
 
-            <div className="reg-form__section">
-              <p className="reg-form__section-title">What is your participation type?</p>
-              <div className="reg-form__button-group">
-                {['student', 'developer', 'working_professional'].map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    className={`reg-form__type-btn ${regForm.participantType === type ? 'reg-form__type-btn--active' : ''}`}
-                    onClick={() => setRegForm({ ...regForm, participantType: type })}
-                  >
-                    {type === 'student' ? 'Student' : type === 'developer' ? 'Developer' : 'Working Professional'}
-                  </button>
-                ))}
+            {!user?.profileType && (
+              <div className="reg-form__section">
+                <p className="reg-form__section-title">What is your participation type?</p>
+                <div className="reg-form__button-group">
+                  {['student', 'developer', 'working_professional'].map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      className={`reg-form__type-btn ${regForm.participantType === type ? 'reg-form__type-btn--active' : ''}`}
+                      onClick={() => setRegForm({ ...regForm, participantType: type })}
+                    >
+                      {type === 'student' ? 'Student' : type === 'developer' ? 'Developer' : 'Working Professional'}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {isTeamReg ? (
               <>
@@ -1629,7 +1655,7 @@ export default function EventDetail() {
             )}
 
             <Button variant="primary" size="lg" fullWidth onClick={submitRegistration} icon={Zap} disabled={submitting}>
-              {submitting ? 'Registering...' : isWaitlistActive ? 'Join Waitlist' : (event.accessType === 'Invite' && (event.inviteApprovals || event.inviteShortlist) ? 'Submit Request' : 'Confirm Registration')}
+              {submitting ? 'Processing...' : isTeamEditMode ? 'Update Team' : 'Confirm Registration'}
             </Button>
 
             <p className="reg-form__footnote">

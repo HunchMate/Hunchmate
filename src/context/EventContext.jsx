@@ -708,14 +708,14 @@ export function EventProvider({ children }) {
     return { success: true, registration: updatedLead, removedRegistrationIds: deletedRegistrationIds };
   };
 
-  const checkInParticipant = async (qrToken) => {
+  const checkInParticipant = async (qrToken, eventId = null) => {
     const scannedToken = String(qrToken || '').trim();
     if (!scannedToken) {
       return { success: false, status: 'invalid', message: 'QR token is required for validation.' };
     }
 
     try {
-      const payload = await checkInByQrToken(scannedToken);
+      const payload = await checkInByQrToken(scannedToken, eventId);
       const result = {
         success: Boolean(payload?.success),
         status: payload?.status || 'valid',

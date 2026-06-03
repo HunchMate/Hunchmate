@@ -244,6 +244,7 @@ export default function Onboarding() {
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [bio, setBio] = useState('');
   const [profileType, setProfileType] = useState('student');
   const [stream, setStream] = useState('');
@@ -288,6 +289,7 @@ export default function Onboarding() {
 
     if (!initializedRef.current) {
       setName(user.name || '');
+      setPhoneNumber(user.phoneNumber || '');
       setBio(user.bio || '');
       setProfileType(user.profileType || 'student');
       setStream(user.stream || '');
@@ -312,6 +314,7 @@ export default function Onboarding() {
 
   const completionChecks = [
     Boolean(name.trim()),
+    Boolean(phoneNumber.trim()),
     Boolean(profileType),
     Boolean(stream),
     Boolean(graduationYear),
@@ -363,6 +366,8 @@ export default function Onboarding() {
     const nextErrors = {};
 
     if (!name.trim()) nextErrors.name = 'Please add your name.';
+    if (!phoneNumber.trim()) nextErrors.phoneNumber = 'Please add your phone number.';
+    else if (!/^[+\d][\d\s\-()]{6,15}$/.test(phoneNumber.trim())) nextErrors.phoneNumber = 'Please enter a valid phone number.';
     if (!user?.email) nextErrors.email = 'Email is unavailable. Please login again.';
     if (bioWords > 100) nextErrors.bio = 'Bio must be 100 words or less.';
     if (!profileType) nextErrors.profileType = 'Please select Student or Working Professional.';
@@ -398,6 +403,7 @@ export default function Onboarding() {
     try {
       await updateProfile({
         name: name.trim(),
+        phoneNumber: phoneNumber.trim(),
         bio: bio.trim(),
         profileType,
         stream,
@@ -503,6 +509,23 @@ export default function Onboarding() {
               <span>How can we reach you?</span>
               <input value={user?.email || ''} readOnly disabled />
               {fieldErrors.email ? <small className="onboarding__error-text">{fieldErrors.email}</small> : null}
+            </label>
+
+            <label className="onboarding__field">
+              <span>Phone number</span>
+              <input
+                value={phoneNumber}
+                onChange={(event) => {
+                  setPhoneNumber(event.target.value);
+                  clearFieldError('phoneNumber');
+                }}
+                onBlur={() => {
+                  if (!phoneNumber.trim()) setFieldErrors((current) => ({ ...current, phoneNumber: 'Please add your phone number.' }));
+                }}
+                placeholder="+91 9876543210"
+                type="tel"
+              />
+              {fieldErrors.phoneNumber ? <small className="onboarding__error-text">{fieldErrors.phoneNumber}</small> : null}
             </label>
 
             <label className="onboarding__field onboarding__field--full">

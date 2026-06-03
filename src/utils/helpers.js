@@ -79,20 +79,28 @@ export const getCategoryColor = (category) => {
 
 export const generateQRToken = (eventId, userId) => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let token = 'QR-';
+  let rand = '';
   for (let i = 0; i < 6; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
+    rand += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return `${token}-${eventId.slice(-3).toUpperCase()}-${userId.slice(-3).toUpperCase()}`;
+  // Event-scoped format: allows validation to verify the QR belongs to a specific event
+  return `EVT:${eventId}|USR:${userId}|TOK:${rand}`;
 };
 
 export const generateTeamQRToken = (eventId, teamId) => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let token = 'TQR-';
+  let rand = '';
   for (let i = 0; i < 8; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
+    rand += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return `${token}-${String(eventId || '').slice(-4).toUpperCase()}-${String(teamId || '').slice(-4).toUpperCase()}`;
+  return `EVT:${eventId}|TEAM:${teamId}|TOK:${rand}`;
+};
+
+/** Parse an event-scoped QR token and extract the eventId */
+export const parseQRTokenEventId = (qrToken) => {
+  const str = String(qrToken || '');
+  const match = str.match(/^EVT:([^|]+)\|/);
+  return match ? match[1] : null;
 };
 
 export const generateCredentialId = () => {

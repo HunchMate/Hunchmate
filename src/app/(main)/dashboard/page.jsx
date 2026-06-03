@@ -48,6 +48,7 @@ function buildForm(user) {
     linkedin: user?.socials?.linkedin || '',
     github: user?.socials?.github || '',
     interests: Array.isArray(user?.socials?.interests) ? user.socials.interests : [],
+    phoneNumber: user?.phoneNumber || '',
   };
 }
 
@@ -307,6 +308,7 @@ export default function Profile() {
         name: form.name,
         avatar: form.avatar,
         avatarBackdrop: form.avatarBackdrop,
+        phoneNumber: form.phoneNumber,
         institution: form.institutionName || form.institution,
         institutionName: form.institutionName || form.institution,
         organizationName: form.organizationName,
@@ -444,6 +446,16 @@ export default function Profile() {
                   <select value={user.email || ''} disabled>
                     <option value={user.email || ''}>{user.email || 'Select a verified email to display'}</option>
                   </select>
+                </label>
+
+                <label>
+                  Phone number
+                  <input
+                    value={form.phoneNumber}
+                    onChange={(event) => setForm({ ...form, phoneNumber: event.target.value })}
+                    placeholder="+91 9876543210"
+                    type="tel"
+                  />
                 </label>
 
                 <label className="profile-page__span-2">
@@ -856,13 +868,28 @@ export default function Profile() {
                   >
                     <ExternalLink size={15} /> View Event Page
                   </Link>
-                  <button
-                    type="button"
-                    className="profile-page__registered-qr-btn"
-                    onClick={() => setSelectedQrRegistration(selectedRegisteredItem.registration)}
-                  >
-                    <QrCode size={15} /> QR Pass
-                  </button>
+                  {(() => {
+                    const eventEnd = selectedRegisteredItem.event.timeline?.eventEnd || selectedRegisteredItem.event.endDate || selectedRegisteredItem.event.timeline?.eventStart || selectedRegisteredItem.event.startDate;
+                    const isCompleted = eventEnd ? new Date(eventEnd) < new Date() : false;
+                    
+                    if (isCompleted) {
+                      return (
+                        <div className="flex items-center gap-1.5 px-3 py-2 bg-green-50 text-green-700 font-bold text-xs rounded-xl border border-green-100">
+                          <Check size={15} /> Event Completed
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <button
+                        type="button"
+                        className="profile-page__registered-qr-btn"
+                        onClick={() => setSelectedQrRegistration(selectedRegisteredItem.registration)}
+                      >
+                        <QrCode size={15} /> View Ticket (QR)
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             ) : null}

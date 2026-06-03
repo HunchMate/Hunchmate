@@ -61,6 +61,7 @@ export default function OrganizerDashboard() {
   const [scannerStarting, setScannerStarting] = useState(false);
   const [registrationEvent, setRegistrationEvent] = useState(null);
   const [credentialEvent, setCredentialEvent] = useState(null);
+  const [scannerEventId, setScannerEventId] = useState('');
   const [deleteEventCandidate, setDeleteEventCandidate] = useState(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleteError, setDeleteError] = useState('');
@@ -139,8 +140,13 @@ export default function OrganizerDashboard() {
   const applyScanToken = async (tokenValue) => {
     const token = String(tokenValue || '').trim();
     if (!token) return;
+    if (!scannerEventId) {
+      setScanResult({ success: false, status: 'invalid', message: 'Please select an event first before scanning.' });
+      window.setTimeout(() => setScanResult(null), 5000);
+      return;
+    }
 
-    const result = await checkInParticipant(token);
+    const result = await checkInParticipant(token, scannerEventId);
     setScanResult(result);
     setScanInput(token);
     window.setTimeout(() => setScanResult(null), 7000);
@@ -772,17 +778,29 @@ export default function OrganizerDashboard() {
         {activeTab === 'scanner' && (
           <section className="orgx-panel orgx-scanner animate-fade-in">
             <h2><QrCode size={22} /> Validate Entry</h2>
-            <p>Paste or scan participant QR token for instant check-in.</p>
+            <p>Select the event you are scanning for, then paste or scan participant QR token.</p>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>Select Event to Validate</label>
+              <select
+                style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: 'var(--color-text)', fontSize: '0.88rem', width: '100%' }}
+                value={scannerEventId}
+                onChange={(e) => setScannerEventId(e.target.value)}
+              >
+                <option value="">Choose your event...</option>
+                {myEvents.map((ev) => <option key={ev.id} value={ev.id}>{ev.title}</option>)}
+              </select>
+            </div>
 
             <div className="orgx-scanner__row">
               <input
                 type="text"
-                placeholder="QR token (e.g. QR-NX-001-USR001-2026)"
+                placeholder="QR token (e.g. EVT:abc123|USR:def456|TOK:XYZ)"
                 value={scanInput}
                 onChange={(e) => setScanInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleScan()}
               />
-              <Button variant="primary" icon={Camera} onClick={openCameraScanner}>Validate</Button>
+              <Button variant="primary" icon={Camera} onClick={openCameraScanner}>Scan QR</Button>
               <Button variant="secondary" icon={QrCode} disabled={!scanInput.trim()} onClick={handleScan}>Validate Token</Button>
             </div>
 
@@ -790,12 +808,15 @@ export default function OrganizerDashboard() {
               <div className={`orgx-scan-result orgx-scan-result--${scanResult.status}`}>
                 {scanResult.status === 'valid' && <CheckCircle size={30} />}
                 {scanResult.status === 'invalid' && <XCircle size={30} />}
+                {scanResult.status === 'wrong-event' && <AlertCircle size={30} />}
                 {scanResult.status === 'already-checked-in' && <AlertCircle size={30} />}
                 {scanResult.status === 'auth-expired' && <AlertCircle size={30} />}
                 <div className="orgx-scan-result__head">
                   <strong>
                     {scanResult.status === 'valid'
                       ? 'Validation Successful'
+                      : scanResult.status === 'wrong-event'
+                        ? 'Not Registered For This Event'
                       : scanResult.status === 'auth-expired'
                         ? 'Session Expired'
                       : scanResult.status === 'already-checked-in'
@@ -814,12 +835,6 @@ export default function OrganizerDashboard() {
                   <div className="orgx-scan-team-details">
                     <div className="orgx-scan-team-details__row"><span>Team Name</span><strong>{scanResult.team.teamName}</strong></div>
                     <div className="orgx-scan-team-details__row"><span>Registered On</span><strong>{formatDate(scanResult.team.registrationDate)}</strong></div>
-                    <div className="orgx-scan-team-details__row">
-                      <span>Payment</span>
-                      <strong className={`orgx-payment-chip orgx-payment-chip--${scanResult.team.paymentStatus || 'not-paid'}`}>
-                        {scanResult.team.paymentLabel}
-                      </strong>
-                    </div>
                     <div className="orgx-scan-team-details__members">
                       <span>Teammates</span>
                       {Array.isArray(scanResult.team.members) && scanResult.team.members.length > 0 ? (

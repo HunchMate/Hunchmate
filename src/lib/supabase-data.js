@@ -556,72 +556,66 @@ export async function listRegistrations() {
 }
 
 export async function createRegistrationRecord(eventId, registration) {
-  const { data, error } = await supabase
-    .from('registrations')
-    .insert({
-      event_id: eventId,
-      user_id: registration.userId || registration.participant?.id || registration.user_id,
-      team_name: registration.teamName || registration.team_name,
-      members: registration.members || [],
-      qr_token: registration.qrToken || registration.qr_token,
-      checked_in: registration.checkedIn || false,
-      checked_in_at: registration.checkedInAt || null,
-      participant: registration.participant || {},
-    })
-    .select()
-    .single();
+  const res = await fetch('/api/registrations/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ eventId, registration }),
+  });
 
-  if (error) {
-    console.error('createRegistrationRecord error:', error.message);
-    throw error;
+  const json = await res.json();
+
+  if (!res.ok || !json.success) {
+    const message = json?.error || 'Failed to create registration on server';
+    console.error('createRegistrationRecord server error:', message);
+    throw new Error(message);
   }
 
-  // Increment event registeredCount
-  await supabase.rpc('increment_event_registration', { event_id_param: eventId });
-
   return {
-    registration: mapRegistrationToApp(data),
+    registration: mapRegistrationToApp(json.registration),
   };
 }
 
 export async function updateRegistrationRecord(registrationId, updates = {}) {
-  const { data, error } = await supabase
-    .from('registrations')
-    .update({
-      team_name: updates.teamName,
-      members: updates.members,
-      qr_token: updates.qrToken,
-      checked_in: updates.checkedIn,
-      checked_in_at: updates.checkedInAt,
-      participant: updates.participant,
-    })
-    .eq('id', registrationId)
-    .select()
-    .single();
+  const res = await fetch('/api/registrations/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ registrationId, updates }),
+  });
 
-  if (error) {
-    console.error('updateRegistrationRecord error:', error.message);
-    throw error;
+  const json = await res.json();
+
+  if (!res.ok || !json.success) {
+    const message = json?.error || 'Failed to update registration on server';
+    console.error('updateRegistrationRecord server error:', message);
+    throw new Error(message);
   }
-  return mapRegistrationToApp(data);
+
+  return mapRegistrationToApp(json.registration);
 }
 
 export async function deleteRegistrationRecord(registrationId) {
-  const { data, error } = await supabase
-    .from('registrations')
-    .delete()
-    .eq('id', registrationId)
-    .select()
-    .maybeSingle();
+  const res = await fetch('/api/registrations/delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ registrationId }),
+  });
 
-  if (error) {
-    console.error('deleteRegistrationRecord error:', error.message);
-    throw error;
+  const json = await res.json();
+
+  if (!res.ok || !json.success) {
+    const message = json?.error || 'Failed to delete registration on server';
+    console.error('deleteRegistrationRecord server error:', message);
+    throw new Error(message);
   }
-  return { deletedRegistrationId: registrationId, existed: !!data };
+
+  return { deletedRegistrationId: json.deletedRegistrationId, existed: json.existed };
 }
 
-export async function checkInByQrToken(qrToken) {
+export async function checkInByQrToken(qrToken, eventId = null) {
+  // First, look up the registration by qr_token (without event filter)
   const { data: regData, error: regError } = await supabase
     .from('registrations')
     .select('*, events(*)')
@@ -632,12 +626,42 @@ export async function checkInByQrToken(qrToken) {
     return {
       success: false,
       status: 'invalid',
-      message: 'QR token is invalid or registration not found.',
+      message: 'QR code not found or invalid.',
       team: null,
       event: null,
     };
   }
 
+  // Event-scoped validation: if organizer is scanning for a specific event,
+  // verify this QR belongs to THAT event
+  if (eventId && regData.event_id !== eventId) {
+    return {
+      success: false,
+      status: 'wrong-event',
+      message: 'Not registered for this event. This QR belongs to a different event.',
+      team: null,
+      event: regData.events ? mapEventToApp(regData.events) : null,
+    };
+  }
+
+  // Already checked in
+  if (regData.checked_in) {
+    return {
+      success: false,
+      status: 'already-checked-in',
+      message: 'This participant has already been checked in.',
+      checkedInAt: regData.checked_in_at,
+      team: {
+        registrationIds: [regData.id],
+        teamName: regData.team_name,
+        members: regData.members || [],
+        participant: regData.participant || null,
+      },
+      event: regData.events ? mapEventToApp(regData.events) : null,
+    };
+  }
+
+  // Mark as checked in
   const checkedInAt = nowIso();
   const { error: updateError } = await supabase
     .from('registrations')

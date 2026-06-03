@@ -3,6 +3,7 @@ import '../../node_modules/shadcn/dist/tailwind.css';
 import '../../node_modules/@fontsource-variable/geist/index.css';
 import '../index.css';
 import { Providers } from '../components/providers';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata = {
   title: 'Hunchmate — Accelerate Innovation From Vision to Value',
@@ -29,6 +30,7 @@ export default function RootLayout({ children }) {
         <Providers>
           {children}
         </Providers>
+        <SpeedInsights />
       </body>
     </html>
   );

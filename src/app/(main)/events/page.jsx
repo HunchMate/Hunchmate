@@ -111,6 +111,7 @@ export default function Events() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [featuredIndex, setFeaturedIndex] = useState(0);
   const [bookmarkedIds, setBookmarkedIds] = useState([]);
+  const [mounted, setMounted] = useState(false);
 
   // Server-side paginated state
   const [paginatedEvents, setPaginatedEvents] = useState([]);
@@ -120,6 +121,10 @@ export default function Events() {
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const fetchIdRef = useRef(0);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Debounce search input (300ms)
   useEffect(() => {
@@ -230,6 +235,10 @@ export default function Events() {
   }, [featuredEvents.length, featuredIndex]);
 
   const carouselEvents = featuredEvents.slice(0, 8);
+
+  if (!mounted) {
+    return null; // Prevent hydration mismatch
+  }
 
   return (
     <div className="explore-page">

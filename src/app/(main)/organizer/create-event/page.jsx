@@ -46,6 +46,8 @@ export default function CreateEvent() {
     sponsors: '',
     partners: '',
     venue: '',
+    venueCity: '',
+    onlineLink: '',
     accessType: 'Open',
     inviteApprovals: false,
     inviteShortlist: false,
@@ -84,6 +86,11 @@ export default function CreateEvent() {
     paymentType: 'free',
     paymentAmount: '',
     paymentCurrency: 'INR',
+    bankAccountName: user?.bankAccountName || '',
+    bankName: user?.bankName || '',
+    accountNumber: user?.accountNumber || '',
+    ifscCode: user?.ifscCode || '',
+    panGst: user?.panGst || '',
     internships: '',
     goodies: '',
     sponsorPerks: '',
@@ -127,6 +134,8 @@ export default function CreateEvent() {
   const [mentors, setMentors] = useState([]);
   const [rounds, setRounds] = useState([]);
   const [faqs, setFaqs] = useState([{ q: '', a: '' }]);
+  const [sponsorsList, setSponsorsList] = useState([]);
+  const [organizersList, setOrganizersList] = useState([{ name: user?.institutionName || user?.organizationName || user?.companyName || user?.organisationName || user?.name || '' }]);
   const [judgingCriteriaList, setJudgingCriteriaList] = useState([]);
   const [coupons, setCoupons] = useState([]);
   const [posterImage, setPosterImage] = useState('');
@@ -267,11 +276,10 @@ export default function CreateEvent() {
       shortDescription: targetEvent.shortDescription || '',
       tagline: targetEvent.tagline || '',
       logo: targetEvent.logo || '',
-      organizerName: targetEvent.organizer?.name || targetEvent.organiser?.name || user?.institutionName || user?.organizationName || user?.companyName || user?.organisationName || user?.name || '',
       organizerLogo: targetEvent.organizer?.logo || targetEvent.organiser?.logo || '',
-      sponsors: Array.isArray(targetEvent.sponsors) ? targetEvent.sponsors.join(', ') : '',
-      partners: Array.isArray(targetEvent.partners) ? targetEvent.partners.join(', ') : '',
       venue: targetEvent.venue || targetEvent.location || '',
+      venueCity: targetEvent.venueCity || '',
+      onlineLink: targetEvent.onlineLink || '',
       accessType: targetEvent.accessType || 'Open',
       inviteApprovals: Boolean(targetEvent.inviteApprovals),
       inviteShortlist: Boolean(targetEvent.inviteShortlist),
@@ -322,6 +330,11 @@ export default function CreateEvent() {
       paymentType: targetEvent.paymentConfig?.type || 'free',
       paymentAmount: targetEvent.paymentConfig?.amount || '',
       paymentCurrency: targetEvent.paymentConfig?.currency || 'INR',
+      bankAccountName: targetEvent.paymentConfig?.bankAccountName || user?.bankAccountName || '',
+      bankName: targetEvent.paymentConfig?.bankName || user?.bankName || '',
+      accountNumber: targetEvent.paymentConfig?.accountNumber || user?.accountNumber || '',
+      ifscCode: targetEvent.paymentConfig?.ifscCode || user?.ifscCode || '',
+      panGst: targetEvent.paymentConfig?.panGst || user?.panGst || '',
       internships: targetEvent.internships || '',
       goodies: targetEvent.goodies || '',
       sponsorPerks: targetEvent.sponsorPerks || '',
@@ -376,6 +389,25 @@ export default function CreateEvent() {
     setMentors(Array.isArray(targetEvent.mentors) ? targetEvent.mentors : []);
     setRounds(Array.isArray(targetEvent.rounds) ? targetEvent.rounds : []);
     setJudgingCriteriaList(Array.isArray(targetEvent.judgingCriteria) ? targetEvent.judgingCriteria : []);
+    
+    // Convert string organizers to list if legacy
+    let initOrganizers = [{ name: user?.institutionName || user?.organizationName || user?.name || '' }];
+    if (Array.isArray(targetEvent.organizers) && targetEvent.organizers.length > 0) {
+      initOrganizers = targetEvent.organizers;
+    } else if (targetEvent.organizer?.name || targetEvent.organiser?.name) {
+      initOrganizers = [{ name: targetEvent.organizer?.name || targetEvent.organiser?.name }];
+    }
+    setOrganizersList(initOrganizers);
+
+    // Convert string sponsors to list if legacy
+    let initSponsors = [];
+    if (Array.isArray(targetEvent.sponsorsList) && targetEvent.sponsorsList.length > 0) {
+      initSponsors = targetEvent.sponsorsList;
+    } else if (Array.isArray(targetEvent.sponsors) && typeof targetEvent.sponsors[0] === 'string') {
+      initSponsors = targetEvent.sponsors.map((name) => ({ name, tier: 'Partner', logoUrl: '' }));
+    }
+    setSponsorsList(initSponsors);
+
     setCoupons(Array.isArray(targetEvent.paymentConfig?.coupons) ? targetEvent.paymentConfig.coupons : []);
     setPosterImage(
       targetEvent.posterImage ||
@@ -559,7 +591,7 @@ export default function CreateEvent() {
       const includeShowcaseInLegacyCollections = normalizedShowcaseImage && !isDataImageSrc(normalizedShowcaseImage);
 
       const organiser = {
-        name: String(form.organizerName || '').trim() || user?.organizationName || user?.name || '',
+        name: organizersList[0]?.name || user?.organizationName || user?.name || '',
         logo: String(form.organizerLogo || '').trim() || '',
         id: user?.id,
         email: String(form.organizerContactEmail || '').trim(),
@@ -579,7 +611,9 @@ export default function CreateEvent() {
         shortDescription: form.shortDescription,
         tagline: form.tagline,
         logo: form.logo,
-        sponsors: form.sponsors.split(',').map(s => s.trim()).filter(Boolean),
+        organizers: organizersList.filter((o) => o.name),
+        sponsorsList: sponsorsList.filter((s) => s.name),
+        sponsors: sponsorsList.map((s) => s.name).filter(Boolean),
         partners: form.partners.split(',').map(p => p.trim()).filter(Boolean),
         organiser,
         organizer: organiser,
@@ -604,6 +638,8 @@ export default function CreateEvent() {
         },
         venue: form.venue,
         venueAddress: form.venueAddress,
+        venueCity: form.venueCity,
+        onlineLink: form.onlineLink,
         venueInstructions: form.venueInstructions,
         fee: form.fee,
         prizes: prizes.map(p => ({ rank: String(p.rank || '').trim(), reward: String(p.reward || '').trim() })).filter(p => p.rank || p.reward),
@@ -674,6 +710,11 @@ export default function CreateEvent() {
           amount: form.paymentAmount,
           currency: form.paymentCurrency,
           coupons: coupons.filter((c) => c.code),
+          bankAccountName: form.bankAccountName,
+          bankName: form.bankName,
+          accountNumber: form.accountNumber,
+          ifscCode: form.ifscCode,
+          panGst: form.panGst,
         },
         communicationPrefs: {
           onRegistration: form.commOnRegistration,
@@ -1177,30 +1218,42 @@ export default function CreateEvent() {
                   onChange={(e) => update('logo', e.target.value)}
                 />
 
-                <div className="create-event__row">
-                  <Input
-                    label="Sponsors (comma separated)"
-                    placeholder="Google, Microsoft, IBM"
-                    value={form.sponsors}
-                    onChange={(e) => update('sponsors', e.target.value)}
-                  />
-                  <Input
-                    label="Partners (comma separated)"
-                    placeholder="GitHub, OpenAI"
-                    value={form.partners}
-                    onChange={(e) => update('partners', e.target.value)}
-                  />
-                </div>
+                <Input
+                  label="Partners (comma separated)"
+                  placeholder="GitHub, OpenAI"
+                  value={form.partners}
+                  onChange={(e) => update('partners', e.target.value)}
+                />
 
                 <div className="create-event__divider" style={{ margin: '1.5rem 0 1rem' }} />
                 <h3 style={{ margin: '0 0 1rem 0', color: '#1f3658', fontSize: '1.1rem', fontFamily: 'Space Grotesk, sans-serif' }}>Organizer Details</h3>
 
-                <Input
-                  label="Organizer Name"
-                  placeholder="e.g. Google Developer Student Clubs"
-                  value={form.organizerName}
-                  onChange={(e) => update('organizerName', e.target.value)}
-                />
+                <div className="create-event__dynamic-list mt-4 mb-4" style={{ marginBottom: '1rem' }}>
+                  <div className="create-event__optional-head">
+                    <label className="input-label" style={{ marginBottom: 0 }}>Organized By (up to 5)</label>
+                    {organizersList.length < 5 && (
+                      <button type="button" className="create-event__mini-btn" onClick={() => addListItem(setOrganizersList, { name: '' })}>
+                        <Plus size={14} /> Add Partner
+                      </button>
+                    )}
+                  </div>
+                  {organizersList.map((org, index) => (
+                    <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
+                      <div style={{ flex: 1 }}>
+                        <Input
+                          placeholder="e.g. Google Developer Student Clubs"
+                          value={org.name}
+                          onChange={(e) => updateListItem(setOrganizersList, index, { name: e.target.value })}
+                        />
+                      </div>
+                      {organizersList.length > 1 && (
+                        <button type="button" className="create-event__remove-btn opacity-50 hover:opacity-100" onClick={() => removeListItem(setOrganizersList, index)}>
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.36rem', width: '100%' }}>
                   <label className="input-label">Organizer Logo</label>
@@ -1280,31 +1333,51 @@ export default function CreateEvent() {
             <div className="create-event__step-content">
               <h2>Logistics & Timeline</h2>
               <div className="create-event__fields">
-                <Input
-                  label="Venue / Platform"
-                  icon={MapPin}
-                  placeholder="Location or virtual link"
-                  value={form.venue}
-                  onChange={(e) => update('venue', e.target.value)}
-                />
+                {(form.mode === 'Offline' || form.mode === 'Hybrid') && (
+                  <>
+                    <Input
+                      label="Venue Name"
+                      icon={MapPin}
+                      placeholder="e.g. Main Campus Auditorium"
+                      value={form.venue}
+                      onChange={(e) => update('venue', e.target.value)}
+                    />
+                    <div className="create-event__row">
+                      <Input
+                        label="Venue Address"
+                        placeholder="Full address including state, ZIP"
+                        value={form.venueAddress}
+                        onChange={(e) => update('venueAddress', e.target.value)}
+                      />
+                      <Input
+                        label="City"
+                        placeholder="e.g. New York"
+                        value={form.venueCity}
+                        onChange={(e) => update('venueCity', e.target.value)}
+                      />
+                    </div>
+                    <div className="create-event__textarea-group">
+                      <label className="input-label">Venue Instructions (parking, entry gate, etc.)</label>
+                      <textarea
+                        className="create-event__textarea"
+                        placeholder="Parking available at Gate 2. Enter through the main lobby..."
+                        value={form.venueInstructions}
+                        onChange={(e) => update('venueInstructions', e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                  </>
+                )}
 
-                <Input
-                  label="Venue Address"
-                  placeholder="Full address including city, state, ZIP"
-                  value={form.venueAddress}
-                  onChange={(e) => update('venueAddress', e.target.value)}
-                />
-
-                <div className="create-event__textarea-group">
-                  <label className="input-label">Venue Instructions (parking, entry gate, etc.)</label>
-                  <textarea
-                    className="create-event__textarea"
-                    placeholder="Parking available at Gate 2. Enter through the main lobby..."
-                    value={form.venueInstructions}
-                    onChange={(e) => update('venueInstructions', e.target.value)}
-                    rows={3}
+                {(form.mode === 'Online' || form.mode === 'Hybrid') && (
+                  <Input
+                    label="Online Meeting Link / Public Link"
+                    icon={MapPin}
+                    placeholder="https://zoom.us/..."
+                    value={form.onlineLink}
+                    onChange={(e) => update('onlineLink', e.target.value)}
                   />
-                </div>
+                )}
 
                 {/* Payment Setup */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.62rem', marginTop: '1.5rem', marginBottom: '1rem' }}>
@@ -1340,6 +1413,21 @@ export default function CreateEvent() {
                           <option value="USD">USD ($)</option>
                           <option value="EUR">EUR (€)</option>
                         </select>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '1.5rem', marginBottom: '0.5rem', padding: '1rem', background: '#f9fcff', border: '1px solid #dce5f2', borderRadius: '12px' }}>
+                      <h3 style={{ margin: '0 0 1rem 0', color: '#1f3658', fontSize: '1rem' }}>Payout Details (Bank Info)</h3>
+                      <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>This information is required to process your payouts for ticket sales.</p>
+                      
+                      <Input label="Bank Account Holder Name" placeholder="John Doe" value={form.bankAccountName} onChange={(e) => update('bankAccountName', e.target.value)} />
+                      <div className="create-event__row">
+                        <Input label="Bank Name" placeholder="e.g. Chase, HDFC" value={form.bankName} onChange={(e) => update('bankName', e.target.value)} />
+                        <Input label="IFSC Code / Routing Number" placeholder="e.g. HDFC0001234" value={form.ifscCode} onChange={(e) => update('ifscCode', e.target.value)} />
+                      </div>
+                      <div className="create-event__row">
+                        <Input label="Account Number" type="password" placeholder="Enter account number" value={form.accountNumber} onChange={(e) => update('accountNumber', e.target.value)} />
+                        <Input label="PAN / GST (Optional)" placeholder="Optional tax ID" value={form.panGst} onChange={(e) => update('panGst', e.target.value)} />
                       </div>
                     </div>
 
@@ -1965,19 +2053,38 @@ export default function CreateEvent() {
                 <div className="create-event__dynamic-list mt-4 mb-6" style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
                   <div className="create-event__optional-head">
                     <h3>Judges</h3>
-                    <button type="button" className="create-event__mini-btn" onClick={() => addListItem(setJudges, { name: '', title: '', organization: '', bio: '' })}>
+                    <button type="button" className="create-event__mini-btn" onClick={() => addListItem(setJudges, { name: '', title: '', organization: '', bio: '', photoUrl: '' })}>
                       <Plus size={14} /> Add Judge
                     </button>
                   </div>
                   {judges.map((judge, index) => (
                     <div key={index} className="create-event__optional-card mt-2 p-4 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] rounded-xl">
-                      <div className="create-event__row">
-                        <Input placeholder="Name" value={judge.name} onChange={(e) => updateListItem(setJudges, index, { ...judge, name: e.target.value })} />
-                        <Input placeholder="Title / Designation" value={judge.title} onChange={(e) => updateListItem(setJudges, index, { ...judge, title: e.target.value })} />
-                      </div>
-                      <div className="create-event__row">
+                      <div className="create-event__row" style={{ alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: '0 0 100px' }}>
+                          {judge.photoUrl ? (
+                            <img src={judge.photoUrl} alt="Judge" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e1e7f0' }} />
+                          ) : (
+                            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#f1f5f9', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: '#64748b', textAlign: 'center', padding: '0.5rem' }}>Photo</div>
+                          )}
+                          <label className="create-event__upload-field" style={{ margin: 0, padding: '0.4rem', fontSize: '0.7rem', textAlign: 'center' }}>
+                            <span>Upload</span>
+                            <input type="file" accept="image/*" onChange={async (e) => {
+                               const file = e.target.files?.[0];
+                               if(file) {
+                                  const encoded = await convertFileToDataUrl(file);
+                                  updateListItem(setJudges, index, { ...judge, photoUrl: encoded });
+                               }
+                            }} />
+                          </label>
+                        </div>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.88rem' }}>
+                          <div className="create-event__row">
+                            <Input placeholder="Name" value={judge.name} onChange={(e) => updateListItem(setJudges, index, { ...judge, name: e.target.value })} />
+                            <Input placeholder="Title / Designation" value={judge.title} onChange={(e) => updateListItem(setJudges, index, { ...judge, title: e.target.value })} />
+                          </div>
                         <Input placeholder="Organization" value={judge.organization} onChange={(e) => updateListItem(setJudges, index, { ...judge, organization: e.target.value })} />
                         <Input placeholder="Short Bio" value={judge.bio} onChange={(e) => updateListItem(setJudges, index, { ...judge, bio: e.target.value })} />
+                      </div>
                       </div>
                       <button type="button" className="create-event__remove-btn opacity-50 hover:opacity-100 mt-2" onClick={() => removeListItem(setJudges, index)}>
                         <Trash2 size={14} /> Remove
@@ -1990,22 +2097,91 @@ export default function CreateEvent() {
                 <div className="create-event__dynamic-list mt-4 mb-6" style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
                   <div className="create-event__optional-head">
                     <h3>Mentors</h3>
-                    <button type="button" className="create-event__mini-btn" onClick={() => addListItem(setMentors, { name: '', title: '', organization: '', bio: '' })}>
+                    <button type="button" className="create-event__mini-btn" onClick={() => addListItem(setMentors, { name: '', title: '', organization: '', bio: '', photoUrl: '' })}>
                       <Plus size={14} /> Add Mentor
                     </button>
                   </div>
                   {mentors.map((mentor, index) => (
                     <div key={index} className="create-event__optional-card mt-2 p-4 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] rounded-xl">
-                      <div className="create-event__row">
-                        <Input placeholder="Name" value={mentor.name} onChange={(e) => updateListItem(setMentors, index, { ...mentor, name: e.target.value })} />
-                        <Input placeholder="Title / Designation" value={mentor.title} onChange={(e) => updateListItem(setMentors, index, { ...mentor, title: e.target.value })} />
-                      </div>
-                      <div className="create-event__row">
+                      <div className="create-event__row" style={{ alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: '0 0 100px' }}>
+                          {mentor.photoUrl ? (
+                            <img src={mentor.photoUrl} alt="Mentor" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e1e7f0' }} />
+                          ) : (
+                            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#f1f5f9', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: '#64748b', textAlign: 'center', padding: '0.5rem' }}>Photo</div>
+                          )}
+                          <label className="create-event__upload-field" style={{ margin: 0, padding: '0.4rem', fontSize: '0.7rem', textAlign: 'center' }}>
+                            <span>Upload</span>
+                            <input type="file" accept="image/*" onChange={async (e) => {
+                               const file = e.target.files?.[0];
+                               if(file) {
+                                  const encoded = await convertFileToDataUrl(file);
+                                  updateListItem(setMentors, index, { ...mentor, photoUrl: encoded });
+                               }
+                            }} />
+                          </label>
+                        </div>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.88rem' }}>
+                          <div className="create-event__row">
+                            <Input placeholder="Name" value={mentor.name} onChange={(e) => updateListItem(setMentors, index, { ...mentor, name: e.target.value })} />
+                            <Input placeholder="Title / Designation" value={mentor.title} onChange={(e) => updateListItem(setMentors, index, { ...mentor, title: e.target.value })} />
+                          </div>
                         <Input placeholder="Organization" value={mentor.organization} onChange={(e) => updateListItem(setMentors, index, { ...mentor, organization: e.target.value })} />
                         <Input placeholder="Short Bio" value={mentor.bio} onChange={(e) => updateListItem(setMentors, index, { ...mentor, bio: e.target.value })} />
                       </div>
+                      </div>
                       <button type="button" className="create-event__remove-btn opacity-50 hover:opacity-100 mt-2" onClick={() => removeListItem(setMentors, index)}>
                         <Trash2 size={14} /> Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Sponsors Dynamic List */}
+                <div className="create-event__dynamic-list mt-4 mb-6" style={{ marginTop: '1rem', marginBottom: '1.5rem' }}>
+                  <div className="create-event__optional-head">
+                    <h3>Sponsors</h3>
+                    <button type="button" className="create-event__mini-btn" onClick={() => addListItem(setSponsorsList, { name: '', tier: 'Partner', logoUrl: '' })}>
+                      <Plus size={14} /> Add Sponsor
+                    </button>
+                  </div>
+                  {sponsorsList.map((sponsor, index) => (
+                    <div key={index} className="create-event__optional-card mt-2 p-4 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] rounded-xl flex gap-4" style={{ alignItems: 'center' }}>
+                      <div style={{ flex: '0 0 80px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {sponsor.logoUrl ? (
+                          <img src={sponsor.logoUrl} alt="Sponsor Logo" style={{ width: '80px', height: '80px', objectFit: 'contain', background: '#fff', border: '1px solid #dce5f2', borderRadius: '8px' }} />
+                        ) : (
+                          <div style={{ width: '80px', height: '80px', background: '#f1f5f9', border: '2px dashed #cbd5e1', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: '#64748b' }}>Logo</div>
+                        )}
+                        <label className="create-event__upload-field" style={{ margin: 0, padding: '0.4rem', fontSize: '0.7rem', textAlign: 'center' }}>
+                          <span>Upload</span>
+                          <input type="file" accept="image/*" onChange={async (e) => {
+                             const file = e.target.files?.[0];
+                             if(file) {
+                                const encoded = await convertFileToDataUrl(file);
+                                updateListItem(setSponsorsList, index, { ...sponsor, logoUrl: encoded });
+                             }
+                          }} />
+                        </label>
+                      </div>
+                      <div style={{ flex: 1, display: 'flex', gap: '1rem' }}>
+                        <div style={{ flex: 2 }}>
+                          <Input placeholder="Sponsor Name (e.g. Google)" value={sponsor.name} onChange={(e) => updateListItem(setSponsorsList, index, { ...sponsor, name: e.target.value })} />
+                        </div>
+                        <div style={{ flex: 1 }} className="create-event__select-group">
+                          <label className="input-label" style={{ visibility: 'hidden', height: 0, margin: 0 }}>Tier</label>
+                          <select className="create-event__select" value={sponsor.tier} onChange={(e) => updateListItem(setSponsorsList, index, { ...sponsor, tier: e.target.value })}>
+                            <option value="Title">Title Sponsor</option>
+                            <option value="Platinum">Platinum</option>
+                            <option value="Gold">Gold</option>
+                            <option value="Silver">Silver</option>
+                            <option value="Bronze">Bronze</option>
+                            <option value="Partner">Partner</option>
+                          </select>
+                        </div>
+                      </div>
+                      <button type="button" className="create-event__remove-btn opacity-50 hover:opacity-100" onClick={() => removeListItem(setSponsorsList, index)}>
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   ))}

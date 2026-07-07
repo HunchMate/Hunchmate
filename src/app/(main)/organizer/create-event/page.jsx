@@ -1357,9 +1357,9 @@ export default function CreateEvent() {
                       />
                     </div>
                     <div className="create-event__textarea-group">
-                      <label className="input-label">Venue Instructions (parking, entry gate, etc.)</label>
-                      <textarea
-                        className="create-event__textarea"
+                      <Input
+                        type="textarea"
+                        label="Venue Instructions (parking, entry gate, etc.)"
                         placeholder="Parking available at Gate 2. Enter through the main lobby..."
                         value={form.venueInstructions}
                         onChange={(e) => update('venueInstructions', e.target.value)}
@@ -1529,18 +1529,36 @@ export default function CreateEvent() {
 
                 {/* Eligibility & Guidelines */}
                 <div className="create-event__textarea-group">
-                  <label className="input-label">Eligibility Criteria</label>
-                  <textarea className="create-event__textarea" placeholder="Open to all college students above 18 years..." value={form.eligibility} onChange={(e) => update('eligibility', e.target.value)} rows={3} />
+                  <Input
+                    type="textarea"
+                    label="Eligibility Criteria"
+                    placeholder="Open to all college students above 18 years..."
+                    value={form.eligibility}
+                    onChange={(e) => update('eligibility', e.target.value)}
+                    rows={3}
+                  />
                 </div>
 
-                <div className="create-event__textarea-group">
-                  <label className="input-label">Participation Guidelines</label>
-                  <textarea className="create-event__textarea" placeholder="All participants must attend the opening ceremony..." value={form.participationGuidelines} onChange={(e) => update('participationGuidelines', e.target.value)} rows={3} />
+                <div className="create-event__textarea-group mt-4">
+                  <Input
+                    type="textarea"
+                    label="Participation Guidelines"
+                    placeholder="All participants must attend the opening ceremony..."
+                    value={form.participationGuidelines}
+                    onChange={(e) => update('participationGuidelines', e.target.value)}
+                    rows={3}
+                  />
                 </div>
 
-                <div className="create-event__textarea-group">
-                  <label className="input-label">Code of Conduct</label>
-                  <textarea className="create-event__textarea" placeholder="We expect all participants to behave respectfully..." value={form.codeOfConduct} onChange={(e) => update('codeOfConduct', e.target.value)} rows={3} />
+                <div className="create-event__textarea-group mt-4">
+                  <Input
+                    type="textarea"
+                    label="Code of Conduct"
+                    placeholder="We expect all participants to behave respectfully..."
+                    value={form.codeOfConduct}
+                    onChange={(e) => update('codeOfConduct', e.target.value)}
+                    rows={3}
+                  />
                 </div>
 
                 {/* Access Type Configuration */}

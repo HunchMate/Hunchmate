@@ -11,6 +11,9 @@ const ORGANIZATION_TYPES = [
   { value: 'social_enterprise', label: 'Social Enterprise' },
   { value: 'startup', label: 'Startup' },
   { value: 'nonprofit', label: 'Nonprofit' },
+  { value: 'incubator', label: 'Incubator' },
+  { value: 'community', label: 'Community' },
+  { value: 'other', label: 'Other' },
 ];
 
 const CORPORATE_SECTORS = [
@@ -34,6 +37,14 @@ const HOST_TYPES = [
   { value: 'principal', label: 'Principal' },
   { value: 'club_representative', label: 'Club Representative' },
   { value: 'faculty', label: 'Faculty' },
+  { value: 'founder', label: 'Founder' },
+  { value: 'director', label: 'Director' },
+];
+
+const COUNTRIES = [
+  'India', 'United States', 'United Kingdom', 'Canada', 'Australia',
+  'Germany', 'Singapore', 'UAE', 'Japan', 'South Korea', 'France',
+  'Netherlands', 'Other',
 ];
 
 const HOST_CATEGORIES = [
@@ -190,6 +201,12 @@ export default function HostOnboarding() {
   const [registrationNumber, setRegistrationNumber] = useState('');
   const [hrContactPerson, setHrContactPerson] = useState('');
 
+  // New fields: country, org profile
+  const [country, setCountry] = useState('India');
+  const [orgLogo, setOrgLogo] = useState('');
+  const [website, setWebsite] = useState('');
+  const [linkedin, setLinkedin] = useState('');
+
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -235,6 +252,12 @@ export default function HostOnboarding() {
     setIndustry(user.industry || '');
     setRegistrationNumber(user.registrationNumber || '');
     setHrContactPerson(user.hrContactPerson || '');
+
+    // New fields
+    setCountry(user.country || 'India');
+    setOrgLogo(user.orgLogo || '');
+    setWebsite(user.website || '');
+    setLinkedin(user.linkedin || '');
   }, [navigate, user]);
 
   const validate = () => {
@@ -258,12 +281,14 @@ export default function HostOnboarding() {
       errors.phoneNumber = 'Please enter a valid phone number';
     }
 
-    if (!state.trim()) {
-      errors.state = 'State is required';
-    }
+    if (country === 'India') {
+      if (!state.trim()) {
+        errors.state = 'State is required';
+      }
 
-    if (!city.trim()) {
-      errors.city = 'City is required';
+      if (!city.trim()) {
+        errors.city = 'City is required';
+      }
     }
 
     // Institution validation
@@ -328,9 +353,13 @@ export default function HostOnboarding() {
         name: name.trim(),
         phoneNumber: phoneNumber.trim(),
         email: email.trim(),
-        state: state.trim(),
-        city: city.trim(),
+        country: country.trim(),
+        state: country === 'India' ? state.trim() : '',
+        city: country === 'India' ? city.trim() : '',
         hostCategory: hostCategory.trim(),
+        orgLogo: orgLogo,
+        website: website.trim(),
+        linkedin: linkedin.trim(),
         hostOnboardingCompleted: true,
       };
 
@@ -677,30 +706,106 @@ export default function HostOnboarding() {
                   <legend className="host-onboarding__legend">Location</legend>
 
                   <SearchableDropdown
-                    label="State"
-                    options={toOptions(STATE_OPTIONS)}
-                    value={state}
+                    label="Country"
+                    options={toOptions(COUNTRIES)}
+                    value={country}
                     onChange={(value) => {
-                      setState(value);
-                      setCity('');
-                      setFieldErrors((prev) => { const next = { ...prev }; delete next.state; return next; });
+                      setCountry(value);
+                      if (value !== 'India') {
+                        setState('');
+                        setCity('');
+                      }
+                      setFieldErrors((prev) => { const next = { ...prev }; delete next.country; return next; });
                     }}
-                    placeholder="Select your state"
-                    error={fieldErrors.state}
+                    placeholder="Select your country"
                   />
 
-                  <SearchableDropdown
-                    label="City"
-                    options={toOptions(cityOptions)}
-                    value={city}
-                    onChange={(value) => {
-                      setCity(value);
-                      setFieldErrors((prev) => { const next = { ...prev }; delete next.city; return next; });
-                    }}
-                    placeholder={state ? 'Select your city' : 'Select state first'}
-                    disabled={!state}
-                    error={fieldErrors.city}
-                  />
+                  {country === 'India' && (
+                    <>
+                      <SearchableDropdown
+                        label="State"
+                        options={toOptions(STATE_OPTIONS)}
+                        value={state}
+                        onChange={(value) => {
+                          setState(value);
+                          setCity('');
+                          setFieldErrors((prev) => { const next = { ...prev }; delete next.state; return next; });
+                        }}
+                        placeholder="Select your state"
+                        error={fieldErrors.state}
+                      />
+
+                      <SearchableDropdown
+                        label="City"
+                        options={toOptions(cityOptions)}
+                        value={city}
+                        onChange={(value) => {
+                          setCity(value);
+                          setFieldErrors((prev) => { const next = { ...prev }; delete next.city; return next; });
+                        }}
+                        placeholder={state ? 'Select your city' : 'Select state first'}
+                        disabled={!state}
+                        error={fieldErrors.city}
+                      />
+                    </>
+                  )}
+                </fieldset>
+
+                <fieldset className="host-onboarding__fieldset">
+                  <legend className="host-onboarding__legend">Organization Profile (Optional)</legend>
+
+                  <label className="host-onboarding__field">
+                    <span>Organization Logo</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      {orgLogo && (
+                        <img
+                          src={orgLogo}
+                          alt="Org logo preview"
+                          style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover', border: '1px solid #dbe2ef' }}
+                        />
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 2 * 1024 * 1024) {
+                            setFieldErrors((prev) => ({ ...prev, orgLogo: 'Image must be under 2MB' }));
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            setOrgLogo(ev.target.result);
+                            setFieldErrors((prev) => { const next = { ...prev }; delete next.orgLogo; return next; });
+                          };
+                          reader.readAsDataURL(file);
+                        }}
+                        style={{ fontSize: '0.85rem' }}
+                      />
+                    </div>
+                    {fieldErrors.orgLogo ? <small className="host-onboarding__error-text">{fieldErrors.orgLogo}</small> : null}
+                  </label>
+
+                  <label className="host-onboarding__field">
+                    <span>Website (optional)</span>
+                    <input
+                      type="url"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      placeholder="https://yourorg.com"
+                    />
+                  </label>
+
+                  <label className="host-onboarding__field">
+                    <span>LinkedIn (optional)</span>
+                    <input
+                      type="url"
+                      value={linkedin}
+                      onChange={(e) => setLinkedin(e.target.value)}
+                      placeholder="https://linkedin.com/company/yourorg"
+                    />
+                  </label>
                 </fieldset>
 
                 <button

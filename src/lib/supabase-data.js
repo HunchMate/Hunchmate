@@ -95,6 +95,9 @@ function mapProfileToApp(row) {
     techProficiency: row.tech_proficiency || '',
     workSummary: row.work_summary || '',
     currentDesignation: row.current_designation || '',
+    country: row.country || '',
+    orgLogo: row.org_logo || '',
+    linkedin: row.linkedin || '',
     socials: row.socials || { linkedin: '', github: '', instagram: '' },
     termsAccepted: row.terms_accepted,
     termsAcceptedAt: row.terms_accepted_at,
@@ -140,6 +143,9 @@ function mapProfileToDb(app) {
   if (app.techProficiency !== undefined) db.tech_proficiency = app.techProficiency;
   if (app.workSummary !== undefined) db.work_summary = app.workSummary;
   if (app.currentDesignation !== undefined) db.current_designation = app.currentDesignation;
+  if (app.country !== undefined) db.country = app.country;
+  if (app.orgLogo !== undefined) db.org_logo = app.orgLogo;
+  if (app.linkedin !== undefined) db.linkedin = app.linkedin;
   if (app.socials !== undefined) db.socials = app.socials;
   if (app.termsAccepted !== undefined) db.terms_accepted = app.termsAccepted;
   if (app.termsAcceptedAt !== undefined) db.terms_accepted_at = app.termsAcceptedAt;

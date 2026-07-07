@@ -606,6 +606,22 @@ export function EventProvider({ children }) {
     }
   };
 
+  // Simple registration field update (for approvals, status changes, etc.)
+  const updateRegistration = async (registrationId, updates = {}) => {
+    const resolvedId = String(registrationId || '').trim();
+    if (!resolvedId) return { success: false, error: 'Missing registration ID.' };
+    try {
+      const updated = await updateRegistrationRecord(resolvedId, updates);
+      setRegistrations((prev) =>
+        prev.map((r) => (String(r.id) === resolvedId ? { ...r, ...updated } : r))
+      );
+      return { success: true, registration: updated };
+    } catch (err) {
+      console.error('updateRegistration error:', err.message);
+      return { success: false, error: err.message };
+    }
+  };
+
   const updateTeamRegistration = async ({
     registrationId,
     eventId,
@@ -1148,7 +1164,7 @@ export function EventProvider({ children }) {
       events, registrations, credentials, teamInvitations, organizerNotifications,
       eventsLoading,
       createEvent, updateEvent, deleteEvent,
-      registerForEvent, updateTeamRegistration, checkInParticipant,
+      registerForEvent, updateTeamRegistration, updateRegistration, checkInParticipant,
       issueCredential, bulkIssueCredentials, claimCredential,
       createTeamInvitation, getInvitationById, acceptTeamInvitation,
       getOrganizerNotifications, markOrganizerNotificationRead, markAllOrganizerNotificationsRead,

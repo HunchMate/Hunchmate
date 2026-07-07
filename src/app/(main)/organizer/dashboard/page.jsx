@@ -10,11 +10,17 @@ import {
   Camera,
   Calendar,
   CheckCircle,
+  ClipboardList,
   Download,
   Eye,
+  FileText,
+  Globe,
+  LayoutDashboard,
+  Megaphone,
   Pencil,
   Plus,
   QrCode,
+  Settings,
   Sparkles,
   Trash2,
   Users,
@@ -51,9 +57,11 @@ export default function OrganizerDashboard() {
     checkInParticipant,
     bulkIssueCredentials,
     deleteEvent,
+    updateRegistration,
   } = useEvents();
 
   const [activeTab, setActiveTab] = useState('overview');
+  const [eventFilter, setEventFilter] = useState('all');
   const [scanInput, setScanInput] = useState('');
   const [scanResult, setScanResult] = useState(null);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -107,6 +115,17 @@ export default function OrganizerDashboard() {
   );
 
   const activeEventsCount = myEvents.filter((event) => event.status === 'open' || event.status === 'ongoing').length;
+
+  const publishedEvents = myEvents.filter((event) => event.status !== 'draft');
+  const draftEvents = myEvents.filter((event) => event.status === 'draft');
+  const completedEvents = myEvents.filter((event) => event.status === 'completed');
+
+  const filteredEvents = useMemo(() => {
+    if (eventFilter === 'published') return publishedEvents;
+    if (eventFilter === 'completed') return completedEvents;
+    if (eventFilter === 'drafts') return draftEvents;
+    return myEvents;
+  }, [myEvents, publishedEvents, completedEvents, draftEvents, eventFilter]);
 
   const statusBreakdown = useMemo(() => {
     return myEvents.reduce(
@@ -223,6 +242,22 @@ export default function OrganizerDashboard() {
     };
   }, []);
 
+  // Persist announcements to localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('hm_announcements');
+    if (saved) {
+      try {
+        setAnnouncements(JSON.parse(saved));
+      } catch {
+        // ignore parse error
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('hm_announcements', JSON.stringify(announcements));
+  }, [announcements]);
+
   const handleExportCSV = (eventId) => {
     const registrations = getEventRegistrations(eventId);
     const event = events.find((item) => item.id === eventId);
@@ -316,23 +351,47 @@ export default function OrganizerDashboard() {
 
       <section className="container orgx-shell">
         <div className="orgx-metrics-row">
-          <MetricTile icon={<Calendar size={18} />} label="Events" value={myEvents.length} tone="blue" />
-          <MetricTile icon={<Users size={18} />} label="Registrations" value={totalRegistrations} tone="teal" />
-          <MetricTile icon={<CheckCircle size={18} />} label="Checked-In" value={totalCheckedIn} tone="green" />
-          <MetricTile icon={<BarChart3 size={18} />} label="Active Events" value={activeEventsCount} tone="violet" />
+          <MetricTile icon={<Calendar size={18} />} label="Total Events" value={myEvents.length} tone="blue" />
+          <MetricTile icon={<Globe size={18} />} label="Published" value={publishedEvents.length} tone="teal" />
+          <MetricTile icon={<FileText size={18} />} label="Drafts" value={draftEvents.length} tone="amber" />
+          <MetricTile icon={<Bell size={18} />} label="Alerts" value={unreadNotifications} tone="violet" />
         </div>
 
-        <div className="orgx-tabs" role="tablist" aria-label="Organizer sections">
-          <button type="button" className={activeTab === 'events' ? 'is-active' : ''} onClick={() => setActiveTab('events')}>My Programs</button>
-          <button type="button" className={activeTab === 'drafts' ? 'is-active' : ''} onClick={() => setActiveTab('drafts')}>Drafts</button>
-          <button type="button" className={activeTab === 'overview' ? 'is-active' : ''} onClick={() => setActiveTab('overview')}>Analytics</button>
-          <button type="button" className={activeTab === 'credentials' ? 'is-active' : ''} onClick={() => setActiveTab('credentials')}>Certificates</button>
-          <button type="button" className={activeTab === 'registrations' ? 'is-active' : ''} onClick={() => setActiveTab('registrations')}>Registrations</button>
-          <button type="button" className={activeTab === 'approvals' ? 'is-active' : ''} onClick={() => setActiveTab('approvals')}>Approvals</button>
-          <button type="button" className={activeTab === 'teams' ? 'is-active' : ''} onClick={() => setActiveTab('teams')}>Teams</button>
-          <button type="button" className={activeTab === 'submissions' ? 'is-active' : ''} onClick={() => setActiveTab('submissions')}>Submissions</button>
-          <button type="button" className={activeTab === 'announcements' ? 'is-active' : ''} onClick={() => setActiveTab('announcements')}>Announcements</button>
-        </div>
+        <div className="orgx-layout">
+        {/* ── Sidebar Navigation ── */}
+        <nav className="orgx-sidebar" role="tablist" aria-label="Organizer sections">
+          <p className="orgx-sidebar__label">Dashboard</p>
+          <button type="button" className={activeTab === 'overview' ? 'is-active' : ''} onClick={() => setActiveTab('overview')}><LayoutDashboard size={16} /> Overview</button>
+          <button type="button" className={activeTab === 'events' ? 'is-active' : ''} onClick={() => setActiveTab('events')}><Calendar size={16} /> My Events</button>
+          <button type="button" className={activeTab === 'notifications' ? 'is-active' : ''} onClick={() => setActiveTab('notifications')}>
+            <Bell size={16} /> Notifications
+            {unreadNotifications > 0 && <span className="orgx-sidebar__badge">{unreadNotifications}</span>}
+          </button>
+
+          <div className="orgx-sidebar__divider" />
+          <p className="orgx-sidebar__label">Management</p>
+          <button type="button" className={activeTab === 'registrations' ? 'is-active' : ''} onClick={() => setActiveTab('registrations')}><Users size={16} /> Registrations</button>
+          <button type="button" className={activeTab === 'scanner' ? 'is-active' : ''} onClick={() => setActiveTab('scanner')}><QrCode size={16} /> Scanner</button>
+          <button type="button" className={activeTab === 'approvals' ? 'is-active' : ''} onClick={() => setActiveTab('approvals')}><ClipboardList size={16} /> Approvals</button>
+          <button type="button" className={activeTab === 'teams' ? 'is-active' : ''} onClick={() => setActiveTab('teams')}><Users size={16} /> Teams</button>
+
+          <div className="orgx-sidebar__divider" />
+          <p className="orgx-sidebar__label">Tools</p>
+          <button type="button" className={activeTab === 'credentials' ? 'is-active' : ''} onClick={() => setActiveTab('credentials')}><Award size={16} /> Certificates</button>
+          <button type="button" className={activeTab === 'announcements' ? 'is-active' : ''} onClick={() => setActiveTab('announcements')}><Megaphone size={16} /> Announcements</button>
+          <button type="button" className={activeTab === 'analytics' ? 'is-active' : ''} onClick={() => setActiveTab('analytics')}><BarChart3 size={16} /> Analytics</button>
+
+          <div className="orgx-sidebar__divider" />
+          <Link to="/organizer/create-event" style={{ textDecoration: 'none' }}>
+            <button type="button"><Plus size={16} /> Create Event</button>
+          </Link>
+          <Link to="/dashboard/settings" style={{ textDecoration: 'none' }}>
+            <button type="button"><Settings size={16} /> Settings</button>
+          </Link>
+        </nav>
+
+        {/* ── Main Content ── */}
+        <div className="orgx-main">
 
         {activeTab === 'notifications' && (
           <section className="orgx-panel animate-fade-in">
@@ -374,7 +433,7 @@ export default function OrganizerDashboard() {
           </section>
         )}
 
-        {activeTab === 'overview' && (
+        {(activeTab === 'overview' || activeTab === 'analytics') && (
           <section className="orgx-panel orgx-overview animate-fade-in">
             <div className="orgx-overview__left">
               <h2>Today at a glance</h2>
@@ -470,18 +529,29 @@ export default function OrganizerDashboard() {
           <section className="orgx-panel animate-fade-in">
             <header className="orgx-panel__head">
               <h2>My Events</h2>
-              <Link to="/organizer/create-event"><Button variant="primary" icon={Plus}>Create Event</Button></Link>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <div className="orgx-filter-bar">
+                  <span className="orgx-filter-bar__label">Filter:</span>
+                  <select value={eventFilter} onChange={(e) => setEventFilter(e.target.value)}>
+                    <option value="all">All ({myEvents.length})</option>
+                    <option value="published">Published ({publishedEvents.length})</option>
+                    <option value="drafts">Drafts ({draftEvents.length})</option>
+                    <option value="completed">Completed ({completedEvents.length})</option>
+                  </select>
+                </div>
+                <Link to="/organizer/create-event"><Button variant="primary" icon={Plus}>Create Event</Button></Link>
+              </div>
             </header>
 
-            {myEvents.length === 0 ? (
+            {filteredEvents.length === 0 ? (
               <div className="orgx-empty">
                 <Sparkles size={34} />
-                <h3>No events yet</h3>
-                <p>Start by creating your first event and your dashboard analytics will appear here.</p>
+                <h3>{eventFilter === 'all' ? 'No events yet' : `No ${eventFilter} events`}</h3>
+                <p>{eventFilter === 'all' ? 'Start by creating your first event and your dashboard analytics will appear here.' : 'Try a different filter to see your events.'}</p>
               </div>
             ) : (
               <div className="orgx-list">
-                {myEvents.map((event) => {
+                {filteredEvents.map((event) => {
                   const regs = getEventRegistrations(event.id);
                   const checkedIn = regs.filter((reg) => reg.checkedIn).length;
 
@@ -617,8 +687,18 @@ export default function OrganizerDashboard() {
                                   {reg.teamName ? <span style={{ marginLeft: '0.75rem', fontSize: '0.82rem', color: '#ff6b00' }}>Team: {reg.teamName}</span> : null}
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                  <Button variant="primary" size="sm" icon={CheckCircle}>Approve</Button>
-                                  <Button variant="ghost" size="sm" icon={XCircle}>Reject</Button>
+                                  <Button variant="primary" size="sm" icon={CheckCircle} onClick={() => {
+                                    if (updateRegistration) {
+                                      updateRegistration(reg.id, { approved: true, rejected: false });
+                                      toast.success('Registration approved.', reg.name || reg.userName || 'Participant');
+                                    }
+                                  }}>Approve</Button>
+                                  <Button variant="ghost" size="sm" icon={XCircle} onClick={() => {
+                                    if (updateRegistration) {
+                                      updateRegistration(reg.id, { approved: false, rejected: true });
+                                      toast.success('Registration rejected.', reg.name || reg.userName || 'Participant');
+                                    }
+                                  }}>Reject</Button>
                                 </div>
                               </div>
                             ))}
@@ -880,6 +960,8 @@ export default function OrganizerDashboard() {
             </div>
           </section>
         )}
+        </div>{/* end orgx-main */}
+        </div>{/* end orgx-layout */}
       </section>
 
       <Modal

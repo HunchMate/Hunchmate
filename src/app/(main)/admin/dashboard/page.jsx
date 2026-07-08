@@ -1,35 +1,24 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Activity,
   Award,
-  BarChart3,
-  Ban,
   CalendarRange,
   CheckCheck,
   CircleAlert,
+  ExternalLink,
   LoaderCircle,
+  LayoutDashboard,
+  LogOut,
   Shield,
   Search,
-  Users,
   Users2,
   UserCog,
+  Settings,
 } from 'lucide-react'
-import { Link } from '@/utils/router'
-import {
-  Chart as ChartJS,
-  ArcElement,
-  BarElement,
-  CategoryScale,
-  Legend,
-  LineElement,
-  LinearScale,
-  PointElement,
-  Tooltip,
-} from 'chart.js'
-import { Bar, Doughnut, Line } from 'react-chartjs-2'
 import { useAuth } from '@/context/AuthContext'
+import { useEvents } from '@/context/EventContext'
 import {
   getAdminOverview,
   listAdminAuditLogs,
@@ -45,25 +34,43 @@ const USER_ROLE_OPTIONS = ['participant', 'organizer', 'admin']
 const USER_STATUS_OPTIONS = ['active', 'suspended']
 const EVENT_STATUS_OPTIONS = ['upcoming', 'live', 'completed', 'cancelled', 'archived']
 const ALLOW_ADMIN_BYPASS = false
-const CHART_PALETTE = {
-  primary: '#0ea5e9',
-  accent: '#fb923c',
-  success: '#10b981',
-  warning: '#f59e0b',
-  danger: '#e11d48',
-  neutral: '#94a3b8',
-}
 
-ChartJS.register(
-  ArcElement,
-  BarElement,
-  CategoryScale,
-  Legend,
-  LineElement,
-  LinearScale,
-  PointElement,
-  Tooltip
-)
+const ADMIN_SECTIONS = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'organizers', label: 'Organizer Accounts', icon: UserCog },
+  { id: 'participants', label: 'Participant Accounts', icon: Users2 },
+  { id: 'events', label: 'Events', icon: CalendarRange },
+  { id: 'settings', label: 'Settings', icon: Settings },
+]
+
+const SETTINGS_PLACEHOLDERS = [
+  'Platform Fee',
+  'Payment Gateway',
+  'Email Settings',
+  'E-Credentials',
+  'Platform Information',
+  'Admin Account',
+]
+
+const EVENT_DETAIL_TABS = [
+  'Overview',
+  'Microsite URL',
+  'Registrations',
+  'Registration Table',
+  'Payments',
+  'E-Credentials',
+  'Settings',
+]
+
+const DEFAULT_ADMIN_SETTINGS = {
+  platformFee: '5',
+  paymentGateway: 'Razorpay',
+  emailSender: 'Hunchmate',
+  emailReplyTo: '',
+  credentialStorage: 'Supabase Storage',
+  platformName: 'Hunchmate',
+  supportEmail: '',
+}
 
 function normalizeUserRole(role) {
   const value = String(role || '').trim().toLowerCase()
@@ -157,6 +164,62 @@ function safeWriteJson(key, value) {
   } catch {
     return false
   }
+}
+
+function csvEscape(value) {
+  const text = String(value ?? '')
+  if (/[",\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`
+  return text
+}
+
+function downloadCSV(rows, filename) {
+  if (!Array.isArray(rows) || rows.length === 0) return
+  const headers = Object.keys(rows[0])
+  const csv = [
+    headers.map(csvEscape).join(','),
+    ...rows.map((row) => headers.map((header) => csvEscape(row[header])).join(',')),
+  ].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+function getEventId(event = {}) {
+  return String(event?.id || event?._id || '').trim()
+}
+
+function getEventFee(event = {}) {
+  return Number(event?.registrationFee || event?.fee || event?.price || event?.pricing?.amount || 0) || 0
+}
+
+function getRegistrationName(reg = {}) {
+  return reg?.participant?.name || reg?.name || reg?.userName || reg?.members?.[0] || 'Participant'
+}
+
+function getRegistrationEmail(reg = {}) {
+  return reg?.participant?.email || reg?.email || reg?.userEmail || ''
+}
+
+function getRegistrationPhone(reg = {}) {
+  return reg?.participant?.phone || reg?.participant?.phoneNumber || reg?.phone || reg?.phoneNumber || ''
+}
+
+function getRegistrationOrg(reg = {}) {
+  return reg?.participant?.institution || reg?.participant?.organizationName || reg?.college || reg?.organization || ''
+}
+
+function getRegistrationTeam(reg = {}) {
+  return reg?.teamName || (Array.isArray(reg?.members) && reg.members.length > 1 ? reg.members[0] : 'Individual')
+}
+
+function getPaymentStatus(reg = {}) {
+  return String(reg?.paymentStatus || reg?.payment?.status || 'not-paid').toLowerCase()
 }
 
 function appendLocalAdminLog(action, targetType, targetId, metadata = {}) {
@@ -330,7 +393,8 @@ function buildLocalDashboardData() {
 }
 
 export default function AdminDashboard() {
-  const { token, user } = useAuth()
+  const { token, user, logout, resetPassword } = useAuth()
+  const { getEventRegistrations, credentials } = useEvents()
   const bypassActive = ALLOW_ADMIN_BYPASS && user?.role !== 'admin'
   const useLocalMode = !token || bypassActive
 
@@ -348,20 +412,19 @@ export default function AdminDashboard() {
   const [notice, setNotice] = useState('')
 
   const [userSearch, setUserSearch] = useState('')
-  const [userRoleFilter, setUserRoleFilter] = useState('')
   const [userStatusFilter, setUserStatusFilter] = useState('')
 
   const [eventSearch, setEventSearch] = useState('')
   const [eventStatusFilter, setEventStatusFilter] = useState('')
 
-  const overviewRef = useRef(null)
-  const usersRef = useRef(null)
-  const eventsRef = useRef(null)
-  const auditRef = useRef(null)
-
-  const scrollToSection = (ref) => {
-    ref?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  const [activeSection, setActiveSection] = useState('dashboard')
+  const [selectedEventId, setSelectedEventId] = useState('')
+  const [activeEventTab, setActiveEventTab] = useState('Overview')
+  const [adminSettings, setAdminSettings] = useState(() => {
+    if (typeof window === 'undefined') return DEFAULT_ADMIN_SETTINGS
+    return { ...DEFAULT_ADMIN_SETTINGS, ...safeReadJson('hm_admin_settings', {}) }
+  })
+  const [passwordEmail, setPasswordEmail] = useState(user?.email || '')
 
   const loadOverview = useCallback(async () => {
     if (useLocalMode) {
@@ -374,15 +437,6 @@ export default function AdminDashboard() {
     setOverview(data)
   }, [useLocalMode])
 
-  const buildUsersQuery = useCallback(() => {
-    const query = new URLSearchParams()
-    query.set('limit', '40')
-    if (userSearch.trim()) query.set('search', userSearch.trim())
-    if (userRoleFilter) query.set('role', userRoleFilter)
-    if (userStatusFilter) query.set('status', userStatusFilter)
-    return query.toString()
-  }, [userRoleFilter, userSearch, userStatusFilter])
-
   const buildEventsQuery = useCallback(() => {
     const query = new URLSearchParams()
     query.set('limit', '40')
@@ -391,12 +445,52 @@ export default function AdminDashboard() {
     return query.toString()
   }, [eventSearch, eventStatusFilter])
 
+  // Stable loader used by the tab-switch effect — receives section as param so it
+  // doesn't close over search/filter state (avoids re-running on every keystroke).
+  const loadUsersForSection = useCallback(async (section) => {
+    const role = section === 'organizers' ? 'organizer'
+      : section === 'participants' ? 'participant'
+      : ''
+
+    if (useLocalMode) {
+      const fallback = buildLocalDashboardData()
+      const filtered = applyLocalUserFilters(fallback.users, { search: '', role, status: '' })
+      setUsers(filtered)
+      setUsersTotal(fallback.users.length)
+      return
+    }
+
+    const data = await listUsers({ limit: 40, search: '', role, status: '' })
+    setUsers(Array.isArray(data.users) ? data.users : [])
+    setUsersTotal(Number(data.total || 0))
+  }, [useLocalMode])
+
+  // Stable events loader for the tab-switch effect (no search/filter state closure).
+  const loadEventsForSection = useCallback(async () => {
+    if (useLocalMode) {
+      const fallback = buildLocalDashboardData()
+      const filtered = applyLocalEventFilters(fallback.events, { search: '', status: '' })
+      setEvents(filtered)
+      setEventsTotal(fallback.events.length)
+      return
+    }
+
+    const data = await listAdminEvents({ limit: 40, search: '', status: '' })
+    setEvents(Array.isArray(data.events) ? data.events : [])
+    setEventsTotal(Number(data.total || 0))
+  }, [useLocalMode])
+
+  // Full loader used by Apply button and action refreshes — respects current search/filter state.
   const loadUsers = useCallback(async () => {
+    const role = activeSection === 'organizers' ? 'organizer'
+      : activeSection === 'participants' ? 'participant'
+      : ''
+
     if (useLocalMode) {
       const fallback = buildLocalDashboardData()
       const filtered = applyLocalUserFilters(fallback.users, {
         search: userSearch,
-        role: userRoleFilter,
+        role,
         status: userStatusFilter,
       })
       setUsers(filtered)
@@ -404,16 +498,15 @@ export default function AdminDashboard() {
       return
     }
 
-    const queryParams = new URLSearchParams(buildUsersQuery())
     const data = await listUsers({
-      limit: Number(queryParams.get('limit') || 40),
-      search: queryParams.get('search') || '',
-      role: queryParams.get('role') || '',
-      status: queryParams.get('status') || '',
+      limit: 40,
+      search: userSearch.trim(),
+      role,
+      status: userStatusFilter,
     })
     setUsers(Array.isArray(data.users) ? data.users : [])
     setUsersTotal(Number(data.total || 0))
-  }, [buildUsersQuery, useLocalMode, userRoleFilter, userSearch, userStatusFilter])
+  }, [activeSection, useLocalMode, userSearch, userStatusFilter])
 
   const loadEvents = useCallback(async () => {
     if (useLocalMode) {
@@ -448,18 +541,26 @@ export default function AdminDashboard() {
     setLogs(Array.isArray(data) ? data : [])
   }, [useLocalMode])
 
-  const loadAll = useCallback(async () => {
+  // Stable initial loader — used only at mount/token change. Does NOT close over
+  // search/filter state so it won't recreate on keystrokes.
+  const loadAllInitial = useCallback(async () => {
     setLoading(true)
     setError('')
 
     try {
       if (useLocalMode) {
-        await Promise.all([loadOverview(), loadUsers(), loadEvents(), loadLogs()])
+        const fallback = buildLocalDashboardData()
+        setOverview({ metrics: fallback.metrics, recentUsers: fallback.recentUsers, recentEvents: fallback.recentEvents })
+        setUsers(fallback.users)
+        setEvents(fallback.events)
+        setLogs(Array.isArray(fallback.logs) ? fallback.logs : [])
+        setUsersTotal(fallback.users.length)
+        setEventsTotal(fallback.events.length)
         setNotice('Local mode active: all admin controls are connected to hm_* storage.')
         return
       }
 
-      await Promise.all([loadOverview(), loadUsers(), loadEvents(), loadLogs()])
+      await Promise.all([loadOverview(), loadUsersForSection('dashboard'), loadEventsForSection(), loadLogs()])
     } catch (loadError) {
       if (bypassActive || !token) {
         const fallback = buildLocalDashboardData()
@@ -477,7 +578,21 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false)
     }
-  }, [bypassActive, loadEvents, loadLogs, loadOverview, loadUsers, token, useLocalMode])
+  }, [bypassActive, loadEventsForSection, loadLogs, loadOverview, loadUsersForSection, token, useLocalMode])
+
+  // Full refresh loader used by the Refresh button — respects current filter state.
+  const loadAll = useCallback(async () => {
+    setLoading(true)
+    setError('')
+
+    try {
+      await Promise.all([loadOverview(), loadUsers(), loadEvents(), loadLogs()])
+    } catch (loadError) {
+      setError(loadError.message || 'Failed to refresh admin dashboard')
+    } finally {
+      setLoading(false)
+    }
+  }, [loadEvents, loadLogs, loadOverview, loadUsers])
 
   useEffect(() => {
     if (!token) {
@@ -494,12 +609,65 @@ export default function AdminDashboard() {
       return
     }
 
-    loadAll()
-  }, [bypassActive, loadAll, token])
+    loadAllInitial()
+  }, [bypassActive, loadAllInitial, token])
+
+  // Fires only when the active tab changes — uses stable loaders that do NOT
+  // close over search/filter state, so typing in the search box won't re-trigger this.
+  useEffect(() => {
+    if (activeSection === 'organizers' || activeSection === 'participants') {
+      loadUsersForSection(activeSection)
+    } else if (activeSection === 'events') {
+      loadEventsForSection()
+    }
+  }, [activeSection, loadUsersForSection, loadEventsForSection])
+
+  useEffect(() => {
+    if (!selectedEventId && events.length > 0) {
+      setSelectedEventId(getEventId(events[0]))
+    }
+  }, [events, selectedEventId])
+
+  useEffect(() => {
+    if (user?.email && !passwordEmail) {
+      setPasswordEmail(user.email)
+    }
+  }, [passwordEmail, user?.email])
 
   const handleRefresh = async () => {
     setNotice('')
     await loadAll()
+  }
+
+  const updateAdminSetting = (key, value) => {
+    setAdminSettings((current) => ({ ...current, [key]: value }))
+  }
+
+  const saveAdminSettings = () => {
+    safeWriteJson('hm_admin_settings', adminSettings)
+    setNotice('Admin settings saved locally.')
+  }
+
+  const handlePasswordReset = async () => {
+    const email = String(passwordEmail || user?.email || '').trim()
+    if (!email) {
+      setError('Enter an admin email address for password reset.')
+      return
+    }
+    setError('')
+    const result = await resetPassword(email)
+    if (result?.success) {
+      setNotice('Password reset link sent to the admin email.')
+    } else {
+      setError(result?.error || 'Unable to send password reset link.')
+    }
+  }
+
+  const handleAdminLogout = async () => {
+    await logout()
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login'
+    }
   }
 
   const changeUserRole = async (targetUserId, nextRole) => {
@@ -620,14 +788,18 @@ export default function AdminDashboard() {
     }
   }
 
-  const metricCards = useMemo(() => {
+  const adminSummaryCards = useMemo(() => {
     const metrics = overview?.metrics || {}
     const roleCounts = metrics.roleCounts || {}
+    const draftEvents = events.filter((event) => String(event?.status || '').toLowerCase() === 'draft').length
+    const totalEvents = Number(metrics.totalEvents ?? eventsTotal ?? events.length ?? 0)
+    const publishedEvents = Math.max(totalEvents - draftEvents, 0)
+
     return [
       {
-        label: 'Total Users',
-        value: metrics.totalUsers ?? 0,
-        icon: Users,
+        label: 'Total Organizers',
+        value: roleCounts.organizer ?? 0,
+        icon: UserCog,
       },
       {
         label: 'Total Participants',
@@ -635,52 +807,123 @@ export default function AdminDashboard() {
         icon: Users2,
       },
       {
-        label: 'Total Organisers',
-        value: roleCounts.organizer ?? 0,
-        icon: UserCog,
-      },
-      {
-        label: 'Active Events',
-        value: metrics.totalEvents ?? 0,
+        label: 'Total Events',
+        value: totalEvents,
         icon: CalendarRange,
       },
       {
-        label: 'Registrations',
-        value: metrics.totalRegistrations ?? 0,
-        icon: UserCog,
-      },
-      {
-        label: 'Check-ins',
-        value: metrics.totalCheckIns ?? 0,
+        label: 'Published Events',
+        value: publishedEvents,
         icon: CheckCheck,
       },
       {
-        label: 'Credentials Issued',
-        value: metrics.totalCredentials ?? 0,
+        label: 'Draft Events',
+        value: draftEvents,
         icon: Award,
-      },
-      {
-        label: 'Unique Recipients',
-        value: metrics.uniqueCredentialRecipients ?? 0,
-        icon: Award,
-      },
-      {
-        label: 'Live Sessions',
-        value: metrics.activeSessions ?? 0,
-        icon: Activity,
-      },
-      {
-        label: 'Suspended Users',
-        value: metrics.suspendedUsers ?? 0,
-        icon: Ban,
-      },
-      {
-        label: 'Open Complaints',
-        value: metrics.openComplaints ?? 0,
-        icon: CircleAlert,
       },
     ]
-  }, [overview])
+  }, [events, eventsTotal, overview])
+
+  const organizerUsers = useMemo(
+    () => users.filter((entry) => normalizeUserRole(entry?.role) === 'organizer'),
+    [users]
+  )
+
+  const participantUsers = useMemo(
+    () => users.filter((entry) => normalizeUserRole(entry?.role) === 'participant'),
+    [users]
+  )
+
+  const recentOrganizers = useMemo(() => {
+    const overviewOrganizers = (overview?.recentUsers || []).filter((entry) => normalizeUserRole(entry?.role) === 'organizer')
+    const source = overviewOrganizers.length ? overviewOrganizers : organizerUsers
+    return source.slice(0, 5)
+  }, [organizerUsers, overview])
+
+  const recentEvents = useMemo(() => {
+    const source = Array.isArray(overview?.recentEvents) && overview.recentEvents.length ? overview.recentEvents : events
+    return source.slice(0, 5)
+  }, [events, overview])
+
+  const selectedEvent = useMemo(
+    () => events.find((event) => getEventId(event) === selectedEventId) || null,
+    [events, selectedEventId]
+  )
+
+  const selectedRegistrations = useMemo(() => {
+    if (!selectedEvent) return []
+    const eventId = getEventId(selectedEvent)
+    return getEventRegistrations(eventId)
+  }, [getEventRegistrations, selectedEvent])
+
+  const selectedCredentials = useMemo(() => {
+    if (!selectedEvent) return []
+    const eventId = getEventId(selectedEvent)
+    return (credentials || []).filter((item) => String(item?.eventId || '').trim() === eventId)
+  }, [credentials, selectedEvent])
+
+  const selectedPaymentStats = useMemo(() => {
+    const registrationFee = getEventFee(selectedEvent || {})
+    const paidRegistrations = selectedRegistrations.filter((reg) => getPaymentStatus(reg) === 'paid')
+    const grossCollection = paidRegistrations.reduce((sum, reg) => {
+      const amount = Number(reg?.paymentAmount || reg?.amount || reg?.payment?.amount || registrationFee || 0) || 0
+      return sum + amount
+    }, 0)
+    const platformFeeRate = Number(adminSettings.platformFee || 0) || 0
+    const platformFee = Math.round(grossCollection * platformFeeRate) / 100
+    const netSettlement = Math.max(grossCollection - platformFee, 0)
+
+    return {
+      registrationFee,
+      totalTransactions: paidRegistrations.length,
+      grossCollection,
+      platformFee,
+      netSettlement,
+      settlementStatus: grossCollection > 0 ? 'Pending' : 'No transactions',
+    }
+  }, [adminSettings.platformFee, selectedEvent, selectedRegistrations])
+
+  const credentialStats = useMemo(() => {
+    const issued = selectedCredentials.length
+    const eligible = selectedRegistrations.filter((reg) => reg.checkedIn).length
+    return {
+      issued,
+      pending: Math.max(eligible - issued, 0),
+      failed: selectedCredentials.filter((item) => String(item?.status || '').toLowerCase() === 'failed').length,
+      participant: selectedCredentials.filter((item) => String(item?.type || item?.credentialType || 'participation').toLowerCase() !== 'volunteer'),
+      volunteer: selectedCredentials.filter((item) => String(item?.type || item?.credentialType || '').toLowerCase() === 'volunteer'),
+    }
+  }, [selectedCredentials, selectedRegistrations])
+
+  const handleRegistrationExport = () => {
+    if (!selectedEvent || selectedRegistrations.length === 0) return
+    const rows = selectedRegistrations.map((reg) => ({
+      'Registration ID': reg.id || '',
+      Name: getRegistrationName(reg),
+      Email: getRegistrationEmail(reg),
+      Phone: getRegistrationPhone(reg),
+      'College/Organization': getRegistrationOrg(reg),
+      'Team Name': getRegistrationTeam(reg),
+      'Team Members': Array.isArray(reg.members) ? reg.members.join('; ') : '',
+      'Payment Status': getPaymentStatus(reg),
+      'Registration Date': reg.createdAt || reg.registeredAt || '',
+    }))
+    downloadCSV(rows, `${selectedEvent.title || 'event'}-registrations.csv`)
+  }
+
+  const handlePaymentsExport = () => {
+    if (!selectedEvent || selectedRegistrations.length === 0) return
+    const rows = selectedRegistrations.map((reg) => ({
+      'Registration ID': reg.id || '',
+      Name: getRegistrationName(reg),
+      Email: getRegistrationEmail(reg),
+      'Payment Status': getPaymentStatus(reg),
+      Amount: Number(reg?.paymentAmount || reg?.amount || reg?.payment?.amount || selectedPaymentStats.registrationFee || 0) || 0,
+      'Transaction ID': reg?.transactionId || reg?.payment?.transactionId || '',
+      'Registration Date': reg.createdAt || reg.registeredAt || '',
+    }))
+    downloadCSV(rows, `${selectedEvent.title || 'event'}-payments.csv`)
+  }
 
   const heroHighlights = useMemo(() => {
     const metrics = overview?.metrics || {}
@@ -691,92 +934,479 @@ export default function AdminDashboard() {
     ]
   }, [overview])
 
-  const chartCommonOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        labels: {
-          color: '#334155',
-          boxWidth: 12,
-        },
-      },
-    },
-    scales: {
-      x: {
-        ticks: { color: '#64748b' },
-        grid: { color: 'rgba(148, 163, 184, 0.18)' },
-      },
-      y: {
-        ticks: { color: '#64748b' },
-        grid: { color: 'rgba(148, 163, 184, 0.18)' },
-      },
-    },
+  const renderUserAccountsPanel = (title, displayUsers, emptyMessage) => (
+    <section className="admin-panel admin-section-anchor">
+      <div className="admin-panel__head">
+        <h2>{title} ({displayUsers.length})</h2>
+        <div className="admin-panel__filters">
+          <label className="admin-search">
+            <Search size={14} />
+            <input
+              value={userSearch}
+              onChange={(event) => setUserSearch(event.target.value)}
+              placeholder="Search by name or email"
+            />
+          </label>
+          <select value={userStatusFilter} onChange={(event) => setUserStatusFilter(event.target.value)}>
+            <option value="">All status</option>
+            {USER_STATUS_OPTIONS.map((status) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+          <button type="button" onClick={loadUsers} disabled={loading || actionBusy}>Apply</button>
+        </div>
+      </div>
+
+      <div className="admin-table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Provider</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayUsers.map((entry) => (
+              <tr key={entry.id}>
+                <td>
+                  <div className="admin-user-cell">
+                    <span className="admin-avatar" style={{ background: entry.avatarBackdrop || undefined }}>
+                      {entry.name?.charAt(0) || 'U'}
+                    </span>
+                    <div>
+                      <strong>{entry.name || 'Unnamed'}</strong>
+                      <p>{entry.email}</p>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span className={getRoleClassName(entry.role)}>{entry.role}</span>
+                </td>
+                <td>
+                  <span className={getStatusClassName(entry.status)}>{entry.status || 'active'}</span>
+                </td>
+                <td>{entry.provider || 'local'}</td>
+                <td>{formatDate(entry.createdAt)}</td>
+                <td>
+                  <div className="admin-actions">
+                    <select
+                      value={entry.role}
+                      onChange={(event) => changeUserRole(entry.id, event.target.value)}
+                      disabled={actionBusy}
+                    >
+                      {USER_ROLE_OPTIONS.map((role) => (
+                        <option key={role} value={role}>{role}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => toggleUserStatus(entry)}
+                      disabled={actionBusy}
+                      className={entry.status === 'suspended' ? 'admin-btn admin-btn--success' : 'admin-btn admin-btn--danger'}
+                    >
+                      {entry.status === 'suspended' ? 'Restore' : 'Suspend'}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {displayUsers.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="admin-empty">{emptyMessage}</td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+
+  const renderEventsPanel = () => (
+    <section className="admin-panel admin-section-anchor">
+      <div className="admin-panel__head">
+        <h2>Events ({eventsTotal})</h2>
+        <div className="admin-panel__filters">
+          <label className="admin-search">
+            <Search size={14} />
+            <input
+              value={eventSearch}
+              onChange={(event) => setEventSearch(event.target.value)}
+              placeholder="Search event title or organizer"
+            />
+          </label>
+          <select value={eventStatusFilter} onChange={(event) => setEventStatusFilter(event.target.value)}>
+            <option value="">All status</option>
+            {EVENT_STATUS_OPTIONS.map((status) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+          <button type="button" onClick={loadEvents} disabled={loading || actionBusy}>Apply</button>
+        </div>
+      </div>
+
+      <div className="admin-table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>Status</th>
+              <th>Organizer</th>
+              <th>Registrations</th>
+              <th>Updated</th>
+              <th>Moderation</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {events.map((entry) => (
+              <tr key={entry.id || entry._id}>
+                <td>
+                  <strong>{entry.title || 'Untitled Event'}</strong>
+                </td>
+                <td>
+                  <span className={getStatusClassName(entry.status || 'upcoming')}>{entry.status || 'upcoming'}</span>
+                </td>
+                <td>{entry.organiser?.name || entry.organizer?.name || 'Unknown'}</td>
+                <td>{Number(entry.registeredCount || 0)}</td>
+                <td>{formatDate(entry.updatedAt || entry.createdAt)}</td>
+                <td>
+                  <select
+                    value={entry.status || 'upcoming'}
+                    onChange={(event) => updateEventStatus(entry.id || entry._id, event.target.value)}
+                    disabled={actionBusy}
+                  >
+                    {EVENT_STATUS_OPTIONS.map((status) => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedEventId(getEventId(entry))
+                      setActiveEventTab('Overview')
+                    }}
+                    disabled={actionBusy}
+                  >
+                    Select
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {events.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="admin-empty">No events found for current filters.</td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+      {selectedEvent ? renderSelectedEventDetails() : null}
+    </section>
+  )
+
+  const renderSelectedEventDetails = () => {
+    const micrositeUrl = typeof window !== 'undefined' && selectedEvent
+      ? `${window.location.origin}/events/${getEventId(selectedEvent)}`
+      : ''
+
+    return (
+      <div className="admin-event-detail">
+        <div className="admin-panel__head">
+          <h2>{selectedEvent.title || 'Selected Event'}</h2>
+          <div className="admin-panel__filters">
+            {EVENT_DETAIL_TABS.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={activeEventTab === tab ? 'is-active' : ''}
+                onClick={() => setActiveEventTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {activeEventTab === 'Overview' ? (
+          <section className="admin-metrics">
+            <article className="admin-metric-card">
+              <div className="admin-metric-card__icon"><Users2 size={18} /></div>
+              <div><p>Registrations</p><h3>{selectedRegistrations.length}</h3></div>
+            </article>
+            <article className="admin-metric-card">
+              <div className="admin-metric-card__icon"><CheckCheck size={18} /></div>
+              <div><p>Checked In</p><h3>{selectedRegistrations.filter((reg) => reg.checkedIn).length}</h3></div>
+            </article>
+            <article className="admin-metric-card">
+              <div className="admin-metric-card__icon"><Award size={18} /></div>
+              <div><p>Credentials</p><h3>{selectedCredentials.length}</h3></div>
+            </article>
+            <article className="admin-metric-card">
+              <div className="admin-metric-card__icon"><CalendarRange size={18} /></div>
+              <div><p>Status</p><h3>{selectedEvent.status || 'upcoming'}</h3></div>
+            </article>
+          </section>
+        ) : null}
+
+        {activeEventTab === 'Microsite URL' ? (
+          <div className="admin-settings-card admin-settings-card--wide">
+            <div className="admin-metric-card__icon"><ExternalLink size={18} /></div>
+            <div>
+              <h3>Microsite URL</h3>
+              <p>{micrositeUrl || 'Microsite URL unavailable.'}</p>
+              {micrositeUrl ? (
+                <button type="button" onClick={() => navigator.clipboard?.writeText(micrositeUrl)}>
+                  Copy URL
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {activeEventTab === 'Registrations' ? (
+          <section className="admin-metrics">
+            <article className="admin-metric-card"><div><p>Total Registrations</p><h3>{selectedRegistrations.length}</h3></div></article>
+            <article className="admin-metric-card"><div><p>Paid</p><h3>{selectedRegistrations.filter((reg) => getPaymentStatus(reg) === 'paid').length}</h3></div></article>
+            <article className="admin-metric-card"><div><p>Pending</p><h3>{selectedRegistrations.filter((reg) => getPaymentStatus(reg) !== 'paid').length}</h3></div></article>
+          </section>
+        ) : null}
+
+        {activeEventTab === 'Registration Table' ? (
+          <>
+            <div className="admin-panel__head">
+              <h2>Registration Table</h2>
+              <button type="button" onClick={handleRegistrationExport} disabled={selectedRegistrations.length === 0}>
+                Export CSV
+              </button>
+            </div>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Team</th>
+                    <th>Payment</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedRegistrations.map((reg) => (
+                    <tr key={reg.id}>
+                      <td>{getRegistrationName(reg)}</td>
+                      <td>{getRegistrationEmail(reg) || 'N/A'}</td>
+                      <td>{getRegistrationPhone(reg) || 'N/A'}</td>
+                      <td>{getRegistrationTeam(reg)}</td>
+                      <td><span className={getStatusClassName(getPaymentStatus(reg) === 'paid' ? 'live' : 'upcoming')}>{getPaymentStatus(reg)}</span></td>
+                      <td><span className={getStatusClassName(reg.checkedIn ? 'live' : 'upcoming')}>{reg.checkedIn ? 'Checked In' : 'Registered'}</span></td>
+                    </tr>
+                  ))}
+                  {selectedRegistrations.length === 0 ? (
+                    <tr><td colSpan={6} className="admin-empty">No registrations found for this event.</td></tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : null}
+
+        {activeEventTab === 'Payments' ? (
+          <>
+            <section className="admin-metrics">
+              <article className="admin-metric-card"><div><p>Registration Fee</p><h3>{selectedPaymentStats.registrationFee}</h3></div></article>
+              <article className="admin-metric-card"><div><p>Total Transactions</p><h3>{selectedPaymentStats.totalTransactions}</h3></div></article>
+              <article className="admin-metric-card"><div><p>Gross Collection</p><h3>{selectedPaymentStats.grossCollection}</h3></div></article>
+              <article className="admin-metric-card"><div><p>Platform Fee</p><h3>{selectedPaymentStats.platformFee}</h3></div></article>
+              <article className="admin-metric-card"><div><p>Net Settlement</p><h3>{selectedPaymentStats.netSettlement}</h3></div></article>
+              <article className="admin-metric-card"><div><p>Settlement Status</p><h3>{selectedPaymentStats.settlementStatus}</h3></div></article>
+            </section>
+            <div className="admin-panel__head">
+              <h2>Transaction Table</h2>
+              <button type="button" onClick={handlePaymentsExport} disabled={selectedRegistrations.length === 0}>
+                Export CSV
+              </button>
+            </div>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Registration</th>
+                    <th>Name</th>
+                    <th>Payment</th>
+                    <th>Amount</th>
+                    <th>Registered</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedRegistrations.map((reg) => (
+                    <tr key={reg.id}>
+                      <td>{reg.id}</td>
+                      <td>{getRegistrationName(reg)}</td>
+                      <td>{getPaymentStatus(reg)}</td>
+                      <td>{Number(reg?.paymentAmount || reg?.amount || reg?.payment?.amount || selectedPaymentStats.registrationFee || 0) || 0}</td>
+                      <td>{formatDate(reg.createdAt || reg.registeredAt)}</td>
+                    </tr>
+                  ))}
+                  {selectedRegistrations.length === 0 ? (
+                    <tr><td colSpan={5} className="admin-empty">No transactions found for this event.</td></tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : null}
+
+        {activeEventTab === 'E-Credentials' ? (
+          <>
+            <section className="admin-metrics">
+              <article className="admin-metric-card"><div><p>Credentials Issued</p><h3>{credentialStats.issued}</h3></div></article>
+              <article className="admin-metric-card"><div><p>Pending Credentials</p><h3>{credentialStats.pending}</h3></div></article>
+              <article className="admin-metric-card"><div><p>Failed Credentials</p><h3>{credentialStats.failed}</h3></div></article>
+            </section>
+            <div className="admin-dashboard-grid">
+              <article className="admin-panel admin-panel--compact">
+                <div className="admin-panel__head"><h2>Participant Certificate List</h2></div>
+                <div className="admin-mini-list">
+                  {credentialStats.participant.length === 0 ? <p className="admin-empty">No participant certificates issued yet.</p> : null}
+                  {credentialStats.participant.map((credential) => (
+                    <div key={credential.id || credential._id} className="admin-mini-item">
+                      <div><strong>{credential.participantName || credential.name || credential.userId || 'Participant'}</strong><p>{formatDate(credential.issuedAt || credential.createdAt)}</p></div>
+                      <span className="admin-pill admin-pill--success">Issued</span>
+                    </div>
+                  ))}
+                </div>
+              </article>
+              <article className="admin-panel admin-panel--compact">
+                <div className="admin-panel__head"><h2>Volunteer Certificate List</h2></div>
+                <div className="admin-mini-list">
+                  {credentialStats.volunteer.length === 0 ? <p className="admin-empty">No volunteer certificates issued yet.</p> : null}
+                  {credentialStats.volunteer.map((credential) => (
+                    <div key={credential.id || credential._id} className="admin-mini-item">
+                      <div><strong>{credential.participantName || credential.name || credential.userId || 'Volunteer'}</strong><p>{formatDate(credential.issuedAt || credential.createdAt)}</p></div>
+                      <span className="admin-pill admin-pill--success">Issued</span>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </div>
+          </>
+        ) : null}
+
+        {activeEventTab === 'Settings' ? (
+          <div className="admin-settings-grid">
+            <article className="admin-settings-card"><div><h3>Event Visibility</h3><p>{selectedEvent.visibility || 'public'}</p></div></article>
+            <article className="admin-settings-card"><div><h3>Credentials</h3><p>{selectedEvent.credentialEnabled ? 'Enabled' : 'Disabled'}</p></div></article>
+            <article className="admin-settings-card"><div><h3>Registration Mode</h3><p>{selectedEvent.registrationMode || selectedEvent.teamMode || 'Standard'}</p></div></article>
+          </div>
+        ) : null}
+      </div>
+    )
   }
 
-  const registrationTrendData = useMemo(() => {
-    const labels = events.slice(0, 6).map((event) => event.title || 'Untitled')
-    const values = events.slice(0, 6).map((event) => Number(event.registeredCount || 0))
+  const renderSettingsPanel = () => (
+    <section className="admin-panel admin-section-anchor">
+      <div className="admin-panel__head">
+        <h2>Settings</h2>
+        <button type="button" onClick={saveAdminSettings}>Save Settings</button>
+      </div>
+      <div className="admin-settings-grid">
+        <article className="admin-settings-card">
+          <div className="admin-metric-card__icon"><Settings size={18} /></div>
+          <div>
+            <h3>Platform Fee</h3>
+            <label className="admin-field">
+              <span>Fee percentage</span>
+              <input value={adminSettings.platformFee} onChange={(event) => updateAdminSetting('platformFee', event.target.value)} />
+            </label>
+          </div>
+        </article>
 
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Registrations',
-          data: values,
-          borderColor: CHART_PALETTE.primary,
-          backgroundColor: 'rgba(14, 165, 233, 0.18)',
-          tension: 0.35,
-          fill: true,
-          pointRadius: 3,
-        },
-      ],
-    }
-  }, [events])
+        <article className="admin-settings-card">
+          <div className="admin-metric-card__icon"><Settings size={18} /></div>
+          <div>
+            <h3>Payment Gateway</h3>
+            <label className="admin-field">
+              <span>Provider</span>
+              <select value={adminSettings.paymentGateway} onChange={(event) => updateAdminSetting('paymentGateway', event.target.value)}>
+                <option value="Razorpay">Razorpay</option>
+                <option value="Stripe">Stripe</option>
+                <option value="Manual">Manual</option>
+              </select>
+            </label>
+          </div>
+        </article>
 
-  const eventStatusData = useMemo(() => {
-    const counts = {}
-    events.forEach((event) => {
-      const status = String(event?.status || 'upcoming').toLowerCase()
-      counts[status] = (counts[status] || 0) + 1
-    })
+        <article className="admin-settings-card">
+          <div className="admin-metric-card__icon"><Settings size={18} /></div>
+          <div>
+            <h3>Email Settings</h3>
+            <label className="admin-field">
+              <span>Sender name</span>
+              <input value={adminSettings.emailSender} onChange={(event) => updateAdminSetting('emailSender', event.target.value)} />
+            </label>
+            <label className="admin-field">
+              <span>Reply-to email</span>
+              <input value={adminSettings.emailReplyTo} onChange={(event) => updateAdminSetting('emailReplyTo', event.target.value)} />
+            </label>
+          </div>
+        </article>
 
-    const labels = Object.keys(counts)
-    const values = labels.map((label) => counts[label])
-    const colors = [CHART_PALETTE.primary, CHART_PALETTE.success, CHART_PALETTE.warning, CHART_PALETTE.danger, CHART_PALETTE.neutral]
+        <article className="admin-settings-card">
+          <div className="admin-metric-card__icon"><Award size={18} /></div>
+          <div>
+            <h3>E-Credentials Storage</h3>
+            <label className="admin-field">
+              <span>Storage provider</span>
+              <select value={adminSettings.credentialStorage} onChange={(event) => updateAdminSetting('credentialStorage', event.target.value)}>
+                <option value="Supabase Storage">Supabase Storage</option>
+                <option value="Local Storage">Local Storage</option>
+                <option value="External URL">External URL</option>
+              </select>
+            </label>
+          </div>
+        </article>
 
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Events',
-          data: values,
-          backgroundColor: labels.map((_, index) => colors[index % colors.length]),
-          borderColor: '#0f172a',
-          borderWidth: 2,
-        },
-      ],
-    }
-  }, [events])
+        <article className="admin-settings-card">
+          <div className="admin-metric-card__icon"><Shield size={18} /></div>
+          <div>
+            <h3>Platform Information</h3>
+            <label className="admin-field">
+              <span>Platform name</span>
+              <input value={adminSettings.platformName} onChange={(event) => updateAdminSetting('platformName', event.target.value)} />
+            </label>
+            <label className="admin-field">
+              <span>Support email</span>
+              <input value={adminSettings.supportEmail} onChange={(event) => updateAdminSetting('supportEmail', event.target.value)} />
+            </label>
+          </div>
+        </article>
 
-  const roleMixData = useMemo(() => {
-    const counts = overview?.metrics?.roleCounts || { participant: 0, organizer: 0, admin: 0 }
-    return {
-      labels: ['Participant', 'Organizer', 'Admin'],
-      datasets: [
-        {
-          label: 'Users',
-          data: [counts.participant || 0, counts.organizer || 0, counts.admin || 0],
-          backgroundColor: [
-            'rgba(79, 70, 229, 0.75)',
-            'rgba(234, 122, 50, 0.75)',
-            'rgba(16, 185, 129, 0.75)',
-          ],
-          borderRadius: 8,
-        },
-      ],
-    }
-  }, [overview])
+        <article className="admin-settings-card">
+          <div className="admin-metric-card__icon"><UserCog size={18} /></div>
+          <div>
+            <h3>Admin Account</h3>
+            <label className="admin-field">
+              <span>Password reset email</span>
+              <input value={passwordEmail} onChange={(event) => setPasswordEmail(event.target.value)} />
+            </label>
+            <div className="admin-actions">
+              <button type="button" onClick={handlePasswordReset}>Change Password</button>
+              <button type="button" className="admin-btn admin-btn--danger" onClick={handleAdminLogout}>
+                <LogOut size={14} /> Logout
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  )
 
   return (
     <section className="admin-dashboard">
@@ -826,275 +1456,119 @@ export default function AdminDashboard() {
           <aside className="admin-rail">
             <div className="admin-rail__title">
               <Shield size={16} />
-              <span>Admin Navigation</span>
+              <span>Admin Dashboard</span>
             </div>
-            <button type="button" className="admin-rail__item" onClick={() => scrollToSection(overviewRef)}>
-              <BarChart3 size={15} /> Overview
-            </button>
-            <button type="button" className="admin-rail__item" onClick={() => scrollToSection(usersRef)}>
-              <Users2 size={15} /> User Management
-            </button>
-            <button type="button" className="admin-rail__item" onClick={() => scrollToSection(eventsRef)}>
-              <CalendarRange size={15} /> Event Moderation
-            </button>
-            <button type="button" className="admin-rail__item" onClick={() => scrollToSection(auditRef)}>
-              <Activity size={15} /> Audit Trail
-            </button>
-            <Link to="/admin/complaints" className="admin-rail__item admin-rail__item--link">
-              <CircleAlert size={15} /> Complaint Center
-            </Link>
+            {ADMIN_SECTIONS.map((item) => {
+              const Icon = item.icon
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`admin-rail__item${activeSection === item.id ? ' is-active' : ''}`}
+                  onClick={() => {
+                    setActiveSection(item.id)
+                    setUserSearch('')
+                    setUserStatusFilter('')
+                    setEventSearch('')
+                    setEventStatusFilter('')
+                  }}
+                >
+                  <Icon size={15} /> {item.label}
+                </button>
+              )
+            })}
           </aside>
 
           <div className="admin-main">
-            <section ref={overviewRef} className="admin-section-anchor">
-              <section className="admin-metrics">
-                {metricCards.map((card) => {
-                  const Icon = card.icon
-                  return (
-                    <article key={card.label} className="admin-metric-card">
-                      <div className="admin-metric-card__icon"><Icon size={18} /></div>
-                      <div>
-                        <p>{card.label}</p>
-                        <h3>{card.value}</h3>
-                      </div>
-                    </article>
-                  )
-                })}
-              </section>
-
-              <section className="admin-analytics-grid">
-                <article className="admin-chart-card">
-                  <div className="admin-chart-card__head">
-                    <h2>Registration Trend</h2>
-                    <p>Latest event registration volume</p>
-                  </div>
-                  <div className="admin-chart-wrap">
-                    <Line data={registrationTrendData} options={chartCommonOptions} />
-                  </div>
-                </article>
-
-                <article className="admin-chart-card">
-                  <div className="admin-chart-card__head">
-                    <h2>Event Status Mix</h2>
-                    <p>Distribution by event status</p>
-                  </div>
-                  <div className="admin-chart-wrap">
-                    <Doughnut
-                      data={eventStatusData}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                          legend: {
-                            labels: { color: '#334155' },
-                          },
-                        },
-                      }}
-                    />
-                  </div>
-                </article>
-
-                <article className="admin-chart-card">
-                  <div className="admin-chart-card__head">
-                    <h2>Role Distribution</h2>
-                    <p>User role segmentation</p>
-                  </div>
-                  <div className="admin-chart-wrap">
-                    <Bar data={roleMixData} options={chartCommonOptions} />
-                  </div>
-                </article>
-              </section>
-            </section>
-
-            <section ref={usersRef} className="admin-panel admin-section-anchor">
-          <div className="admin-panel__head">
-            <h2>Users ({usersTotal})</h2>
-            <div className="admin-panel__filters">
-              <label className="admin-search">
-                <Search size={14} />
-                <input
-                  value={userSearch}
-                  onChange={(event) => setUserSearch(event.target.value)}
-                  placeholder="Search by name or email"
-                />
-              </label>
-              <select value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
-                <option value="">All roles</option>
-                {USER_ROLE_OPTIONS.map((role) => (
-                  <option key={role} value={role}>{role}</option>
-                ))}
-              </select>
-              <select value={userStatusFilter} onChange={(event) => setUserStatusFilter(event.target.value)}>
-                <option value="">All status</option>
-                {USER_STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
-              <button type="button" onClick={loadUsers} disabled={loading || actionBusy}>Apply</button>
-            </div>
-          </div>
-
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Provider</th>
-                  <th>Created</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((entry) => (
-                  <tr key={entry.id}>
-                    <td>
-                      <div className="admin-user-cell">
-                        <span className="admin-avatar" style={{ background: entry.avatarBackdrop || undefined }}>
-                          {entry.name?.charAt(0) || 'U'}
-                        </span>
+            {activeSection === 'dashboard' ? (
+              <section className="admin-section-anchor">
+                <section className="admin-metrics admin-metrics--ceo">
+                  {adminSummaryCards.map((card) => {
+                    const Icon = card.icon
+                    return (
+                      <article key={card.label} className="admin-metric-card">
+                        <div className="admin-metric-card__icon"><Icon size={18} /></div>
                         <div>
-                          <strong>{entry.name || 'Unnamed'}</strong>
-                          <p>{entry.email}</p>
+                          <p>{card.label}</p>
+                          <h3>{card.value}</h3>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={getRoleClassName(entry.role)}>{entry.role}</span>
-                    </td>
-                    <td>
-                      <span className={getStatusClassName(entry.status)}>{entry.status || 'active'}</span>
-                    </td>
-                    <td>{entry.provider || 'local'}</td>
-                    <td>{formatDate(entry.createdAt)}</td>
-                    <td>
-                      <div className="admin-actions">
-                        <select
-                          value={entry.role}
-                          onChange={(event) => changeUserRole(entry.id, event.target.value)}
-                          disabled={actionBusy}
-                        >
-                          {USER_ROLE_OPTIONS.map((role) => (
-                            <option key={role} value={role}>{role}</option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={() => toggleUserStatus(entry)}
-                          disabled={actionBusy}
-                          className={entry.status === 'suspended' ? 'admin-btn admin-btn--success' : 'admin-btn admin-btn--danger'}
-                        >
-                          {entry.status === 'suspended' ? 'Restore' : 'Suspend'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {users.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="admin-empty">No users found for current filters.</td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-            </section>
+                      </article>
+                    )
+                  })}
+                </section>
 
-            <section ref={eventsRef} className="admin-panel admin-section-anchor">
-          <div className="admin-panel__head">
-            <h2>Events ({eventsTotal})</h2>
-            <div className="admin-panel__filters">
-              <label className="admin-search">
-                <Search size={14} />
-                <input
-                  value={eventSearch}
-                  onChange={(event) => setEventSearch(event.target.value)}
-                  placeholder="Search event title or organizer"
-                />
-              </label>
-              <select value={eventStatusFilter} onChange={(event) => setEventStatusFilter(event.target.value)}>
-                <option value="">All status</option>
-                {EVENT_STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
-              <button type="button" onClick={loadEvents} disabled={loading || actionBusy}>Apply</button>
-            </div>
-          </div>
+                <section className="admin-dashboard-grid">
+                  <article className="admin-panel admin-panel--compact">
+                    <div className="admin-panel__head">
+                      <h2>Recent Organizers</h2>
+                    </div>
+                    <div className="admin-mini-list">
+                      {recentOrganizers.length === 0 ? <p className="admin-empty">No organizers found yet.</p> : null}
+                      {recentOrganizers.map((entry) => (
+                        <div key={entry.id || entry.email} className="admin-mini-item">
+                          <span className="admin-avatar" style={{ background: entry.avatarBackdrop || undefined }}>
+                            {entry.name?.charAt(0) || 'O'}
+                          </span>
+                          <div>
+                            <strong>{entry.name || 'Unnamed Organizer'}</strong>
+                            <p>{entry.email}</p>
+                          </div>
+                          <span className={getStatusClassName(entry.status)}>{entry.status || 'active'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
 
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Event</th>
-                  <th>Status</th>
-                  <th>Organizer</th>
-                  <th>Registrations</th>
-                  <th>Updated</th>
-                  <th>Moderation</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((entry) => (
-                  <tr key={entry.id || entry._id}>
-                    <td>
-                      <strong>{entry.title || 'Untitled Event'}</strong>
-                    </td>
-                    <td>
-                      <span className={getStatusClassName(entry.status || 'upcoming')}>{entry.status || 'upcoming'}</span>
-                    </td>
-                    <td>{entry.organiser?.name || entry.organizer?.name || 'Unknown'}</td>
-                    <td>{Number(entry.registeredCount || 0)}</td>
-                    <td>{formatDate(entry.updatedAt || entry.createdAt)}</td>
-                    <td>
-                      <select
-                        value={entry.status || 'upcoming'}
-                        onChange={(event) => updateEventStatus(entry.id || entry._id, event.target.value)}
-                        disabled={actionBusy}
-                      >
-                        {EVENT_STATUS_OPTIONS.map((status) => (
-                          <option key={status} value={status}>{status}</option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-                {events.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="admin-empty">No events found for current filters.</td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-            </section>
+                  <article className="admin-panel admin-panel--compact">
+                    <div className="admin-panel__head">
+                      <h2>Recent Events</h2>
+                    </div>
+                    <div className="admin-mini-list">
+                      {recentEvents.length === 0 ? <p className="admin-empty">No events found yet.</p> : null}
+                      {recentEvents.map((entry) => (
+                        <div key={entry.id || entry._id || entry.title} className="admin-mini-item">
+                          <div>
+                            <strong>{entry.title || 'Untitled Event'}</strong>
+                            <p>{entry.organiser?.name || entry.organizer?.name || 'Unknown organizer'}</p>
+                          </div>
+                          <span className={getStatusClassName(entry.status || 'upcoming')}>{entry.status || 'upcoming'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
 
-            <section ref={auditRef} className="admin-panel admin-panel--audit admin-section-anchor">
-          <div className="admin-panel__head">
-            <h2>Audit Trail</h2>
-          </div>
-          <div className="admin-log-list">
-            {logs.length === 0 ? <p className="admin-empty">No admin actions recorded yet.</p> : null}
-            {logs.map((entry) => (
-              <article key={entry._id} className="admin-log-item">
-                <div>
-                  <strong>{toTitleCase(entry.action || 'audit event')}</strong>
-                  <p>{getAuditDescription(entry)}</p>
-                  <p>{formatDate(entry.createdAt)}</p>
-                </div>
-                <div>
-                  <p>
-                    Actor: <span>{entry.actorId}</span>
-                  </p>
-                  <p>
-                    Target: <span>{entry.targetType}:{entry.targetId}</span>
-                  </p>
-                </div>
-              </article>
-            ))}
-          </div>
-            </section>
+                  <article className="admin-panel admin-panel--compact admin-panel--audit">
+                    <div className="admin-panel__head">
+                      <h2>Notifications / Audit Trail</h2>
+                    </div>
+                    <div className="admin-log-list">
+                      {logs.length === 0 ? <p className="admin-empty">No admin actions recorded yet.</p> : null}
+                      {logs.slice(0, 6).map((entry) => (
+                        <article key={entry._id} className="admin-log-item">
+                          <div>
+                            <strong>{toTitleCase(entry.action || 'audit event')}</strong>
+                            <p>{getAuditDescription(entry)}</p>
+                            <p>{formatDate(entry.createdAt)}</p>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </article>
+                </section>
+              </section>
+            ) : null}
+
+            {activeSection === 'organizers'
+              ? renderUserAccountsPanel('Organizer Accounts', organizerUsers, 'No organizers found for current filters.')
+              : null}
+
+            {activeSection === 'participants'
+              ? renderUserAccountsPanel('Participant Accounts', participantUsers, 'No participants found for current filters.')
+              : null}
+
+            {activeSection === 'events' ? renderEventsPanel() : null}
+
+            {activeSection === 'settings' ? renderSettingsPanel() : null}
           </div>
         </div>
       </div>

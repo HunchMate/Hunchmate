@@ -212,6 +212,13 @@
   transform: translateY(-1px);
 }
 
+.admin-rail__item.is-active {
+  border-color: #0ea5e9;
+  background: #e0f2fe;
+  color: #0369a1;
+  box-shadow: 0 8px 16px rgba(14, 165, 233, 0.1);
+}
+
 .admin-rail__item--link {
   text-decoration: none;
 }
@@ -243,6 +250,10 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 0.8rem;
+}
+
+.admin-metrics--ceo {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .admin-metric-card {
@@ -307,6 +318,91 @@
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
   padding: 1rem;
   overflow: hidden;
+}
+
+.admin-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.8rem;
+}
+
+.admin-dashboard-grid .admin-panel--audit {
+  grid-column: 1 / -1;
+}
+
+.admin-panel--compact {
+  padding: 0.9rem;
+}
+
+.admin-panel--compact .admin-panel__head {
+  margin-bottom: 0.75rem;
+}
+
+.admin-mini-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.admin-mini-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.86rem;
+  padding: 0.66rem 0.74rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.72rem;
+  background: #f8fafc;
+}
+
+.admin-mini-item > div {
+  min-width: 0;
+}
+
+.admin-mini-item strong {
+  display: block;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.admin-mini-item p {
+  margin: 0.14rem 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-mini-item .admin-pill {
+  flex-shrink: 0;
+}
+
+.admin-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.admin-settings-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.86rem;
+  background: #f8fafc;
+  padding: 0.82rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.68rem;
+}
+
+.admin-settings-card h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.96rem;
+}
+
+.admin-settings-card p {
+  margin: 0.2rem 0 0;
+  color: #64748b;
+  font-size: 0.82rem;
 }
 
 .admin-analytics-grid {
@@ -620,6 +716,11 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .admin-metrics--ceo,
+  .admin-settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .admin-analytics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -666,6 +767,12 @@
   }
 
   .admin-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-metrics--ceo,
+  .admin-dashboard-grid,
+  .admin-settings-grid {
     grid-template-columns: 1fr;
   }
 

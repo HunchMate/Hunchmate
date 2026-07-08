@@ -5,781 +5,670 @@ import { useNavigate } from '@/utils/router';
 import { useAuth } from '@/context/AuthContext';
 import '@/vite-pages/Onboarding.css';
 
+// ─── Constants ───────────────────────────────────────────────────────────────
+
 const PROFILE_TYPES = [
-  { value: 'student', label: 'Student' },
-  { value: 'working_professional', label: 'Working Professional' },
-];
-
-const STREAM_OPTIONS = [
-  'Computer Science',
-  'Information Technology',
-  'Electronics',
-  'Mechanical',
-  'Civil',
-  'Electrical',
-  'Data Science',
-  'Artificial Intelligence',
-  'Cyber Security',
-  'Business Administration',
-  'Commerce',
-  'Arts',
-  'Science',
-  'Medicine',
-  'Law',
-];
-
-const INSTITUTION_OPTIONS = [
-  'IIT Bombay',
-  'IIT Delhi',
-  'IIT Madras',
-  'IIT Kharagpur',
-  'NIT Trichy',
-  'BITS Pilani',
-  'VIT Vellore',
-  'Anna University',
-  'Delhi University',
-  'Mumbai University',
-  'Christ University',
-  'Amity University',
-  'Symbiosis International',
-  'Manipal Institute of Technology',
-  'SRM Institute of Science and Technology',
-];
-
-const TECH_PROFICIENCY_OPTIONS = [
-  'Beginner',
-  'Intermediate',
-  'Advanced',
-  'Expert',
-];
-
-const EXPERIENCE_OPTIONS = [
-  '0-1 years',
-  '1-3 years',
-  '3-5 years',
-  '5-8 years',
-  '8+ years',
-];
-
-const DESIGNATION_OPTIONS = [
-  'Software Engineer',
-  'Senior Software Engineer',
-  'Tech Lead',
-  'Engineering Manager',
-  'Product Manager',
-  'Data Analyst',
-  'Data Scientist',
-  'DevOps Engineer',
-  'QA Engineer',
-  'UX Designer',
-  'Founder',
-  'Consultant',
+  { value: 'student', label: 'Student', icon: '🎓' },
+  { value: 'startup_founder', label: 'Startup Founder', icon: '🚀' },
+  { value: 'professional', label: 'Professional', icon: '💼' },
 ];
 
 const SKILL_OPTIONS = [
-  'JavaScript',
-  'TypeScript',
-  'React',
-  'Node.js',
-  'Python',
-  'Java',
-  'C++',
-  'SQL',
-  'MongoDB',
-  'PostgreSQL',
-  'AWS',
-  'Azure',
-  'Docker',
-  'Kubernetes',
-  'Machine Learning',
-  'UI/UX',
-  'System Design',
-  'Cyber Security',
-  'Data Engineering',
-  'Product Strategy',
+  'JavaScript','TypeScript','React','Node.js','Python','Java','C++','SQL',
+  'MongoDB','PostgreSQL','AWS','Azure','Docker','Kubernetes','Machine Learning',
+  'UI/UX','System Design','Cyber Security','Data Engineering','Product Strategy',
+  'Figma','Flutter','Swift','Kotlin','Go','Rust','GraphQL','REST API',
+  'Blockchain','Web3','Marketing','Finance','Operations','Sales',
 ];
 
 const INDIA_STATE_CITY = {
-  'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur'],
-  'Delhi': ['New Delhi', 'North Delhi', 'South Delhi'],
-  'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara'],
-  'Karnataka': ['Bengaluru', 'Mysuru', 'Mangaluru'],
-  'Kerala': ['Kochi', 'Thiruvananthapuram', 'Kozhikode'],
-  'Madhya Pradesh': ['Indore', 'Bhopal', 'Gwalior'],
-  'Maharashtra': ['Mumbai', 'Pune', 'Nagpur'],
-  'Rajasthan': ['Jaipur', 'Udaipur', 'Jodhpur'],
-  'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai'],
-  'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad'],
-  'Uttar Pradesh': ['Lucknow', 'Noida', 'Kanpur'],
-  'West Bengal': ['Kolkata', 'Howrah', 'Durgapur'],
+  'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur','Tirupati'],
+  'Delhi': ['New Delhi', 'North Delhi', 'South Delhi', 'East Delhi'],
+  'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot'],
+  'Karnataka': ['Bengaluru', 'Mysuru', 'Mangaluru', 'Hubli'],
+  'Kerala': ['Kochi', 'Thiruvananthapuram', 'Kozhikode', 'Thrissur'],
+  'Madhya Pradesh': ['Indore', 'Bhopal', 'Gwalior', 'Jabalpur'],
+  'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Aurangabad'],
+  'Punjab': ['Chandigarh', 'Ludhiana', 'Amritsar', 'Jalandhar'],
+  'Rajasthan': ['Jaipur', 'Udaipur', 'Jodhpur', 'Kota'],
+  'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Salem'],
+  'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad', 'Karimnagar'],
+  'Uttar Pradesh': ['Lucknow', 'Noida', 'Kanpur', 'Agra', 'Varanasi'],
+  'West Bengal': ['Kolkata', 'Howrah', 'Durgapur', 'Siliguri'],
+  'Haryana': ['Gurugram', 'Faridabad', 'Panipat', 'Ambala'],
+  'Bihar': ['Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur'],
 };
 
-const STATE_OPTIONS = Object.keys(INDIA_STATE_CITY);
+const STATE_OPTIONS = Object.keys(INDIA_STATE_CITY).sort();
+
+const DEGREE_OPTIONS = ['B.Tech','B.E.','B.Sc','B.Com','BBA','BCA','M.Tech','M.E.','M.Sc','MBA','MCA','Ph.D','Diploma','B.Arch','MBBS','LLB'];
+const BRANCH_OPTIONS = ['Computer Science','Information Technology','Electronics','Mechanical','Civil','Electrical','Data Science','Artificial Intelligence','Cyber Security','Business Administration','Commerce','Arts','Science','Medicine','Law','Design'];
+const GRADUATION_YEAR_OPTIONS = Array.from({ length: 16 }, (_, i) => String(new Date().getFullYear() - 7 + i));
+const EXPERIENCE_OPTIONS = ['0-1 years','1-3 years','3-5 years','5-8 years','8+ years'];
+const DESIGNATION_OPTIONS = ['Software Engineer','Senior Software Engineer','Tech Lead','Engineering Manager','Product Manager','Data Analyst','Data Scientist','DevOps Engineer','QA Engineer','UX Designer','Founder','Consultant','CTO','CEO','Freelancer'];
+const INDUSTRY_OPTIONS = ['Technology','Finance','Healthcare','Education','E-commerce','Manufacturing','Retail','Media','Real Estate','Agriculture','Logistics','Travel','Government','Non-profit','Other'];
+const STARTUP_STAGE_OPTIONS = ['Idea','MVP','Early Traction','Funded','Scaling'];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function wordCount(value) {
-  return String(value || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .length;
-}
-
-function SearchableDropdown({
-  label,
-  options,
-  value,
-  onChange,
-  placeholder,
-  disabled = false,
-  error = '',
-}) {
-  const containerRef = useRef(null);
-  const [open, setOpen] = useState(false);
-
-  const filtered = useMemo(() => {
-    const normalized = String(value || '').trim().toLowerCase();
-    if (!normalized) return options;
-    return options.filter((option) => option.label.toLowerCase().includes(normalized));
-  }, [options, value]);
-
-  useEffect(() => {
-    const onOutsideClick = (event) => {
-      if (!containerRef.current?.contains(event.target)) {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', onOutsideClick);
-    return () => document.removeEventListener('mousedown', onOutsideClick);
-  }, []);
-
-  return (
-    <label className="onboarding__field" ref={containerRef}>
-      <span>{label}</span>
-      <input
-        value={value}
-        onChange={(event) => {
-          onChange(event.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        placeholder={placeholder}
-        disabled={disabled}
-        autoComplete="off"
-      />
-
-      {open && !disabled ? (
-        <div className="onboarding__dropdown">
-          {filtered.length ? filtered.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={`onboarding__option ${value === option.value ? 'is-active' : ''}`}
-              onClick={() => {
-                onChange(option.value);
-                setOpen(false);
-              }}
-            >
-              {option.label}
-            </button>
-          )) : <p className="onboarding__no-result">No results found</p>}
-        </div>
-      ) : null}
-
-      {error ? <small className="onboarding__error-text">{error}</small> : null}
-    </label>
-  );
-}
-
-function toOptions(items) {
-  return items.map((item) => ({ value: item, label: item }));
+  return String(value || '').trim().split(/\s+/).filter(Boolean).length;
 }
 
 function hasCompletedOnboarding(user) {
   if (!user) return false;
-  if (user.onboardingCompleted) return true;
+  return Boolean(user.onboardingCompleted);
+}
 
-  const hasCore = Boolean(
-    String(user.profileType || '').trim()
-    && String(user.stream || '').trim()
-    && String(user.graduationYear || '').trim()
-    && String(user.institutionName || user.institution || '').trim()
-    && String(user.state || '').trim()
-    && String(user.city || '').trim()
-    && Array.isArray(user.skills)
-    && user.skills.length > 0
+function readImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Unable to read image file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// ─── Reusable Components ──────────────────────────────────────────────────────
+
+function FieldError({ error }) {
+  if (!error) return null;
+  return <small className="onboarding__error-text">{error}</small>;
+}
+
+function SimpleSelect({ label, options, value, onChange, placeholder, error, required }) {
+  return (
+    <label className="onboarding__field">
+      <span>{label}{required && <em className="onboarding__required"> *</em>}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={error ? 'onboarding__input--error' : ''}
+      >
+        <option value="">{placeholder || 'Select…'}</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+      <FieldError error={error} />
+    </label>
   );
-
-  if (!hasCore) return false;
-
-  if (user.profileType === 'working_professional') {
-    return Boolean(
-      String(user.experience || '').trim()
-      && String(user.techProficiency || '').trim()
-      && String(user.currentDesignation || '').trim()
-    );
-  }
-
-  return true;
 }
 
-function getOnboardingCacheKey(user) {
-  const identity = String(user?.id || user?.email || '').trim();
-  return identity ? `hm_onboarding_completed_${identity}` : '';
+function TextInput({ label, value, onChange, placeholder, error, required, type = 'text', readOnly, disabled }) {
+  return (
+    <label className="onboarding__field">
+      <span>{label}{required && <em className="onboarding__required"> *</em>}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        readOnly={readOnly}
+        disabled={disabled}
+        className={error ? 'onboarding__input--error' : ''}
+      />
+      <FieldError error={error} />
+    </label>
+  );
 }
 
-const INTEREST_OPTIONS = [
-  'Problem Solver',
-  'Builder',
-  'AI Explorer',
-  'Open Source',
-  'Designer',
-  'Researcher',
-  'Hustler',
-  'Speaker',
-];
+function TagInput({ label, value, onChange, options, placeholder, error, required }) {
+  const [input, setInput] = useState('');
+
+  const addTag = (tag) => {
+    const trimmed = String(tag || '').trim();
+    if (!trimmed) return;
+    if (value.some((s) => s.toLowerCase() === trimmed.toLowerCase())) { setInput(''); return; }
+    onChange([...value, trimmed]);
+    setInput('');
+  };
+
+  return (
+    <div className="onboarding__field onboarding__field--full">
+      <span className="onboarding__label">{label}{required && <em className="onboarding__required"> *</em>}</span>
+      <div className="onboarding__skills-row">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(input); } }}
+          placeholder={placeholder || 'Type and press Enter'}
+          list={`datalist-${label}`}
+          className={`onboarding__tag-input${error ? ' onboarding__input--error' : ''}`}
+        />
+        {options && (
+          <datalist id={`datalist-${label}`}>
+            {options.filter((o) => !value.some((v) => v.toLowerCase() === o.toLowerCase())).map((o) => (
+              <option key={o} value={o} />
+            ))}
+          </datalist>
+        )}
+        <button type="button" className="onboarding__add-btn" onClick={() => addTag(input)}>Add</button>
+      </div>
+      <FieldError error={error} />
+      <div className="onboarding__chips">
+        {value.length ? value.map((tag) => (
+          <button key={tag} type="button" className="onboarding__chip onboarding__chip--tag"
+            onClick={() => onChange(value.filter((t) => t !== tag))}>
+            {tag} <span>×</span>
+          </button>
+        )) : <p className="onboarding__no-skill">No {label.toLowerCase()} added yet.</p>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Onboarding() {
   const { user, updateProfile } = useAuth();
   const navigate = useNavigate();
-
-  const [name, setName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [bio, setBio] = useState('');
-  const [profileType, setProfileType] = useState('student');
-  const [stream, setStream] = useState('');
-  const [graduationYear, setGraduationYear] = useState('');
-  const [institutionName, setInstitutionName] = useState('');
-  const [state, setState] = useState('');
-  const [city, setCity] = useState('');
-  const [experience, setExperience] = useState('');
-  const [techProficiency, setTechProficiency] = useState('');
-  const [workSummary, setWorkSummary] = useState('');
-  const [currentDesignation, setCurrentDesignation] = useState('');
-  const [selectedSkill, setSelectedSkill] = useState('');
-  const [skills, setSkills] = useState([]);
-  const [interests, setInterests] = useState([]);
+  const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
-  const [submitting, setSubmitting] = useState(false);
   const initializedRef = useRef(false);
+  const avatarInputRef = useRef(null);
 
-  const graduationYearOptions = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    return Array.from({ length: 16 }).map((_, index) => String(currentYear - 7 + index));
-  }, []);
+  // ── Step 1: Common fields ──
+  const [profileType, setProfileType] = useState('student');
+  const [avatar, setAvatar] = useState('');
+  const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [state, setState] = useState('');
+  const [city, setCity] = useState('');
+  const [skills, setSkills] = useState([]);
+  const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [bio, setBio] = useState('');
 
-  const cityOptions = useMemo(() => {
-    if (!state) return [];
-    return INDIA_STATE_CITY[state] || [];
-  }, [state]);
+  // ── Step 2: Student fields ──
+  const [institutionName, setInstitutionName] = useState('');
+  const [degree, setDegree] = useState('');
+  const [branch, setBranch] = useState('');
+  const [graduationYear, setGraduationYear] = useState('');
+  const [githubUrl, setGithubUrl] = useState('');
+  const [resumeUrl, setResumeUrl] = useState('');
 
+  // ── Step 2: Startup Founder fields ──
+  const [startupName, setStartupName] = useState('');
+  const [industry, setIndustry] = useState('');
+  const [startupStage, setStartupStage] = useState('');
+  const [startupWebsite, setStartupWebsite] = useState('');
+  const [startupDescription, setStartupDescription] = useState('');
+
+  // ── Step 2: Professional fields ──
+  const [company, setCompany] = useState('');
+  const [currentDesignation, setCurrentDesignation] = useState('');
+  const [experience, setExperience] = useState('');
+  const [proIndustry, setProIndustry] = useState('');
+  const [portfolioUrl, setPortfolioUrl] = useState('');
+
+  const cityOptions = useMemo(() => INDIA_STATE_CITY[state] || [], [state]);
+  const bioWords = wordCount(bio);
+  const descWords = wordCount(startupDescription);
+
+  // Initialize from existing user data
   useEffect(() => {
     if (!user) return;
-
     if (hasCompletedOnboarding(user)) {
-      const path = user.role === 'admin'
-        ? '/admin/dashboard'
-        : user.role === 'organizer'
-          ? '/organizer/dashboard'
-          : '/events';
+      const path = user.role === 'admin' ? '/admin/dashboard'
+        : user.role === 'organizer' ? '/organizer/dashboard' : '/events';
       navigate(path, { replace: true });
       return;
     }
-
     if (!initializedRef.current) {
+      setProfileType(user.profileType || 'student');
+      setAvatar(user.avatar || '');
       setName(user.name || '');
       setPhoneNumber(user.phoneNumber || '');
-      setBio(user.bio || '');
-      setProfileType(user.profileType || 'student');
-      setStream(user.stream || '');
-      setGraduationYear(user.graduationYear || '');
-      setInstitutionName(user.institutionName || user.institution || '');
       setState(user.state || '');
       setCity(user.city || '');
-      setExperience(user.experience || '');
-      setTechProficiency(user.techProficiency || '');
-      setWorkSummary(user.workSummary || '');
-      setCurrentDesignation(user.currentDesignation || user.headline || '');
       setSkills(Array.isArray(user.skills) ? user.skills : []);
-      setInterests(Array.isArray(user.socials?.interests) ? user.socials.interests : []);
+      setLinkedinUrl(user.linkedinUrl || user.socials?.linkedin || '');
+      setBio(user.bio || '');
+      setInstitutionName(user.institutionName || user.institution || '');
+      setDegree(user.degree || '');
+      setBranch(user.branch || user.stream || '');
+      setGraduationYear(user.graduationYear || '');
+      setGithubUrl(user.githubUrl || user.socials?.github || '');
+      setResumeUrl(user.resumeUrl || '');
+      setStartupName(user.startupName || '');
+      setIndustry(user.industry || '');
+      setStartupStage(user.startupStage || '');
+      setStartupWebsite(user.startupWebsite || '');
+      setStartupDescription(user.startupDescription || '');
+      setCompany(user.company || '');
+      setCurrentDesignation(user.currentDesignation || '');
+      setExperience(user.experience || '');
+      setProIndustry(user.industry || '');
+      setPortfolioUrl(user.portfolioUrl || '');
       initializedRef.current = true;
     }
   }, [navigate, user]);
 
-  const bioWords = wordCount(bio);
-  const workSummaryWords = wordCount(workSummary);
-  const isWorkingProfessional = profileType === 'working_professional';
-  const roleLabel = isWorkingProfessional ? 'Working Professional' : 'Student';
-
-  const completionChecks = [
-    Boolean(name.trim()),
-    Boolean(phoneNumber.trim()),
-    Boolean(profileType),
-    Boolean(stream),
-    Boolean(graduationYear),
-    Boolean(institutionName),
-    Boolean(state),
-    Boolean(city),
-    Boolean(skills.length),
-    isWorkingProfessional ? Boolean(experience) : true,
-    isWorkingProfessional ? Boolean(techProficiency) : true,
-    isWorkingProfessional ? Boolean(currentDesignation) : true,
-  ];
-  const completionPercent = Math.round((completionChecks.filter(Boolean).length / completionChecks.length) * 100);
-
-  const addSkill = () => {
-    const nextSkill = String(selectedSkill || '').trim();
-    if (!nextSkill) return;
-
-    const normalized = nextSkill.toLowerCase();
-    const alreadyExists = skills.some((skill) => String(skill || '').toLowerCase() === normalized);
-    if (alreadyExists) {
-      setSelectedSkill('');
-      return;
+  // ── Avatar handling ──
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await readImageFile(file);
+      setAvatar(base64);
+    } catch {
+      setError('Could not read image file.');
     }
-
-    setSkills((current) => [...current, nextSkill]);
-    setSelectedSkill('');
-    setFieldErrors((current) => {
-      if (!current.skills) return current;
-      const next = { ...current };
-      delete next.skills;
-      return next;
-    });
   };
 
-  const removeSkill = (skill) => {
-    setSkills((current) => current.filter((item) => item !== skill));
+  // ── Validation ──
+  const clearError = (field) => setFieldErrors((cur) => { if (!cur[field]) return cur; const n = { ...cur }; delete n[field]; return n; });
+
+  const validateStep1 = () => {
+    const errs = {};
+    if (!name.trim()) errs.name = 'Full name is required.';
+    if (!phoneNumber.trim()) errs.phoneNumber = 'Mobile number is required.';
+    else if (!/^[+\d][\d\s\-()]{6,15}$/.test(phoneNumber.trim())) errs.phoneNumber = 'Enter a valid phone number.';
+    if (!state) errs.state = 'State is required.';
+    if (!city) errs.city = 'City is required.';
+    if (!skills.length) errs.skills = 'Add at least one skill.';
+    if (bioWords > 100) errs.bio = 'Bio must be 100 words or less.';
+    if (!profileType) errs.profileType = 'Please select a profile type.';
+    return errs;
   };
 
-  const clearFieldError = (fieldName) => {
-    setFieldErrors((current) => {
-      if (!current[fieldName]) return current;
-      const next = { ...current };
-      delete next[fieldName];
-      return next;
-    });
-  };
-
-  const validate = () => {
-    const nextErrors = {};
-
-    if (!name.trim()) nextErrors.name = 'Please add your name.';
-    if (!phoneNumber.trim()) nextErrors.phoneNumber = 'Please add your phone number.';
-    else if (!/^[+\d][\d\s\-()]{6,15}$/.test(phoneNumber.trim())) nextErrors.phoneNumber = 'Please enter a valid phone number.';
-    if (!user?.email) nextErrors.email = 'Email is unavailable. Please login again.';
-    if (bioWords > 100) nextErrors.bio = 'Bio must be 100 words or less.';
-    if (!profileType) nextErrors.profileType = 'Please select Student or Working Professional.';
-    if (!stream) nextErrors.stream = 'Please select your stream.';
-    if (!graduationYear) nextErrors.graduationYear = 'Please select your graduation year.';
-    if (!institutionName) nextErrors.institutionName = 'Please select your institution name.';
-    if (!state) nextErrors.state = 'Please select your state.';
-    if (!city) nextErrors.city = 'Please select your city.';
-    if (!skills.length) nextErrors.skills = 'Please add at least one skill.';
-
-    if (isWorkingProfessional) {
-      if (!experience) nextErrors.experience = 'Please select your experience range.';
-      if (!techProficiency) nextErrors.techProficiency = 'Please select your tech proficiency.';
-      if (!currentDesignation) nextErrors.currentDesignation = 'Please select your current role/designation.';
-      if (workSummaryWords > 150) nextErrors.workSummary = 'Work summary must be 150 words or less.';
+  const validateStep2 = () => {
+    const errs = {};
+    if (profileType === 'student') {
+      if (!institutionName.trim()) errs.institutionName = 'Institution name is required.';
+      if (!degree) errs.degree = 'Degree is required.';
+      if (!branch) errs.branch = 'Branch is required.';
+      if (!graduationYear) errs.graduationYear = 'Graduation year is required.';
+    } else if (profileType === 'startup_founder') {
+      if (!startupName.trim()) errs.startupName = 'Startup name is required.';
+      if (!industry) errs.industry = 'Industry is required.';
+      if (!startupStage) errs.startupStage = 'Startup stage is required.';
+      if (descWords > 100) errs.startupDescription = 'Description must be 100 words or less.';
+    } else if (profileType === 'professional') {
+      if (!company.trim()) errs.company = 'Company name is required.';
+      if (!currentDesignation) errs.currentDesignation = 'Designation is required.';
+      if (!experience) errs.experience = 'Experience is required.';
     }
-
-    return nextErrors;
+    return errs;
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleNext = () => {
+    const errs = validateStep1();
+    if (Object.keys(errs).length) { setFieldErrors(errs); setError('Please fix the highlighted fields.'); return; }
+    setFieldErrors({});
     setError('');
+    setStep(2);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-    const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setFieldErrors(validationErrors);
-      setError('Please fix the highlighted fields.');
-      return;
-    }
+  const handleBack = () => { setStep(1); setError(''); setFieldErrors({}); };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    const errs = validateStep2();
+    if (Object.keys(errs).length) { setFieldErrors(errs); setError('Please fix the highlighted fields.'); return; }
 
     setSubmitting(true);
     try {
-      await updateProfile({
+      const payload = {
         name: name.trim(),
+        avatar,
         phoneNumber: phoneNumber.trim(),
         bio: bio.trim(),
         profileType,
-        stream,
-        graduationYear,
-        institutionName,
-        institution: institutionName,
         state,
         city,
-        experience: isWorkingProfessional ? experience : '',
-        techProficiency: isWorkingProfessional ? techProficiency : '',
-        workSummary: isWorkingProfessional ? workSummary.trim() : '',
-        currentDesignation: isWorkingProfessional ? currentDesignation : '',
-        headline: isWorkingProfessional ? currentDesignation : '',
         skills,
-        socials: {
-          ...(user?.socials || {}),
-          interests,
-        },
+        linkedinUrl: linkedinUrl.trim(),
+        socials: { ...(user?.socials || {}), linkedin: linkedinUrl.trim() },
         onboardingCompleted: true,
-      });
+      };
 
-      const cacheKey = getOnboardingCacheKey(user);
-      if (cacheKey) {
-        localStorage.setItem(cacheKey, '1');
+      if (profileType === 'student') {
+        Object.assign(payload, {
+          institutionName: institutionName.trim(),
+          institution: institutionName.trim(),
+          degree,
+          branch,
+          stream: branch,
+          graduationYear,
+          githubUrl: githubUrl.trim(),
+          resumeUrl: resumeUrl.trim(),
+          socials: { ...(user?.socials || {}), linkedin: linkedinUrl.trim(), github: githubUrl.trim() },
+        });
+      } else if (profileType === 'startup_founder') {
+        Object.assign(payload, {
+          startupName: startupName.trim(),
+          industry,
+          startupStage,
+          startupWebsite: startupWebsite.trim(),
+          startupDescription: startupDescription.trim(),
+        });
+      } else if (profileType === 'professional') {
+        Object.assign(payload, {
+          company: company.trim(),
+          currentDesignation,
+          headline: currentDesignation,
+          experience,
+          industry: proIndustry,
+          portfolioUrl: portfolioUrl.trim(),
+        });
       }
 
-      const targetPath = user?.role === 'admin'
-        ? '/admin/dashboard'
-        : user?.role === 'organizer'
-          ? '/organizer/dashboard'
-          : '/events';
-      navigate(targetPath, { replace: true });
-    } catch (submitError) {
-      setError(submitError?.message || 'Failed to save onboarding details.');
-    } finally {
+      await updateProfile(payload);
+
+      const targetPath = user?.role === 'admin' ? '/admin/dashboard'
+        : user?.role === 'organizer' ? '/organizer/dashboard' : '/events';
+
+      // Hard redirect — forces a full page reload so the auth listener reads the
+      // freshly committed DB row (onboarding_completed=true) and doesn't race-bounce
+      // the user back to /onboarding via a stale re-fetch.
+      window.location.replace(targetPath);
+    } catch (err) {
+      setError(err?.message || 'Failed to save profile. Please try again.');
       setSubmitting(false);
     }
   };
 
+  // ── Progress ──
+  const step1Checks = [!!name.trim(), !!phoneNumber.trim(), !!state, !!city, skills.length > 0, !!profileType];
+  const step1Percent = Math.round((step1Checks.filter(Boolean).length / step1Checks.length) * 100);
+
+  const profileTypeLabel = PROFILE_TYPES.find((p) => p.value === profileType)?.label || 'Participant';
+
   return (
     <main className="onboarding">
       <section className="onboarding__shell">
+
+        {/* ── Sidebar ── */}
         <aside className="onboarding__intro">
           <p className="onboarding__kicker">Profile Setup</p>
           <h1>Build your identity in one pass</h1>
-          <p className="onboarding__subtitle">Search, select, and save. We use this profile to personalize events, recommendations, and collaboration opportunities.</p>
+          <p className="onboarding__subtitle">
+            We use your profile to personalize events, recommendations, and collaboration opportunities.
+          </p>
 
+          {/* Step indicator */}
+          <div className="onboarding__step-indicator">
+            {[1, 2].map((s) => (
+              <div key={s} className={`onboarding__step-dot${step === s ? ' is-active' : step > s ? ' is-done' : ''}`}>
+                <span>{step > s ? '✓' : s}</span>
+                <small>{s === 1 ? 'Primary Info' : 'Additional Info'}</small>
+              </div>
+            ))}
+            <div className="onboarding__step-line" />
+          </div>
+
+          {/* Progress card */}
           <div className="onboarding__progress-card">
             <div>
               <p>Completion</p>
-              <h2>{completionPercent}%</h2>
+              <h2>{step === 1 ? step1Percent : 100}%</h2>
             </div>
             <div
               className="onboarding__progress-ring"
-              data-label={`${completionPercent}%`}
-              style={{ '--progress': `${Math.max(0, Math.min(100, completionPercent))}%` }}
+              data-label={`${step === 1 ? step1Percent : 100}%`}
+              style={{ '--progress': `${step === 1 ? step1Percent : 100}%` }}
             />
           </div>
 
           <div className="onboarding__facts">
-            <article>
-              <span>Profile Type</span>
-              <strong>{roleLabel}</strong>
-            </article>
-            <article>
-              <span>Email</span>
-              <strong>{user?.email || 'Unavailable'}</strong>
-            </article>
-            <article>
-              <span>Skills Added</span>
-              <strong>{skills.length}</strong>
-            </article>
+            <article><span>Profile Type</span><strong>{profileTypeLabel}</strong></article>
+            <article><span>Email</span><strong>{user?.email || 'Unavailable'}</strong></article>
+            <article><span>Skills Added</span><strong>{skills.length}</strong></article>
           </div>
         </aside>
 
+        {/* ── Form Panel ── */}
         <section className="onboarding__panel">
           {error ? <p className="onboarding__error">{error}</p> : null}
 
-          <form className="onboarding__form" onSubmit={handleSubmit}>
-            <div className="onboarding__section-title onboarding__field--full">
-              <h3>Basic Information</h3>
-              <p>Start with your core identity details.</p>
-            </div>
+          <form className="onboarding__form" onSubmit={step === 1 ? (e) => { e.preventDefault(); handleNext(); } : handleSubmit}>
 
-            <label className="onboarding__field">
-              <span>What should we call you?</span>
-              <input
-                value={name}
-                onChange={(event) => {
-                  setName(event.target.value);
-                  clearFieldError('name');
-                }}
-                onBlur={() => {
-                  if (!name.trim()) setFieldErrors((current) => ({ ...current, name: 'Please add your name.' }));
-                }}
-                placeholder="Your name"
-                required
-              />
-              {fieldErrors.name ? <small className="onboarding__error-text">{fieldErrors.name}</small> : null}
-            </label>
-
-            <label className="onboarding__field">
-              <span>How can we reach you?</span>
-              <input value={user?.email || ''} readOnly disabled />
-              {fieldErrors.email ? <small className="onboarding__error-text">{fieldErrors.email}</small> : null}
-            </label>
-
-            <label className="onboarding__field">
-              <span>Phone number</span>
-              <input
-                value={phoneNumber}
-                onChange={(event) => {
-                  setPhoneNumber(event.target.value);
-                  clearFieldError('phoneNumber');
-                }}
-                onBlur={() => {
-                  if (!phoneNumber.trim()) setFieldErrors((current) => ({ ...current, phoneNumber: 'Please add your phone number.' }));
-                }}
-                placeholder="+91 9876543210"
-                type="tel"
-              />
-              {fieldErrors.phoneNumber ? <small className="onboarding__error-text">{fieldErrors.phoneNumber}</small> : null}
-            </label>
-
-            <label className="onboarding__field onboarding__field--full">
-              <span>Bio (max 100 words)</span>
-              <textarea
-                value={bio}
-                onChange={(event) => {
-                  setBio(event.target.value);
-                  clearFieldError('bio');
-                }}
-                rows={4}
-                placeholder="Write a short introduction"
-              />
-              <small>{bioWords}/100 words</small>
-              {fieldErrors.bio ? <small className="onboarding__error-text">{fieldErrors.bio}</small> : null}
-            </label>
-
-            <div className="onboarding__section-title onboarding__field--full">
-              <h3>Academic Details</h3>
-              <p>All selections are searchable for faster completion.</p>
-            </div>
-
-            <div className="onboarding__field onboarding__field--full">
-              <span>You are</span>
-              <div className="onboarding__segmented">
-                {PROFILE_TYPES.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={`onboarding__segmented-option ${profileType === option.value ? 'is-active' : ''}`}
-                    onClick={() => {
-                      setProfileType(option.value);
-                      clearFieldError('profileType');
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-              {fieldErrors.profileType ? <small className="onboarding__error-text">{fieldErrors.profileType}</small> : null}
-            </div>
-
-            <SearchableDropdown
-              label="Stream"
-              options={toOptions(STREAM_OPTIONS)}
-              value={stream}
-              onChange={(value) => {
-                setStream(value);
-                clearFieldError('stream');
-              }}
-              placeholder="Search stream"
-              error={fieldErrors.stream}
-            />
-
-            <SearchableDropdown
-              label="Graduation year"
-              options={toOptions(graduationYearOptions)}
-              value={graduationYear}
-              onChange={(value) => {
-                setGraduationYear(value);
-                clearFieldError('graduationYear');
-              }}
-              placeholder="Search graduation year"
-              error={fieldErrors.graduationYear}
-            />
-
-            <label className="onboarding__field">
-              <span>Institution name</span>
-              <textarea
-                value={institutionName}
-                onChange={(event) => {
-                  setInstitutionName(event.target.value);
-                  clearFieldError('institutionName');
-                }}
-                rows={2}
-                placeholder="Type your college name"
-              />
-              {fieldErrors.institutionName ? <small className="onboarding__error-text">{fieldErrors.institutionName}</small> : null}
-            </label>
-
-            <SearchableDropdown
-              label="State"
-              options={toOptions(STATE_OPTIONS)}
-              value={state}
-              onChange={(value) => {
-                setState(value);
-                setCity('');
-                clearFieldError('state');
-                clearFieldError('city');
-              }}
-              placeholder="Search state"
-              error={fieldErrors.state}
-            />
-
-            <SearchableDropdown
-              label="City"
-              options={toOptions(cityOptions)}
-              value={city}
-              onChange={(value) => {
-                setCity(value);
-                clearFieldError('city');
-              }}
-              placeholder={state ? 'Search city' : 'Select state first'}
-              disabled={!state}
-              error={fieldErrors.city}
-            />
-
-            {isWorkingProfessional ? (
+            {/* ════════════════════════════════════════
+                STEP 1 — Common Fields
+            ════════════════════════════════════════ */}
+            {step === 1 && (
               <>
+                {/* Profile Type */}
                 <div className="onboarding__section-title onboarding__field--full">
-                  <h3>Professional Details</h3>
-                  <p>Tell us about your current work profile.</p>
+                  <h3>Who are you?</h3>
+                  <p>Choose the type that best describes you.</p>
                 </div>
 
-                <SearchableDropdown
-                  label="Experience"
-                  options={toOptions(EXPERIENCE_OPTIONS)}
-                  value={experience}
-                  onChange={(value) => {
-                    setExperience(value);
-                    clearFieldError('experience');
-                  }}
-                  placeholder="Search experience"
-                  error={fieldErrors.experience}
+                <div className="onboarding__field onboarding__field--full">
+                  <div className="onboarding__type-grid">
+                    {PROFILE_TYPES.map((pt) => (
+                      <button
+                        key={pt.value}
+                        type="button"
+                        className={`onboarding__type-card${profileType === pt.value ? ' is-active' : ''}`}
+                        onClick={() => { setProfileType(pt.value); clearError('profileType'); }}
+                      >
+                        <span className="onboarding__type-icon">{pt.icon}</span>
+                        <span className="onboarding__type-label">{pt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <FieldError error={fieldErrors.profileType} />
+                </div>
+
+                {/* Avatar */}
+                <div className="onboarding__section-title onboarding__field--full">
+                  <h3>Primary Information</h3>
+                  <p>Your basic identity details.</p>
+                </div>
+
+                <div className="onboarding__field onboarding__field--full onboarding__avatar-row">
+                  <div
+                    className="onboarding__avatar-preview"
+                    style={{ backgroundImage: avatar ? `url(${avatar})` : 'none' }}
+                    onClick={() => avatarInputRef.current?.click()}
+                  >
+                    {!avatar && <span>📷</span>}
+                  </div>
+                  <div className="onboarding__avatar-info">
+                    <p><strong>Profile Photo</strong> <em>(optional)</em></p>
+                    <p>Upload a clear photo of yourself.</p>
+                    <button type="button" className="onboarding__upload-btn" onClick={() => avatarInputRef.current?.click()}>
+                      {avatar ? 'Change Photo' : 'Upload Photo'}
+                    </button>
+                    <input ref={avatarInputRef} type="file" accept="image/*" hidden onChange={handleAvatarChange} />
+                  </div>
+                </div>
+
+                <TextInput
+                  label="Full Name" required
+                  value={name} onChange={(v) => { setName(v); clearError('name'); }}
+                  placeholder="Your full name" error={fieldErrors.name}
                 />
 
-                <SearchableDropdown
-                  label="Tech proficiency"
-                  options={toOptions(TECH_PROFICIENCY_OPTIONS)}
-                  value={techProficiency}
-                  onChange={(value) => {
-                    setTechProficiency(value);
-                    clearFieldError('techProficiency');
-                  }}
-                  placeholder="Search proficiency"
-                  error={fieldErrors.techProficiency}
+                <label className="onboarding__field">
+                  <span>Email</span>
+                  <input value={user?.email || ''} readOnly disabled />
+                </label>
+
+                <TextInput
+                  label="Mobile Number" required type="tel"
+                  value={phoneNumber} onChange={(v) => { setPhoneNumber(v); clearError('phoneNumber'); }}
+                  placeholder="+91 9876543210" error={fieldErrors.phoneNumber}
                 />
 
-                <SearchableDropdown
-                  label="Current role/designation"
-                  options={toOptions(DESIGNATION_OPTIONS)}
-                  value={currentDesignation}
-                  onChange={(value) => {
-                    setCurrentDesignation(value);
-                    clearFieldError('currentDesignation');
-                  }}
-                  placeholder="Search designation"
-                  error={fieldErrors.currentDesignation}
+                <SimpleSelect
+                  label="State" required
+                  options={STATE_OPTIONS} value={state}
+                  onChange={(v) => { setState(v); setCity(''); clearError('state'); clearError('city'); }}
+                  placeholder="Select state" error={fieldErrors.state}
                 />
+
+                <SimpleSelect
+                  label="City" required
+                  options={cityOptions} value={city}
+                  onChange={(v) => { setCity(v); clearError('city'); }}
+                  placeholder={state ? 'Select city' : 'Select state first'}
+                  error={fieldErrors.city}
+                />
+
+                <TagInput
+                  label="Skills" required
+                  value={skills} onChange={(v) => { setSkills(v); clearError('skills'); }}
+                  options={SKILL_OPTIONS}
+                  placeholder="Search or type a skill, press Enter"
+                  error={fieldErrors.skills}
+                />
+
+                <label className="onboarding__field">
+                  <span>LinkedIn URL <em className="onboarding__optional">(optional)</em></span>
+                  <input
+                    type="url"
+                    value={linkedinUrl}
+                    onChange={(e) => setLinkedinUrl(e.target.value)}
+                    placeholder="https://linkedin.com/in/yourprofile"
+                  />
+                </label>
 
                 <label className="onboarding__field onboarding__field--full">
-                  <span>Work summary (max 150 words)</span>
+                  <span>Bio <em className="onboarding__optional">(max 100 words, optional)</em></span>
                   <textarea
-                    value={workSummary}
-                    onChange={(event) => {
-                      setWorkSummary(event.target.value);
-                      clearFieldError('workSummary');
-                    }}
+                    value={bio}
+                    onChange={(e) => { setBio(e.target.value); clearError('bio'); }}
                     rows={4}
-                    placeholder="Summarize your current work"
+                    placeholder="Write a short introduction about yourself…"
                   />
-                  <small>{workSummaryWords}/150 words</small>
-                  {fieldErrors.workSummary ? <small className="onboarding__error-text">{fieldErrors.workSummary}</small> : null}
+                  <small className={bioWords > 100 ? 'onboarding__word-count--over' : 'onboarding__word-count'}>{bioWords}/100 words</small>
+                  <FieldError error={fieldErrors.bio} />
                 </label>
-              </>
-            ) : null}
 
-            <div className="onboarding__section-title onboarding__field--full">
-              <h3>Interests</h3>
-              <p>Select the capsules that best describe you.</p>
-            </div>
-
-            <div className="onboarding__field onboarding__field--full">
-              <div className="onboarding__chips mt-1">
-                {INTEREST_OPTIONS.map((interest) => {
-                  const isSelected = interests.includes(interest);
-                  return (
-                    <button
-                      key={interest}
-                      type="button"
-                      onClick={() => {
-                        if (isSelected) {
-                          setInterests(interests.filter((i) => i !== interest));
-                        } else {
-                          setInterests([...interests, interest]);
-                        }
-                      }}
-                      className="onboarding__chip"
-                      style={{
-                        background: isSelected ? 'linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)' : '#e2e8f0',
-                        color: isSelected ? '#fff' : '#1e293b',
-                        border: isSelected ? '1px solid #0284c7' : '1px solid #cbd5e1',
-                        borderRadius: '999px',
-                        padding: '0.45rem 1rem',
-                        fontWeight: '700',
-                        fontSize: '0.85rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.18s ease',
-                      }}
-                    >
-                      {interest} {isSelected ? '✓' : '+'}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="onboarding__section-title onboarding__field--full">
-              <h3>Skills</h3>
-              <p>Add your strengths to improve recommendations.</p>
-            </div>
-
-            <div className="onboarding__field onboarding__field--full">
-              <div className="onboarding__skills-row">
-                <label className="onboarding__field">
-                  <span>Add skill</span>
-                  <input
-                    value={selectedSkill}
-                    onChange={(event) => {
-                      setSelectedSkill(event.target.value);
-                      clearFieldError('skills');
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault();
-                        addSkill();
-                      }
-                    }}
-                    placeholder="Search or type your own skill"
-                    list="onboarding-skill-options"
-                  />
-                  <datalist id="onboarding-skill-options">
-                    {SKILL_OPTIONS
-                      .filter((skill) => !skills.some((selected) => selected.toLowerCase() === skill.toLowerCase()))
-                      .map((skill) => (
-                        <option key={skill} value={skill} />
-                      ))}
-                  </datalist>
-                </label>
-                <button type="button" className="onboarding__add-btn" onClick={addSkill}>Add skill</button>
-              </div>
-              {fieldErrors.skills ? <small className="onboarding__error-text">{fieldErrors.skills}</small> : null}
-              <div className="onboarding__chips">
-                {skills.length ? skills.map((skill) => (
-                  <button key={skill} type="button" className="onboarding__chip" onClick={() => removeSkill(skill)}>
-                    {skill} x
+                <div className="onboarding__field--full">
+                  <button type="submit" className="onboarding__submit">
+                    Next: Additional Info →
                   </button>
-                )) : <p className="onboarding__no-skill">No skills selected yet.</p>}
-              </div>
-            </div>
+                </div>
+              </>
+            )}
 
-            <button type="submit" className="onboarding__submit" disabled={submitting}>
-              {submitting ? 'Saving profile...' : 'Save and continue'}
-            </button>
+            {/* ════════════════════════════════════════
+                STEP 2 — Type-specific Additional Fields
+            ════════════════════════════════════════ */}
+            {step === 2 && (
+              <>
+                <div className="onboarding__section-title onboarding__field--full">
+                  <h3>
+                    {profileType === 'student' && '🎓 Academic Details'}
+                    {profileType === 'startup_founder' && '🚀 Startup Details'}
+                    {profileType === 'professional' && '💼 Professional Details'}
+                  </h3>
+                  <p>Help others understand your background better.</p>
+                </div>
+
+                {/* ── Student ── */}
+                {profileType === 'student' && (
+                  <>
+                    <label className="onboarding__field onboarding__field--full">
+                      <span>Institution Name <em className="onboarding__required"> *</em></span>
+                      <input
+                        value={institutionName}
+                        onChange={(e) => { setInstitutionName(e.target.value); clearError('institutionName'); }}
+                        placeholder="Your college / university name"
+                        className={fieldErrors.institutionName ? 'onboarding__input--error' : ''}
+                      />
+                      <FieldError error={fieldErrors.institutionName} />
+                    </label>
+
+                    <SimpleSelect label="Degree" required options={DEGREE_OPTIONS} value={degree}
+                      onChange={(v) => { setDegree(v); clearError('degree'); }}
+                      placeholder="Select degree" error={fieldErrors.degree} />
+
+                    <SimpleSelect label="Branch" required options={BRANCH_OPTIONS} value={branch}
+                      onChange={(v) => { setBranch(v); clearError('branch'); }}
+                      placeholder="Select branch" error={fieldErrors.branch} />
+
+                    <SimpleSelect label="Graduation Year" required options={GRADUATION_YEAR_OPTIONS} value={graduationYear}
+                      onChange={(v) => { setGraduationYear(v); clearError('graduationYear'); }}
+                      placeholder="Select year" error={fieldErrors.graduationYear} />
+
+                    <TextInput label="GitHub URL" type="url"
+                      value={githubUrl} onChange={setGithubUrl}
+                      placeholder="https://github.com/yourprofile" />
+
+                    <TextInput label="Resume URL" type="url"
+                      value={resumeUrl} onChange={setResumeUrl}
+                      placeholder="Link to your resume (Google Drive, Notion, etc.)" />
+                  </>
+                )}
+
+                {/* ── Startup Founder ── */}
+                {profileType === 'startup_founder' && (
+                  <>
+                    <TextInput label="Startup Name" required
+                      value={startupName} onChange={(v) => { setStartupName(v); clearError('startupName'); }}
+                      placeholder="Your startup's name" error={fieldErrors.startupName} />
+
+                    <SimpleSelect label="Industry" required options={INDUSTRY_OPTIONS} value={industry}
+                      onChange={(v) => { setIndustry(v); clearError('industry'); }}
+                      placeholder="Select industry" error={fieldErrors.industry} />
+
+                    <SimpleSelect label="Stage" required options={STARTUP_STAGE_OPTIONS} value={startupStage}
+                      onChange={(v) => { setStartupStage(v); clearError('startupStage'); }}
+                      placeholder="Select stage (MVP / Idea / Funded)" error={fieldErrors.startupStage} />
+
+                    <TextInput label="Website" type="url"
+                      value={startupWebsite} onChange={setStartupWebsite}
+                      placeholder="https://yourstartup.com (optional)" />
+
+                    <label className="onboarding__field onboarding__field--full">
+                      <span>Startup Description <em className="onboarding__optional">(max 100 words, optional)</em></span>
+                      <textarea
+                        value={startupDescription}
+                        onChange={(e) => { setStartupDescription(e.target.value); clearError('startupDescription'); }}
+                        rows={4}
+                        placeholder="What does your startup do? What problem does it solve?"
+                      />
+                      <small className={descWords > 100 ? 'onboarding__word-count--over' : 'onboarding__word-count'}>{descWords}/100 words</small>
+                      <FieldError error={fieldErrors.startupDescription} />
+                    </label>
+                  </>
+                )}
+
+                {/* ── Professional ── */}
+                {profileType === 'professional' && (
+                  <>
+                    <TextInput label="Company" required
+                      value={company} onChange={(v) => { setCompany(v); clearError('company'); }}
+                      placeholder="Where do you work?" error={fieldErrors.company} />
+
+                    <SimpleSelect label="Designation" required options={DESIGNATION_OPTIONS} value={currentDesignation}
+                      onChange={(v) => { setCurrentDesignation(v); clearError('currentDesignation'); }}
+                      placeholder="Select your role" error={fieldErrors.currentDesignation} />
+
+                    <SimpleSelect label="Experience" required options={EXPERIENCE_OPTIONS} value={experience}
+                      onChange={(v) => { setExperience(v); clearError('experience'); }}
+                      placeholder="Years of experience" error={fieldErrors.experience} />
+
+                    <SimpleSelect label="Industry" options={INDUSTRY_OPTIONS} value={proIndustry}
+                      onChange={setProIndustry}
+                      placeholder="Select industry (optional)" />
+
+                    <TextInput label="Portfolio / Resume URL" type="url"
+                      value={portfolioUrl} onChange={setPortfolioUrl}
+                      placeholder="Link to your portfolio or resume (optional)" />
+                  </>
+                )}
+
+                <div className="onboarding__field--full onboarding__btn-row">
+                  <button type="button" className="onboarding__back-btn" onClick={handleBack}>
+                    ← Back
+                  </button>
+                  <button type="submit" className="onboarding__submit" disabled={submitting}>
+                    {submitting ? 'Saving profile…' : 'Save & Continue 🎉'}
+                  </button>
+                </div>
+              </>
+            )}
+
           </form>
         </section>
       </section>

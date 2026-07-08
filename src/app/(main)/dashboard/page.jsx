@@ -45,10 +45,23 @@ function buildForm(user) {
     currentDesignation: user?.currentDesignation || '',
     workSummary: user?.workSummary || '',
     skills: Array.isArray(user?.skills) ? user.skills : [],
-    linkedin: user?.socials?.linkedin || '',
-    github: user?.socials?.github || '',
+    linkedin: user?.socials?.linkedin || user?.linkedinUrl || '',
+    github: user?.socials?.github || user?.githubUrl || '',
     interests: Array.isArray(user?.socials?.interests) ? user.socials.interests : [],
     phoneNumber: user?.phoneNumber || '',
+    // New participant profile fields
+    degree: user?.degree || '',
+    branch: user?.branch || '',
+    linkedinUrl: user?.linkedinUrl || user?.socials?.linkedin || '',
+    githubUrl: user?.githubUrl || user?.socials?.github || '',
+    resumeUrl: user?.resumeUrl || '',
+    startupName: user?.startupName || '',
+    industry: user?.industry || '',
+    startupStage: user?.startupStage || '',
+    startupWebsite: user?.startupWebsite || '',
+    startupDescription: user?.startupDescription || '',
+    portfolioUrl: user?.portfolioUrl || '',
+    company: user?.company || '',
   };
 }
 
@@ -314,19 +327,29 @@ export default function Profile() {
         organizationName: form.organizationName,
         bio: form.bio,
         profileType: form.profileType,
-        stream: form.stream,
+        stream: form.branch || form.stream,
+        branch: form.branch,
         graduationYear: form.graduationYear,
+        degree: form.degree,
         state: form.state,
         city: form.city,
-        experience: form.profileType === 'working_professional' ? form.experience : '',
-        techProficiency: form.profileType === 'working_professional' ? form.techProficiency : '',
-        currentDesignation: form.profileType === 'working_professional' ? form.currentDesignation : '',
-        workSummary: form.profileType === 'working_professional' ? form.workSummary : '',
-        headline: form.profileType === 'working_professional' ? form.currentDesignation : '',
+        experience: form.experience,
+        currentDesignation: form.currentDesignation,
+        headline: form.currentDesignation || '',
         skills: Array.isArray(form.skills) ? form.skills.map((item) => item.trim()).filter(Boolean) : [],
+        linkedinUrl: form.linkedinUrl || form.linkedin || '',
+        githubUrl: form.githubUrl || form.github || '',
+        resumeUrl: form.resumeUrl,
+        startupName: form.startupName,
+        industry: form.industry,
+        startupStage: form.startupStage,
+        startupWebsite: form.startupWebsite,
+        startupDescription: form.startupDescription,
+        portfolioUrl: form.portfolioUrl,
+        company: form.company,
         socials: {
-          linkedin: urlFields[0] || '',
-          github: urlFields[1] || '',
+          linkedin: form.linkedinUrl || form.linkedin || urlFields[0] || '',
+          github: form.githubUrl || form.github || urlFields[1] || '',
           additionalUrls: urlFields.slice(2).map((item) => item.trim()).filter(Boolean),
           instagram: user.socials?.instagram || '',
           interests: Array.isArray(form.interests) ? form.interests : [],
@@ -458,11 +481,6 @@ export default function Profile() {
                   />
                 </label>
 
-                <label className="profile-page__span-2">
-                  Bio
-                  <textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} rows={4} />
-                </label>
-
                 <label>
                   City
                   <input value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} />
@@ -474,30 +492,101 @@ export default function Profile() {
                 </label>
 
                 <label>
-                  Institution
-                  <input value={form.institutionName} onChange={(event) => setForm({ ...form, institutionName: event.target.value })} />
+                  Skills
+                  <input value={Array.isArray(form.skills) ? form.skills.join(', ') : form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value.split(',').map(s => s.trim()).filter(Boolean) })} placeholder="React, UI Design, Product Strategy" />
                 </label>
 
                 <label>
-                  Skills
-                  <input value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} placeholder="React, UI Design, Product Strategy" />
+                  LinkedIn URL
+                  <input type="url" value={form.linkedinUrl} onChange={(event) => setForm({ ...form, linkedinUrl: event.target.value })} placeholder="https://linkedin.com/in/you" />
                 </label>
 
                 <label className="profile-page__span-2">
-                  Social URLs
-                  <span className="profile-page__field-note">Add your public links for the profile surface.</span>
+                  Bio
+                  <textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} rows={4} />
                 </label>
 
-                <div className="profile-page__settings-url-list profile-page__span-2">
-                  {urlFields.map((url, index) => (
-                    <input
-                      key={`url-${index}`}
-                      value={url}
-                      onChange={(event) => handleUrlChange(index, event.target.value)}
-                      placeholder={index === 0 ? 'https://linkedin.com/in/you' : index === 1 ? 'https://github.com/you' : 'https://example.com'}
-                    />
-                  ))}
-                </div>
+                {/* Student additional fields */}
+                {(form.profileType === 'student' || !form.profileType) && (
+                  <>
+                    <label className="profile-page__span-2">
+                      Institution Name
+                      <input value={form.institutionName} onChange={(event) => setForm({ ...form, institutionName: event.target.value })} placeholder="Your college / university" />
+                    </label>
+                    <label>
+                      Degree
+                      <input value={form.degree} onChange={(event) => setForm({ ...form, degree: event.target.value })} placeholder="e.g. B.Tech" />
+                    </label>
+                    <label>
+                      Branch
+                      <input value={form.branch} onChange={(event) => setForm({ ...form, branch: event.target.value })} placeholder="e.g. Computer Science" />
+                    </label>
+                    <label>
+                      Graduation Year
+                      <input value={form.graduationYear} onChange={(event) => setForm({ ...form, graduationYear: event.target.value })} placeholder="e.g. 2026" />
+                    </label>
+                    <label>
+                      GitHub URL
+                      <input type="url" value={form.githubUrl} onChange={(event) => setForm({ ...form, githubUrl: event.target.value })} placeholder="https://github.com/you" />
+                    </label>
+                    <label>
+                      Resume URL
+                      <input type="url" value={form.resumeUrl} onChange={(event) => setForm({ ...form, resumeUrl: event.target.value })} placeholder="Link to your resume" />
+                    </label>
+                  </>
+                )}
+
+                {/* Startup Founder additional fields */}
+                {form.profileType === 'startup_founder' && (
+                  <>
+                    <label>
+                      Startup Name
+                      <input value={form.startupName} onChange={(event) => setForm({ ...form, startupName: event.target.value })} placeholder="Your startup name" />
+                    </label>
+                    <label>
+                      Industry
+                      <input value={form.industry} onChange={(event) => setForm({ ...form, industry: event.target.value })} placeholder="e.g. Technology" />
+                    </label>
+                    <label>
+                      Stage
+                      <input value={form.startupStage} onChange={(event) => setForm({ ...form, startupStage: event.target.value })} placeholder="MVP / Idea / Funded" />
+                    </label>
+                    <label>
+                      Startup Website
+                      <input type="url" value={form.startupWebsite} onChange={(event) => setForm({ ...form, startupWebsite: event.target.value })} placeholder="https://yourstartup.com" />
+                    </label>
+                    <label className="profile-page__span-2">
+                      Startup Description
+                      <textarea value={form.startupDescription} onChange={(event) => setForm({ ...form, startupDescription: event.target.value })} rows={3} placeholder="What does your startup do?" />
+                    </label>
+                  </>
+                )}
+
+                {/* Professional additional fields */}
+                {form.profileType === 'professional' && (
+                  <>
+                    <label>
+                      Company
+                      <input value={form.company} onChange={(event) => setForm({ ...form, company: event.target.value })} placeholder="Where do you work?" />
+                    </label>
+                    <label>
+                      Designation
+                      <input value={form.currentDesignation} onChange={(event) => setForm({ ...form, currentDesignation: event.target.value })} placeholder="Your role / designation" />
+                    </label>
+                    <label>
+                      Experience
+                      <input value={form.experience} onChange={(event) => setForm({ ...form, experience: event.target.value })} placeholder="e.g. 3-5 years" />
+                    </label>
+                    <label>
+                      Industry
+                      <input value={form.industry} onChange={(event) => setForm({ ...form, industry: event.target.value })} placeholder="e.g. Technology" />
+                    </label>
+                    <label>
+                      Portfolio / Resume URL
+                      <input type="url" value={form.portfolioUrl} onChange={(event) => setForm({ ...form, portfolioUrl: event.target.value })} placeholder="Link to portfolio or resume" />
+                    </label>
+                  </>
+                )}
               </div>
 
               <div className="profile-page__settings-actions-row">
@@ -628,7 +717,61 @@ export default function Profile() {
               )}
             </section>
 
+            {/* Additional Info Section */}
+            {(form.profileType === 'student' || form.profileType === 'startup_founder' || form.profileType === 'professional') && (
+              <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-indigo-600">
+                    <span className="material-symbols-outlined">
+                      {form.profileType === 'student' ? 'school' : form.profileType === 'startup_founder' ? 'rocket_launch' : 'business_center'}
+                    </span>
+                    <h2 className="text-xl font-black text-gray-900">
+                      {form.profileType === 'student' ? 'Academic Details' : form.profileType === 'startup_founder' ? 'Startup Details' : 'Professional Details'}
+                    </h2>
+                  </div>
+                  <button onClick={() => navigate('/dashboard/settings')} className="text-indigo-600 font-bold text-xs hover:underline">Edit</button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Student */}
+                  {(form.profileType === 'student' || !form.profileType) && (
+                    <>
+                      {form.institutionName && <div className="col-span-2"><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Institution</p><p className="text-sm font-bold text-gray-800 mt-0.5">{form.institutionName}</p></div>}
+                      {form.degree && <div><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Degree</p><p className="text-sm font-bold text-gray-800 mt-0.5">{form.degree}</p></div>}
+                      {form.branch && <div><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Branch</p><p className="text-sm font-bold text-gray-800 mt-0.5">{form.branch}</p></div>}
+                      {form.graduationYear && <div><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Graduation Year</p><p className="text-sm font-bold text-gray-800 mt-0.5">{form.graduationYear}</p></div>}
+                      {form.githubUrl && <div><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">GitHub</p><a href={form.githubUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-indigo-600 hover:underline mt-0.5 block truncate">{form.githubUrl.replace(/^https?:\/\/(www\.)?/, '')}</a></div>}
+                      {form.resumeUrl && <div><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Resume</p><a href={form.resumeUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-indigo-600 hover:underline mt-0.5 block">View Resume ↗</a></div>}
+                    </>
+                  )}
+
+                  {/* Startup Founder */}
+                  {form.profileType === 'startup_founder' && (
+                    <>
+                      {form.startupName && <div><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Startup Name</p><p className="text-sm font-bold text-gray-800 mt-0.5">{form.startupName}</p></div>}
+                      {form.industry && <div><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Industry</p><p className="text-sm font-bold text-gray-800 mt-0.5">{form.industry}</p></div>}
+                      {form.startupStage && <div><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Stage</p><span className="inline-block mt-0.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg">{form.startupStage}</span></div>}
+                      {form.startupWebsite && <div><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Website</p><a href={form.startupWebsite} target="_blank" rel="noreferrer" className="text-sm font-bold text-indigo-600 hover:underline mt-0.5 block truncate">{form.startupWebsite.replace(/^https?:\/\/(www\.)?/, '')}</a></div>}
+                      {form.startupDescription && <div className="col-span-2"><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">About Startup</p><p className="text-sm text-gray-600 mt-0.5 leading-relaxed">{form.startupDescription}</p></div>}
+                    </>
+                  )}
+
+                  {/* Professional */}
+                  {form.profileType === 'professional' && (
+                    <>
+                      {form.company && <div><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Company</p><p className="text-sm font-bold text-gray-800 mt-0.5">{form.company}</p></div>}
+                      {form.currentDesignation && <div><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Designation</p><p className="text-sm font-bold text-gray-800 mt-0.5">{form.currentDesignation}</p></div>}
+                      {form.experience && <div><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Experience</p><p className="text-sm font-bold text-gray-800 mt-0.5">{form.experience}</p></div>}
+                      {form.industry && <div><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Industry</p><p className="text-sm font-bold text-gray-800 mt-0.5">{form.industry}</p></div>}
+                      {form.portfolioUrl && <div className="col-span-2"><p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Portfolio / Resume</p><a href={form.portfolioUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-indigo-600 hover:underline mt-0.5 block">View Portfolio ↗</a></div>}
+                    </>
+                  )}
+                </div>
+              </section>
+            )}
+
             {/* Skills Section */}
+
             <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-blue-600">

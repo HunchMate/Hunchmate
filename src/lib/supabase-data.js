@@ -103,6 +103,19 @@ function mapProfileToApp(row) {
     termsAcceptedAt: row.terms_accepted_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    // New participant profile fields
+    degree: row.degree || '',
+    branch: row.branch || '',
+    linkedinUrl: row.linkedin_url || '',
+    githubUrl: row.github_url || '',
+    resumeUrl: row.resume_url || '',
+    startupName: row.startup_name || '',
+    industry: row.industry || '',
+    startupStage: row.startup_stage || '',
+    startupWebsite: row.startup_website || '',
+    startupDescription: row.startup_description || '',
+    portfolioUrl: row.portfolio_url || '',
+    company: row.company || '',
   };
 }
 
@@ -149,6 +162,19 @@ function mapProfileToDb(app) {
   if (app.socials !== undefined) db.socials = app.socials;
   if (app.termsAccepted !== undefined) db.terms_accepted = app.termsAccepted;
   if (app.termsAcceptedAt !== undefined) db.terms_accepted_at = app.termsAcceptedAt;
+  // New participant profile fields
+  if (app.degree !== undefined) db.degree = app.degree;
+  if (app.branch !== undefined) db.branch = app.branch;
+  if (app.linkedinUrl !== undefined) db.linkedin_url = app.linkedinUrl;
+  if (app.githubUrl !== undefined) db.github_url = app.githubUrl;
+  if (app.resumeUrl !== undefined) db.resume_url = app.resumeUrl;
+  if (app.startupName !== undefined) db.startup_name = app.startupName;
+  if (app.industry !== undefined) db.industry = app.industry;
+  if (app.startupStage !== undefined) db.startup_stage = app.startupStage;
+  if (app.startupWebsite !== undefined) db.startup_website = app.startupWebsite;
+  if (app.startupDescription !== undefined) db.startup_description = app.startupDescription;
+  if (app.portfolioUrl !== undefined) db.portfolio_url = app.portfolioUrl;
+  if (app.company !== undefined) db.company = app.company;
   return db;
 }
 
@@ -384,18 +410,36 @@ export async function updateUserProfile(uid, updates = {}) {
 
   const dbPayload = mapProfileToDb(updates);
 
-  const { data, error } = await supabase
+  // Use the authenticated client so RLS auth.uid() = id check passes.
+  const client = await getAuthClient();
+
+  const { data, error } = await client
     .from('profiles')
     .update(dbPayload)
     .eq('id', uid)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('updateUserProfile error:', error.message);
     throw error;
   }
-  return mapProfileToApp(data);
+
+  if (data) {
+    return mapProfileToApp(data);
+  }
+
+  // Row exists but RLS filtered it out or update touched 0 rows — read it back
+  const { data: readData, error: readError } = await client
+    .from('profiles')
+    .select('*')
+    .eq('id', uid)
+    .maybeSingle();
+
+  if (readError) throw readError;
+  if (readData) return mapProfileToApp(readData);
+
+  throw new Error('Profile update failed: no data returned.');
 }
 
 // ==========================================

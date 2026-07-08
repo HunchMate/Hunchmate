@@ -463,17 +463,21 @@
 
 /* Horizontal Control Bar */
 .explore-controls {
-  background: #f9fafd;
-  border-bottom: 1px solid rgba(112, 126, 161, 0.1);
-  padding: 16px 0;
-  margin-bottom: 24px;
+    max-width: 900px;
+    margin: -28px auto 28px;
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.05);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 12px 35px rgba(15,23,42,.08);
 }
 
 .explore-controls__wrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+    display:flex;
+    align-items:center;
+    gap:18px;
+    justify-content:space-between;
+    flex-wrap:wrap;
 }
 
 .explore-controls__category-wrap {
@@ -481,10 +485,10 @@
 }
 
 .explore-controls__category {
-  min-height: 44px;
-  min-width: 140px;
+  height: 52px;
+  width: 2  40px;
   border: 1.5px solid #d4dce8;
-  border-radius: 12px;
+  border-radius: 14px;
   background: #ffffff;
   color: #1f2d49;
   padding: 10px 14px;
@@ -541,7 +545,7 @@
 }
 
 .explore-controls__search-wrapper {
-  flex: 0 1 280px;
+  flex:1 ;
   display: flex;
   align-items: center;
   gap: 8px;

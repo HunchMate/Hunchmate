@@ -242,6 +242,14 @@ function mapRegistrationToApp(row) {
   return {
     ...row,
     id: String(row.id),
+    eventId: row.event_id || row.eventId,
+    userId: row.user_id || row.userId,
+    teamName: row.team_name || row.teamName,
+    qrToken: row.qr_token || row.qrToken,
+    checkedIn: row.checked_in !== undefined ? row.checked_in : row.checkedIn,
+    checkedInAt: row.checked_in_at || row.checkedInAt,
+    createdAt: row.created_at || row.createdAt,
+    updatedAt: row.updated_at || row.updatedAt,
   };
 }
 

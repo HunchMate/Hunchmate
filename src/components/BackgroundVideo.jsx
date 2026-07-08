@@ -55,7 +55,7 @@ const BackgroundVideo = memo(function BackgroundVideo() {
   // Skip video on mobile for better performance
   if (isMobile) {
     return (
-      <div className="fixed inset-0 -z-10 w-full h-full overflow-hidden bg-gradient-to-br from-orange-500 via-purple-600 to-blue-600" />
+      <div className="fixed inset-0 -z-10 w-full h-full overflow-hidden bg-gradient-to-br from-orange-500 via-orange-500 to-indigo-950" />
     )
   }
 

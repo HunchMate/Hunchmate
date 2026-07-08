@@ -13,7 +13,7 @@ const GrainyGradient = memo(function GrainyGradient() {
   
   // Skip expensive animations on mobile
   if (isMobile || prefersReducedMotion) {
-    return <div className="fixed inset-0 -z-10 bg-gradient-to-br from-orange-500 via-purple-600 to-blue-600" />
+    return <div className="fixed inset-0 -z-10 bg-gradient-to-br from-orange-500 via-orange-500 to-indigo-950" />
   }
 
   return (

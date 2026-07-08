@@ -146,7 +146,7 @@
 
 .auth-modern__field input {
   width: 100%;
-  min-height: 42px;
+  min-height: 44px;
   border: none;
   outline: none;
   background: transparent;
@@ -166,7 +166,7 @@
 }
 
 .auth-modern__roles button {
-  min-height: 40px;
+  min-height: 44px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.05);
@@ -198,7 +198,7 @@
 
 .auth-modern__submit {
   margin-top: 2px;
-  min-height: 42px;
+  min-height: 44px;
   border: 1px solid #ffffff;
   border-radius: 10px;
   background: #f4f6fb;
@@ -292,7 +292,7 @@
 }
 
 .auth-modern__socials button {
-  min-height: 40px;
+  min-height: 44px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: #f6f8fc;
@@ -356,7 +356,7 @@
 /* ── StatefulButton ── */
 .sb-btn {
   margin-top: 2px;
-  min-height: 42px;
+  min-height: 44px;
   min-width: 120px;
   width: 100%;
   border: 1px solid #ffffff;

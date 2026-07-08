@@ -16,7 +16,7 @@ export default function HostEventRedirect() {
       navigate('/host-signup');
     } else if (user.role === 'organizer' || user.role === 'admin') {
       // If host/organizer, go to create event page
-      navigate('/organizer/create-event');
+      navigate('/organizer/dashboard');
     } else {
       // If participant, go to host signup which displays the upgrade instructions card
       navigate('/host-signup');

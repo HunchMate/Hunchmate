@@ -2,7 +2,7 @@
 
 .hc-card {
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 22px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -16,9 +16,11 @@
 }
 
 .hc-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 30px rgba(234, 122, 50, 0.15), 0 4px 12px rgba(0, 0, 0, 0.06);
-  border-color: rgba(234, 122, 50, 0.2);
+  transform: translateY(-8px) scale(1.015);
+  box-shadow:
+    0 20px 45px rgba(0,0,0,0.10),
+    0 10px 30px rgba(234,122,50,0.18);
+  border-color: rgba(234,122,50,.25);
 }
 
 @keyframes hcFadeUp {
@@ -35,7 +37,7 @@
 /* ── Image / Header ── */
 .hc-card__image {
   position: relative;
-  height: 180px;
+  height: 200px;
   overflow: hidden;
   display: flex;
   align-items: flex-start;
@@ -43,6 +45,18 @@
   padding: 14px;
 }
 
+.hc-card__image::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(
+        to top,
+        rgba(0,0,0,.28),
+        rgba(0,0,0,0)
+    );
+    opacity:.8;
+    transition:.35s;
+}
 /* Category badge — top-left */
 .hc-card__category-badge {
   padding: 4px 12px;
@@ -120,7 +134,7 @@
 
 /* ── Body ── */
 .hc-card__body {
-  padding: 18px 18px 16px;
+  padding:22px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -141,6 +155,7 @@
 
 .hc-card:hover .hc-card__title {
   color: #ea7a32;
+  letter-spacing:.03em;
 }
 
 /* Meta rows */
@@ -153,8 +168,8 @@
 .hc-card__meta-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
+  gap: 10px;
+  font-size: 0.84rem;
   color: #64748b;
 }
 
@@ -195,12 +210,15 @@
   font-size: 0.78rem;
   font-weight: 700;
   color: white;
-  transition: all 0.2s ease;
+  transition:
+transform .25s ease,
+box-shadow .25s ease,
+background .25s ease;
   white-space: nowrap;
 }
 
 .hc-card:hover .hc-card__cta {
-  transform: scale(1.04);
+  transform:translateY(-2px) scale(1.05);
   box-shadow: 0 4px 14px rgba(234, 122, 50, 0.35);
 }
 
@@ -230,4 +248,22 @@
     transform: none !important;
     box-shadow: initial !important;
   }
+}
+.hc-card{
+    cursor:pointer;
+}
+
+.hc-card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:22px;
+    pointer-events:none;
+    opacity:0;
+    transition:.35s;
+    box-shadow:0 0 0 2px rgba(234,122,50,.18);
+}
+
+.hc-card:hover::before{
+    opacity:1;
 }

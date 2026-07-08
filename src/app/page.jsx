@@ -76,7 +76,7 @@ export default function Landing() {
   return (
     <>
       {/* Disable expensive WebGL gradient on mobile and for reduced-motion users */}
-      {!isMobile && !prefersReducedMotion ? <GrainyGradient /> : <div className="fixed inset-0 -z-10 bg-gradient-to-br from-orange-500 via-purple-600 to-blue-600" />}
+      {!isMobile && !prefersReducedMotion ? <GrainyGradient /> : <div className="fixed inset-0 -z-10 bg-gradient-to-br from-orange-500 via-orange-500 to-indigo-950" />}
       <SiteHeader />
       <div className="relative z-10 w-full overflow-hidden">
         <div

@@ -81,7 +81,7 @@ export default function EventCard({ event, index = 0 }) {
 
       {/* Body */}
       <div className="hc-card__body">
-        <h3 className="hc-card__title">{title}</h3>
+        <h3 className="hc-card__title" title={title}>{title}</h3>
 
         <div className="hc-card__meta">
           <div className="hc-card__meta-row">

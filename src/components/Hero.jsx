@@ -30,7 +30,7 @@ export default function Hero() {
   return (
     <section
       id="hero-section"
-      className="relative z-10 flex flex-col items-center justify-center text-center px-6 pt-16 pb-20 lg:pt-20 lg:pb-24"
+      className="relative z-10 flex min-h-[90vh] flex-col items-center justify-center text-center px-6 pt-24 pb-16 sm:px-8 lg:px-12"
     >
       {/* Headline */}
       {shouldAnimate ? (
@@ -39,7 +39,7 @@ export default function Hero() {
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          className="text-white text-4xl sm:text-5xl lg:text-6xl leading-[1.15] max-w-2xl font-semibold"
+          className="max-w-4xl text-balance text-white text-4xl sm:text-5xl md:text-6xl xl:text-7xl leading-tight font-bold"
           style={{
             fontFamily: '"Plus Jakarta Sans", sans-serif',
             letterSpacing: '-0.02em',
@@ -49,7 +49,7 @@ export default function Hero() {
         </Motion.h1>
       ) : (
         <h1
-          className="text-white text-4xl sm:text-5xl lg:text-6xl leading-[1.15] max-w-2xl font-semibold"
+          className="max-w-4xl text-balance text-white text-4xl sm:text-5xl md:text-6xl xl:text-7xl leading-tight font-bold"
           style={{
             fontFamily: '"Plus Jakarta Sans", sans-serif',
             letterSpacing: '-0.02em',
@@ -66,14 +66,14 @@ export default function Hero() {
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          className="text-white/65 text-base sm:text-lg max-w-lg mt-6 leading-relaxed"
+          className="mt-8 max-w-2xl text-white/70 text-base sm:text-lg md:text-xl leading-relaxed"
           style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
         >
           A comprehensive infrastructure that powers all your modern programs, Seamlessly.
         </Motion.p>
       ) : (
         <p
-          className="text-white/65 text-base sm:text-lg max-w-lg mt-6 leading-relaxed"
+          className="mt-10 flex w-full flex-col items-center gap-4 sm:w-auto sm:flex-row"
           style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
         >
           A comprehensive infrastructure that powers all your modern programs, Seamlessly.
@@ -87,12 +87,12 @@ export default function Hero() {
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          className="flex items-center gap-3 mt-10"
+          className="mt-10 flex w-full flex-col items-center gap-4 sm:w-auto sm:flex-row"
         >
           <a
             id="cta-innovators"
             href="/signup"
-            className="inline-flex items-center justify-center px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 hover:scale-[1.03]"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 hover:-translate-y-1 hover:scale-105 shadow-lg hover:shadow-xl"
             style={{
               background: 'rgba(255,255,255,0.95)',
               color: '#1a1a1a',
@@ -156,7 +156,7 @@ export default function Hero() {
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          className="flex items-center gap-3 mt-12"
+          className="flex items-center gap-3 mt-16"
         >
           <div className="flex -space-x-2">
             {['A', 'P', 'R', 'K', 'S'].map((char, i) => (
@@ -182,7 +182,7 @@ export default function Hero() {
           </span>
         </Motion.div>
       ) : (
-        <div className="flex items-center gap-3 mt-12">
+        <div className="flex items-center gap-3 mt-16">
           <div className="flex -space-x-2">
             {['A', 'P', 'R', 'K', 'S'].map((char, i) => (
               <div

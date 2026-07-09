@@ -65,11 +65,16 @@ const EVENT_DETAIL_TABS = [
 const DEFAULT_ADMIN_SETTINGS = {
   platformFee: '5',
   paymentGateway: 'Razorpay',
+  paymentGatewayKeyId: '',
+  paymentGatewaySecret: '',
   emailSender: 'Hunchmate',
+  emailSenderEmail: '',
   emailReplyTo: '',
   credentialStorage: 'Supabase Storage',
   platformName: 'Hunchmate',
   supportEmail: '',
+  certFooter: '',
+  signatureName: '',
 }
 
 function normalizeUserRole(role) {
@@ -450,7 +455,7 @@ export default function AdminDashboard() {
   const loadUsersForSection = useCallback(async (section) => {
     const role = section === 'organizers' ? 'organizer'
       : section === 'participants' ? 'participant'
-      : ''
+        : ''
 
     if (useLocalMode) {
       const fallback = buildLocalDashboardData()
@@ -484,7 +489,7 @@ export default function AdminDashboard() {
   const loadUsers = useCallback(async () => {
     const role = activeSection === 'organizers' ? 'organizer'
       : activeSection === 'participants' ? 'participant'
-      : ''
+        : ''
 
     if (useLocalMode) {
       const fallback = buildLocalDashboardData()
@@ -914,13 +919,12 @@ export default function AdminDashboard() {
   const handlePaymentsExport = () => {
     if (!selectedEvent || selectedRegistrations.length === 0) return
     const rows = selectedRegistrations.map((reg) => ({
-      'Registration ID': reg.id || '',
+      'Transaction ID': reg?.transactionId || reg?.payment?.transactionId || '',
       Name: getRegistrationName(reg),
       Email: getRegistrationEmail(reg),
-      'Payment Status': getPaymentStatus(reg),
       Amount: Number(reg?.paymentAmount || reg?.amount || reg?.payment?.amount || selectedPaymentStats.registrationFee || 0) || 0,
-      'Transaction ID': reg?.transactionId || reg?.payment?.transactionId || '',
-      'Registration Date': reg.createdAt || reg.registeredAt || '',
+      Status: getPaymentStatus(reg),
+      'Payment Date': reg.createdAt || reg.registeredAt || '',
     }))
     downloadCSV(rows, `${selectedEvent.title || 'event'}-payments.csv`)
   }
@@ -1237,25 +1241,23 @@ export default function AdminDashboard() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Registration</th>
                     <th>Name</th>
-                    <th>Payment</th>
-                    <th>Amount</th>
-                    <th>Registered</th>
+                    <th>Transaction ID</th>
+                    <th>Transaction Amount</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {selectedRegistrations.map((reg) => (
                     <tr key={reg.id}>
-                      <td>{reg.id}</td>
                       <td>{getRegistrationName(reg)}</td>
-                      <td>{getPaymentStatus(reg)}</td>
+                      <td>{reg?.transactionId || reg?.payment?.transactionId || 'N/A'}</td>
                       <td>{Number(reg?.paymentAmount || reg?.amount || reg?.payment?.amount || selectedPaymentStats.registrationFee || 0) || 0}</td>
-                      <td>{formatDate(reg.createdAt || reg.registeredAt)}</td>
+                      <td><span className={getStatusClassName(getPaymentStatus(reg) === 'paid' ? 'live' : 'upcoming')}>{getPaymentStatus(reg)}</span></td>
                     </tr>
                   ))}
                   {selectedRegistrations.length === 0 ? (
-                    <tr><td colSpan={5} className="admin-empty">No transactions found for this event.</td></tr>
+                    <tr><td colSpan={4} className="admin-empty">No transactions found for this event.</td></tr>
                   ) : null}
                 </tbody>
               </table>
@@ -1300,10 +1302,135 @@ export default function AdminDashboard() {
         ) : null}
 
         {activeEventTab === 'Settings' ? (
-          <div className="admin-settings-grid">
-            <article className="admin-settings-card"><div><h3>Event Visibility</h3><p>{selectedEvent.visibility || 'public'}</p></div></article>
-            <article className="admin-settings-card"><div><h3>Credentials</h3><p>{selectedEvent.credentialEnabled ? 'Enabled' : 'Disabled'}</p></div></article>
-            <article className="admin-settings-card"><div><h3>Registration Mode</h3><p>{selectedEvent.registrationMode || selectedEvent.teamMode || 'Standard'}</p></div></article>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+            {/* Platform Fee */}
+            <article className="admin-settings-card" style={{ width: '100%' }}>
+              <div>
+                <h3>Platform Fee (%)</h3>
+                <label className="admin-field">
+                  <span>Fee percentage</span>
+                  <select
+                    value={adminSettings.platformFee}
+                    onChange={(e) => updateAdminSetting('platformFee', e.target.value)}
+                  >
+                    <option value="2">2%</option>
+                    <option value="3">3%</option>
+                    <option value="5">5%</option>
+                    <option value="10">10%</option>
+                  </select>
+                </label>
+                <div className="admin-actions" style={{ marginTop: '0.75rem' }}>
+                  <button type="button" onClick={saveAdminSettings}>Save</button>
+                </div>
+              </div>
+            </article>
+
+            {/* Payment Gateway */}
+            <article className="admin-settings-card" style={{ width: '100%' }}>
+              <div>
+                <h3>Payment Gateway</h3>
+                <label className="admin-field">
+                  <span>Provider</span>
+                  <select
+                    value={adminSettings.paymentGateway}
+                    onChange={(e) => updateAdminSetting('paymentGateway', e.target.value)}
+                  >
+                    <option value="Razorpay">Razorpay</option>
+                    <option value="PayU">PayU</option>
+                  </select>
+                </label>
+                <label className="admin-field">
+                  <span>Key ID</span>
+                  <input
+                    value={adminSettings.paymentGatewayKeyId}
+                    onChange={(e) => updateAdminSetting('paymentGatewayKeyId', e.target.value)}
+                    placeholder="Enter Key ID"
+                  />
+                </label>
+                <label className="admin-field">
+                  <span>Secret Key</span>
+                  <input
+                    type="password"
+                    value={adminSettings.paymentGatewaySecret}
+                    onChange={(e) => updateAdminSetting('paymentGatewaySecret', e.target.value)}
+                    placeholder="Enter Secret Key"
+                  />
+                </label>
+                <div className="admin-actions" style={{ marginTop: '0.75rem' }}>
+                  <button type="button" onClick={saveAdminSettings}>Save</button>
+                </div>
+              </div>
+            </article>
+
+            {/* Email Settings */}
+            <article className="admin-settings-card" style={{ width: '100%' }}>
+              <div>
+                <h3>Email Settings</h3>
+                <label className="admin-field">
+                  <span>Sender Email</span>
+                  <input
+                    value={adminSettings.emailSenderEmail}
+                    onChange={(e) => updateAdminSetting('emailSenderEmail', e.target.value)}
+                    placeholder="noreply@example.com"
+                  />
+                </label>
+                <label className="admin-field">
+                  <span>Sender Name</span>
+                  <input
+                    value={adminSettings.emailSender}
+                    onChange={(e) => updateAdminSetting('emailSender', e.target.value)}
+                    placeholder="Hunchmate"
+                  />
+                </label>
+                <label className="admin-field">
+                  <span>Reply-To Email</span>
+                  <input
+                    value={adminSettings.emailReplyTo}
+                    onChange={(e) => updateAdminSetting('emailReplyTo', e.target.value)}
+                    placeholder="support@example.com"
+                  />
+                </label>
+                <div className="admin-actions" style={{ marginTop: '0.75rem' }}>
+                  <button type="button" onClick={saveAdminSettings}>Save</button>
+                </div>
+              </div>
+            </article>
+
+            {/* E-Credentials Settings */}
+            <article className="admin-settings-card" style={{ width: '100%' }}>
+              <div>
+                <h3>E-Credentials Settings</h3>
+                <label className="admin-field">
+                  <span>Platform Name</span>
+                  <input
+                    value={adminSettings.platformName}
+                    onChange={(e) => updateAdminSetting('platformName', e.target.value)}
+                    placeholder="Hunchmate"
+                  />
+                </label>
+                <label className="admin-field">
+                  <span>Certificate Footer</span>
+                  <input
+                    value={adminSettings.certFooter}
+                    onChange={(e) => updateAdminSetting('certFooter', e.target.value)}
+                    placeholder="Issued by Hunchmate Platform"
+                  />
+                </label>
+                <label className="admin-field">
+                  <span>Signature Name</span>
+                  <input
+                    value={adminSettings.signatureName}
+                    onChange={(e) => updateAdminSetting('signatureName', e.target.value)}
+                    placeholder="Platform Director"
+                  />
+                </label>
+                <div className="admin-actions" style={{ marginTop: '0.75rem' }}>
+                  <button type="button" onClick={saveAdminSettings}>Save</button>
+                </div>
+              </div>
+            </article>
+
           </div>
         ) : null}
       </div>

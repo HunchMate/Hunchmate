@@ -23,7 +23,7 @@ export default function Login() {
     }
 
     if (!nextUser?.onboardingCompleted) {
-      return nextUser?.role === 'organizer' ? '/host-onboarding' : '/onboarding';
+      return nextUser?.role === 'organizer' ? '/host-onboarding' : '/events';
     }
     return nextUser.role === 'admin'
       ? '/admin/dashboard'
@@ -37,18 +37,30 @@ export default function Login() {
     setError('');
     setLoading(true);
 
-    const normalizedIdentity = email.trim().toLowerCase();
-    const result = await login(normalizedIdentity, password);
-    if (result.success) {
-      const pendingInvite = String(localStorage.getItem('hm_pending_invite') || '').trim();
-      const hasValidInvite = /^[a-zA-Z0-9_-]+$/.test(pendingInvite);
-      const path = hasValidInvite
-        ? `/invites/${pendingInvite}`
-        : getPostAuthPath(result.user);
-      if (pendingInvite) localStorage.removeItem('hm_pending_invite');
-      navigate(path, { replace: true });
-    } else {
-      setError(result.error);
+    try {
+      const normalizedIdentity = email.trim().toLowerCase();
+      const result = await Promise.race([
+        login(normalizedIdentity, password),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Sign-in is taking too long. Please check your connection and try again.')), 15000)
+        ),
+      ]);
+
+      if (result.success) {
+        const pendingInvite = String(localStorage.getItem('hm_pending_invite') || '').trim();
+        const hasValidInvite = /^[a-zA-Z0-9_-]+$/.test(pendingInvite);
+        const path = hasValidInvite
+          ? `/invites/${pendingInvite}`
+          : getPostAuthPath(result.user);
+        if (pendingInvite) localStorage.removeItem('hm_pending_invite');
+        // Hard redirect — re-reads session from cookies, eliminates auth race conditions
+        window.location.replace(path);
+        return; // don't reset loading; page is navigating
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError(err?.message || 'Sign-in failed. Please try again.');
     }
     setLoading(false);
   };
@@ -68,17 +80,25 @@ export default function Login() {
     setLoading(true);
     setError('');
 
-    const result = await googleAuth({ role: 'participant' });
-    if (result.success) {
-      const pendingInvite = String(localStorage.getItem('hm_pending_invite') || '').trim();
-      const hasValidInvite = /^[a-zA-Z0-9_-]+$/.test(pendingInvite);
-      const path = hasValidInvite
-        ? `/invites/${pendingInvite}`
-        : getPostAuthPath(result.user);
-      if (pendingInvite) localStorage.removeItem('hm_pending_invite');
-      navigate(path, { replace: true });
-    } else {
-      setError(result.error);
+    try {
+      const result = await Promise.race([
+        googleAuth({ role: 'participant' }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Google sign-in is taking too long. Please try again.')), 15000)
+        ),
+      ]);
+      if (result.success) {
+        const pendingInvite = String(localStorage.getItem('hm_pending_invite') || '').trim();
+        const hasValidInvite = /^[a-zA-Z0-9_-]+$/.test(pendingInvite);
+        const path = hasValidInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user);
+        if (pendingInvite) localStorage.removeItem('hm_pending_invite');
+        window.location.replace(path);
+        return;
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError(err?.message || 'Google sign-in failed. Please try again.');
     }
     setLoading(false);
   };

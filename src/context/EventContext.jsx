@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createClient as createSupabaseClient } from '../utils/supabase/client';
 import { sampleEvents, sampleRegistrations, sampleCredentials } from '../utils/sampleData';
 import {
   buildEventPathSegment,
@@ -43,7 +44,11 @@ function safeWriteJson(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch (error) {
-    console.warn(`Failed to persist ${key} in localStorage.`, error);
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      // Ignore
+    }
     return false;
   }
 }
@@ -179,13 +184,53 @@ export function EventProvider({ children }) {
 
   const [events, setEvents] = useState(() => {
     const cached = safeReadJson('hm_events', null);
-    if (cached) return cached;
-    safeWriteJson('hm_events', sampleEvents);
-    return sampleEvents;
+    if (cached) {
+      // Detect stale bloated cache (events with base64 image data) and purge it.
+      const isBloated = cached.some(
+        (e) =>
+          (typeof e.posterData === 'string' && e.posterData.startsWith('data:image/')) ||
+          (typeof e.showcaseData === 'string' && e.showcaseData.startsWith('data:image/'))
+      );
+      if (isBloated) {
+        try { localStorage.removeItem('hm_events'); } catch (_) {}
+        return [];
+      }
+      return cached;
+    }
+    return [];
   });
   const [registrations, setRegistrations] = useState(() => {
     const cached = safeReadJson('hm_registrations', null);
-    if (cached) return cached;
+    if (cached) {
+      // Migrate stale snake_case entries (user_id, event_id) to camelCase so
+      // getUserRegistrations() and the profile page work immediately on boot,
+      // before the 2-second server sync fires.
+      const needsMigration = cached.some((r) => r.user_id && !r.userId);
+      if (needsMigration) {
+        const migrated = cached.map((r) => ({
+          ...r,
+          id: String(r.id),
+          userId: r.user_id || r.userId || '',
+          eventId: String(r.event_id || r.eventId || ''),
+          teamId: r.team_id ?? r.teamId ?? null,
+          teamName: r.team_name ?? r.teamName ?? null,
+          teamLeadId: r.team_lead_id ?? r.teamLeadId ?? null,
+          teamLeadName: r.team_lead_name ?? r.teamLeadName ?? null,
+          teamSize: r.team_size ?? r.teamSize ?? null,
+          qrToken: r.qr_token || r.qrToken || null,
+          checkedIn: r.checked_in ?? r.checkedIn ?? false,
+          checkedInAt: r.checked_in_at ?? r.checkedInAt ?? null,
+          status: r.status || 'approved',
+          participant: r.participant || {},
+          members: r.members || [],
+          createdAt: r.created_at || r.createdAt || new Date().toISOString(),
+          updatedAt: r.updated_at || r.updatedAt || null,
+        }));
+        safeWriteJson('hm_registrations', migrated);
+        return migrated;
+      }
+      return cached;
+    }
     safeWriteJson('hm_registrations', sampleRegistrations);
     return sampleRegistrations;
   });
@@ -210,7 +255,12 @@ export function EventProvider({ children }) {
 
   const saveEvents = (data) => {
     setEvents(data);
-    safeWriteJson('hm_events', data);
+    const strippedData = data.map(evt => ({
+      ...evt,
+      posterData: evt.posterData?.startsWith('data:image/') ? null : evt.posterData,
+      showcaseData: evt.showcaseData?.startsWith('data:image/') ? null : evt.showcaseData,
+    }));
+    safeWriteJson('hm_events', strippedData);
   };
 
   const saveRegistrations = (data) => {
@@ -233,7 +283,7 @@ export function EventProvider({ children }) {
     safeWriteJson('hm_organizer_notifications', data);
   };
 
-  // Intentionally mounted once; internal polling and focus handlers drive re-sync.
+  // Intentionally mounted once; internal polling, focus handlers and Realtime drive re-sync.
   useEffect(() => {
     let active = true;
     let firstSync = true;
@@ -269,11 +319,13 @@ export function EventProvider({ children }) {
       }
     };
 
-    syncFromFirebase();
+    // Small delay on first boot so Turbopack can finish compiling /api/events
+    // before the first request fires, avoiding 404s during cold start.
+    const initialTimer = window.setTimeout(() => void syncFromFirebase(), 2000);
 
     const pollId = window.setInterval(() => {
       void syncFromFirebase();
-    }, 5000);
+    }, 30000);
 
     const onFocus = () => {
       void syncFromFirebase();
@@ -288,11 +340,29 @@ export function EventProvider({ children }) {
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisibilityChange);
 
+    // ── Supabase Realtime: instant registration updates for the organizer ──
+    // Subscribe to any INSERT, UPDATE, or DELETE on the registrations table.
+    // When a participant registers, the organizer's dashboard refreshes immediately
+    // without waiting for the 30-second polling interval.
+    const supabaseRealtime = createSupabaseClient();
+    const realtimeChannel = supabaseRealtime
+      .channel('hunchmate-registrations-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'registrations' },
+        () => {
+          if (active) void syncFromFirebase();
+        }
+      )
+      .subscribe();
+
     return () => {
       active = false;
+      window.clearTimeout(initialTimer);
       window.clearInterval(pollId);
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      supabaseRealtime.removeChannel(realtimeChannel);
     };
   }, []);
 
@@ -601,6 +671,9 @@ export function EventProvider({ children }) {
 
       return { success: true, registration: registeredEntry };
     } catch (error) {
+      if (error?.alreadyRegistered) {
+        return { success: false, error: 'You are already registered for this event.', alreadyRegistered: true };
+      }
       console.warn('Registration persistence failed:', error);
       return { success: false, error: error?.message || 'Failed to register for event.' };
     }

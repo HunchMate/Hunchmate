@@ -81,16 +81,17 @@ export default function Stepper({
     if (currentStep > 1) {
       setDirection(-1);
       updateStep(currentStep - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handleNext = () => {
-
     if (!isLastStep) {
       const targetStep = currentStep + 1;
       if (!canMoveToStep(targetStep)) return;
       setDirection(1);
       updateStep(targetStep);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 

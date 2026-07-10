@@ -36,6 +36,22 @@ export async function POST(req) {
       ? createServiceClient(supabaseUrl, serviceKey)
       : supabase;
 
+    // Pre-check: if a registration already exists for this user+event, return a
+    // friendly error instead of letting the DB throw a duplicate key violation.
+    const { data: existing } = await adminClient
+      .from('registrations')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json(
+        { success: false, error: 'You are already registered for this event.', alreadyRegistered: true },
+        { status: 409 }
+      );
+    }
+
     // Insert record
     const { data, error } = await adminClient
       .from('registrations')
@@ -53,6 +69,13 @@ export async function POST(req) {
       .single();
 
     if (error) {
+      // Postgres unique constraint violation — duplicate registration
+      if (error.code === '23505') {
+        return NextResponse.json(
+          { success: false, error: 'You are already registered for this event.', alreadyRegistered: true },
+          { status: 409 }
+        );
+      }
       console.error('Registration insert error:', error.message);
       return NextResponse.json(
         { success: false, error: error.message },

@@ -8,18 +8,20 @@ import {
   ChevronRight,
   Search,
   Star,
+  Globe,
+  Code
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from '@/utils/router';
 import { useEvents } from '@/context/EventContext';
-import { DottedGlowBackground } from '@/components/ui/DottedGlowBackground';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { buildEventDetailPath, formatDate } from '@/utils/helpers';
+import { useAuth } from '@/context/AuthContext';
+import { buildEventDetailPath, formatDate, daysUntil } from '@/utils/helpers';
 import { EventCardSkeleton } from '@/components/ui/Skeleton';
 import EventCard from '@/components/events/EventCard';
 import { getBookmarkedEvents, getBookmarkedEventsSync, toggleEventBookmark } from '@/utils/bookmarks';
 import { toast } from '@/utils/toast';
-import { daysUntil } from '@/utils/helpers';
 import { listEventsPaginated } from '@/lib/supabase-data';
+import { DottedGlowBackground } from '@/components/ui/DottedGlowBackground';
 import '@/vite-pages/Events.css';
 
 const CATEGORY_MAP = {
@@ -42,21 +44,8 @@ const boardTabs = [
   },
 ];
 
-const categoryGradient = {
-  Hackathon: 'linear-gradient(140deg, #07163f 0%, #0d225b 58%, #1a3c95 100%)',
-  Competition: 'linear-gradient(140deg, #2d0b4e 0%, #4a1f75 58%, #6a31a4 100%)',
-  Conference: 'linear-gradient(140deg, #21354f 0%, #2e4f73 58%, #3f6ca0 100%)',
-  Workshop: 'linear-gradient(140deg, #122449 0%, #1b3a73 58%, #24529d 100%)',
-  Bootcamp: 'linear-gradient(140deg, #0f3256 0%, #17547f 58%, #1f77ad 100%)',
-  Meetup: 'linear-gradient(140deg, #1e2458 0%, #2c3779 58%, #4456ad 100%)',
-};
-
 function resolveEventId(event) {
   return String(event?.id || event?._id || '').trim();
-}
-
-function resolveOrganizerName(event) {
-  return event?.organizer?.name || event?.organiser?.name || 'Host Organization';
 }
 
 function resolveTimeline(event) {
@@ -90,6 +79,10 @@ function buildDateLabel(event) {
 
 function sortByTimeline(events, mode) {
   const sorted = [...events];
+  if (mode === 'newest') {
+    sorted.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    return sorted;
+  }
   sorted.sort((a, b) => {
     const aTime = new Date(resolveTimeline(a).eventStart || 0).getTime() || 0;
     const bTime = new Date(resolveTimeline(b).eventStart || 0).getTime() || 0;
@@ -100,16 +93,36 @@ function sortByTimeline(events, mode) {
 
 const PAGE_SIZE = 16;
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 30, scale: 0.95 },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: { type: 'spring', stiffness: 200, damping: 20 }
+  },
+};
+
 export default function Events() {
-  const { events: contextEvents, eventsLoading: contextLoading } = useEvents();
+  const { events: contextEvents } = useEvents();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [tab, setTab] = useState('All Programs');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [sortMode, setSortMode] = useState('soonest');
+  const [sortMode, setSortMode] = useState('newest');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [featuredIndex, setFeaturedIndex] = useState(0);
   const [bookmarkedIds, setBookmarkedIds] = useState([]);
   const [mounted, setMounted] = useState(false);
 
@@ -121,6 +134,8 @@ export default function Events() {
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const fetchIdRef = useRef(0);
+
+
 
   useEffect(() => {
     setMounted(true);
@@ -166,7 +181,6 @@ export default function Events() {
         status,
       });
 
-      // Guard against stale responses
       if (id !== fetchIdRef.current) return;
 
       if (append) {
@@ -198,290 +212,198 @@ export default function Events() {
     fetchPage(currentPage + 1, true);
   };
 
-  const resetDiscoveryFilters = () => {
+  const resetFilters = () => {
     setTab('All Programs');
     setSearch('');
     setDebouncedSearch('');
-    setSortMode('soonest');
+    setSortMode('newest');
     setStatusFilter('all');
   };
 
-  // Sort paginated events client-side (server returns by created_at desc)
+  // Sort paginated events client-side
   const sortedEvents = useMemo(() => {
     return sortByTimeline(paginatedEvents, sortMode);
   }, [paginatedEvents, sortMode]);
 
-  // Featured carousel uses the context events (already fetched for organizer dashboard etc.)
-  const featuredEvents = useMemo(() => {
-    const list = contextEvents.filter((event) => event.featured);
-    if (list.length > 0) return list;
-    return sortByTimeline(contextEvents, 'soonest').slice(0, 5);
-  }, [contextEvents]);
 
-  useEffect(() => {
-    if (featuredEvents.length <= 1) return undefined;
 
-    const timer = window.setInterval(() => {
-      setFeaturedIndex((prev) => (prev + 1) % featuredEvents.length);
-    }, 4000);
-
-    return () => window.clearInterval(timer);
-  }, [featuredEvents.length]);
-
-  useEffect(() => {
-    if (featuredIndex >= featuredEvents.length) {
-      setFeaturedIndex(0);
-    }
-  }, [featuredEvents.length, featuredIndex]);
-
-  const carouselEvents = featuredEvents.slice(0, 8);
-
-  if (!mounted) {
-    return null; // Prevent hydration mismatch
-  }
+  if (!mounted) return null;
 
   return (
     <div className="explore-page">
+      {/* ── Hero Section ── */}
       <section className="explore-hero">
         <DottedGlowBackground
           className="explore-hero__dotted-bg"
-          opacity={0.52}
-          gap={13}
-          radius={1.35}
-          color="rgba(96, 117, 163, 0.32)"
-          darkColor="rgba(96, 117, 163, 0.32)"
-          glowColor="rgba(72, 106, 176, 0.42)"
-          darkGlowColor="rgba(72, 106, 176, 0.42)"
+          opacity={0.4}
+          gap={18}
+          radius={1.5}
+          color="rgba(37, 89, 189, 0.2)"
+          darkColor="rgba(37, 89, 189, 0.2)"
+          glowColor="rgba(234, 122, 50, 0.2)"
+          darkGlowColor="rgba(234, 122, 50, 0.2)"
           backgroundOpacity={0}
-          speedMin={0.22}
-          speedMax={0.72}
-          speedScale={0.72}
+          speedMin={0.3}
+          speedMax={0.8}
+          speedScale={0.8}
         />
-        <div className="container explore-hero__inner">
-          <div className="explore-copy">
-            <h1>
-              <span>DISCOVER.</span>
-              <span className="is-orange">COMPETE.</span>
-              <span className="is-blue">CREATE.</span>
-            </h1>
-            <p>
-              Discover amazing opportunities to showcase your talent and gain recognition. Explore hackathons,
-              startup challenges and innovation competitions.
-            </p>
+        <motion.div 
+          className="container explore-hero__inner"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <h1>
+            Discover Your Next <br />
+            <span className="is-blue">Big</span> <span className="is-orange">Opportunity.</span>
+          </h1>
+          <p>
+            Explore hackathons, innovation challenges, and tech meetups curated to help you build, learn, and grow your career.
+          </p>
+        </motion.div>
+
+
+      </section>
+
+      {/* ── Sticky Controls Bar ── */}
+      <div className="explore-controls-bar">
+        <div className="container explore-controls__inner">
+          <div className="explore-tabs">
+            {boardTabs.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                className={`explore-tab ${tab === item.label ? 'is-active' : ''}`}
+                onClick={() => setTab(item.label)}
+              >
+                {tab === item.label && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="explore-tab-bg"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <span style={{ position: 'relative', zIndex: 2 }}>{item.label}</span>
+              </button>
+            ))}
           </div>
 
-          {/* Featured Carousel */}
-          {carouselEvents.length > 0 && (
-            <div className="explore-carousel">
-              <div
-                className="explore-carousel__track"
-                style={{ transform: `translateX(-${featuredIndex * 100}%)` }}
+          <div className="explore-actions">
+            <div className="explore-search-wrap">
+              <Search size={18} />
+              <input
+                type="text"
+                className="explore-search-input"
+                placeholder="Search amazing events..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            
+            <button
+              type="button"
+              className={`explore-sort-btn ${sortMode === 'newest' ? 'is-active' : ''}`}
+              onClick={() => setSortMode(sortMode === 'newest' ? 'soonest' : 'newest')}
+              title={sortMode === 'newest' ? "Sort by soonest timeline" : "Sort by most recent"}
+            >
+              <ArrowUpDown size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Main Board ── */}
+      <section className="explore-board">
+        <div className="container">
+          <AnimatePresence mode="wait">
+            {isLoadingPage ? (
+              <motion.div 
+                key="loading"
+                className="explore-grid"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
               >
-                {carouselEvents.map((event) => {
+                {Array.from({ length: 8 }).map((_, i) => <EventCardSkeleton key={i} />)}
+              </motion.div>
+            ) : sortedEvents.length > 0 ? (
+              <motion.div 
+                key="content"
+                className="explore-grid"
+                variants={containerVariants}
+                initial="hidden"
+                animate="show"
+              >
+                {sortedEvents.map((event) => {
                   const eventId = resolveEventId(event);
-                  const posterImage = resolvePosterImage(event);
-                  const dateLabel = buildDateLabel(event);
-
                   return (
-                    <div key={`carousel-${eventId}`} className="explore-carousel__slide">
-                      <Link
-                        to={buildEventDetailPath(event)}
-                        className="explore-carousel__card"
-                        style={{
-                          background:
-                            categoryGradient[event.category] || categoryGradient.Hackathon,
-                        }}
-                      >
-                        {posterImage && (
-                          <img
-                            src={posterImage}
-                            alt=""
-                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                            loading="lazy"
-                          />
-                        )}
-
-                        <div className="explore-carousel__veil" />
-                        <div className="explore-carousel__featured"><Star size={12} /> FEATURED</div>
-                        <div className="explore-carousel__content">
-                          <h2>{event.title}</h2>
-                          <p>
-                            <Calendar size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
-                            {dateLabel}
-                          </p>
-                          <span>{event.mode || 'Online'}</span>
-                        </div>
-                      </Link>
-                    </div>
+                    <motion.div 
+                      key={eventId} 
+                      className="explore-card-wrapper cursor-pointer"
+                      onClick={() => navigate(buildEventDetailPath(event))}
+                      variants={itemVariants}
+                    >
+                      <div>
+                        <EventCard 
+                          coverImage={resolvePosterImage(event)}
+                          title={event.title}
+                          categories={[
+                            { label: event.category || 'Hackathon', icon: event.category === 'Hackathon' ? 'code' : 'globe', color: 'purple' },
+                            { label: event.mode || 'Online', icon: 'monitor', color: 'blue' }
+                          ]}
+                          registeredCount={event.registeredCount || 0}
+                          startDate={resolveTimeline(event).eventStart}
+                          endDate={resolveTimeline(event).eventEnd}
+                          daysLeftToRegister={daysUntil(event.timeline?.registrationEnd || event.endDate || event.timeline?.eventStart)}
+                          location={event.location || 'TBA'}
+                          isFree={!event.entryFee}
+                          teamSizeMin={event.teamSize?.min || 1}
+                          teamSizeMax={event.teamSize?.max || 4}
+                          onRegister={() => navigate(buildEventDetailPath(event))}
+                          onBookmark={async () => {
+                            const added = await toggleEventBookmark(eventId);
+                            if (added) toast.bookmarkAdd('Saved to your bookmarks!', event.title);
+                            else toast.bookmarkRemove('Removed from bookmarks.', event.title);
+                          }}
+                          isBookmarked={bookmarkedIds.includes(eventId)}
+                        />
+                      </div>
+                    </motion.div>
                   );
                 })}
-              </div>
-
-              <div className="explore-carousel__controls">
-                <button
-                  type="button"
-                  onClick={() => setFeaturedIndex((prev) => (prev - 1 + carouselEvents.length) % carouselEvents.length)}
-                  aria-label="Previous slide"
-                  disabled={carouselEvents.length <= 1}
-                >
-                  <ChevronLeft size={16} />
-                </button>
-
-                <div className="explore-carousel__dots" aria-hidden="true">
-                  {carouselEvents.map((event, index) => (
-                    <button
-                      key={resolveEventId(event)}
-                      type="button"
-                      className={index === featuredIndex ? 'is-active' : ''}
-                      onClick={() => setFeaturedIndex(index)}
-                    />
-                  ))}
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="empty"
+                className="explore-empty"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.4 }}
+              >
+                <div className="explore-empty__icon">
+                  <Search size={32} />
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setFeaturedIndex((prev) => (prev + 1) % carouselEvents.length)}
-                  aria-label="Next slide"
-                  disabled={carouselEvents.length <= 1}
-                >
-                  <ChevronRight size={16} />
+                <h3>No events found</h3>
+                <p>We couldn't find any events matching your current filters. Try adjusting your search.</p>
+                <button type="button" className="explore-empty__btn" onClick={resetFilters}>
+                  Clear Filters
                 </button>
-              </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {hasMore && (
+            <div className="explore-load-more">
+              <button 
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+              >
+                {isLoadingMore ? 'Loading...' : `Load More (${sortedEvents.length} of ${totalCount})`}
+              </button>
             </div>
           )}
-        </div>
-      </section>
-
-      <section className="explore-controls-bar">
-        <div className="container explore-controls-bar__inner">
-          <div className="explore-controls">
-            <label className="explore-controls__filter" htmlFor="category-filter">
-              <select
-                id="category-filter"
-                className="explore-controls__category"
-                value={tab}
-                onChange={(event) => setTab(event.target.value)}
-              >
-                {boardTabs.map((item) => (
-                  <option key={item.label} value={item.label}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="explore-controls__actions">
-              <button
-                type="button"
-                className={`explore-controls__btn explore-controls__sort-btn ${sortMode === 'soonest' ? 'is-active' : ''}`}
-                onClick={() => setSortMode('soonest')}
-                title="Sort by soonest"
-              >
-                <ArrowUpDown size={18} />
-              </button>
-
-              <div className="explore-controls__search-wrapper">
-                <Search size={16} />
-                <input
-                  type="search"
-                  className="explore-controls__search"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search events..."
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="explore-board">
-        <div className="container explore-board__layout">
-          <div className="explore-board__main">
-            <div className="explore-cards__grid">
-              {isLoadingPage ? (
-                // Show 8 skeleton cards while server fetches first page
-                Array.from({ length: 8 }).map((_, i) => <EventCardSkeleton key={i} />)
-              ) : sortedEvents.length > 0 ? (
-                sortedEvents.map((event) => {
-                  const eventId = resolveEventId(event);
-                  const posterImage = resolvePosterImage(event);
-
-                  return (
-                    <div 
-                      key={eventId} 
-                      className="explore-card-wrapper cursor-pointer" 
-                      style={{ height: '100%' }}
-                      onClick={() => navigate(buildEventDetailPath(event))}
-                    >
-                      <EventCard 
-                        coverImage={posterImage}
-                        title={event.title}
-                        categories={[
-                          { label: event.category || 'Hackathon', icon: event.category === 'Hackathon' ? 'code' : 'globe', color: 'purple' },
-                          { label: event.mode || 'Online', icon: 'monitor', color: 'blue' }
-                        ]}
-                        registeredCount={event.registeredCount || 0}
-                        startDate={resolveTimeline(event).eventStart}
-                        endDate={resolveTimeline(event).eventEnd}
-                        daysLeftToRegister={daysUntil(event.timeline?.registrationEnd || event.endDate || event.timeline?.eventStart)}
-                        location={event.location || 'TBA'}
-                        isFree={!event.entryFee}
-                        teamSizeMin={event.teamSize?.min || 1}
-                        teamSizeMax={event.teamSize?.max || 4}
-                        onRegister={() => navigate(buildEventDetailPath(event))}
-                        onBookmark={async () => {
-                          const added = await toggleEventBookmark(eventId);
-                          if (added) {
-                            toast.bookmarkAdd('Saved to your bookmarked events!', event.title);
-                          } else {
-                            toast.bookmarkRemove('Removed from your bookmarks.', event.title);
-                          }
-                        }}
-                        isBookmarked={bookmarkedIds.includes(eventId)}
-                      />
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="explore-empty-v2">
-                  <div className="explore-empty-v2__container">
-                    <div className="explore-empty-v2__icon-box">
-                      <svg className="explore-empty-v2__icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" fill="currentColor"/>
-                        <path d="M11 15h2v2h-2zm0-8h2v6h-2z" fill="currentColor"/>
-                      </svg>
-                    </div>
-                    <h3 className="explore-empty-v2__title">Nothing here yet</h3>
-                    <p className="explore-empty-v2__subtitle">No events match your filters. Try adjusting your search or creating a new event to get started.</p>
-                    <div className="explore-empty-v2__cta-group">
-                      <button type="button" className="explore-empty-v2__cta-primary" onClick={resetDiscoveryFilters}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
-                        Reset Filters
-                      </button>
-                      <Link to="/host-event" className="explore-empty-v2__cta-secondary">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Create Event
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {hasMore && (
-              <div className="flex justify-center mt-8">
-                <button 
-                  onClick={handleLoadMore}
-                  disabled={isLoadingMore}
-                  className="bg-white border text-gray-800 text-sm font-semibold px-6 py-2.5 rounded-lg transition-transform hover:-translate-y-0.5 shadow-sm flex items-center gap-2"
-                  style={{ opacity: isLoadingMore ? 0.6 : 1 }}
-                >
-                  {isLoadingMore ? 'Loading...' : `Load More (${sortedEvents.length} of ${totalCount})`}
-                </button>
-              </div>
-            )}
-          </div>
         </div>
       </section>
     </div>

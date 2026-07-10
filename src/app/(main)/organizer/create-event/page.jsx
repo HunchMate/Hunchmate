@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from '@/utils/router';
 import { motion } from 'motion/react';
-import { ArrowLeft, HelpCircle, Link2, ListPlus, Mail, MapPin, Phone, Plus, Trash2, Tag, Type, Network, CheckSquare, Code, Rocket, Trophy, Briefcase, GraduationCap, Award, MoreHorizontal, MonitorPlay, Layers, Clock, DollarSign, Calendar, Users, Eye, Palette, Globe, ExternalLink, Shield, FileText, Star, CircleDot, CheckCircle2, Sparkles } from 'lucide-react';
+import { ArrowLeft, HelpCircle, Link2, ListPlus, Mail, MapPin, Phone, Plus, Trash2, Tag, Type, Network, CheckSquare, Code, Rocket, Trophy, Briefcase, GraduationCap, Award, MoreHorizontal, MonitorPlay, Layers, Clock, DollarSign, Calendar, Users, Eye, Palette, Globe, ExternalLink, Shield, FileText, Star, CircleDot, CheckCircle2, CheckCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import Button from '@/components/ui/Button';
 import { useEvents } from '@/context/EventContext';
@@ -26,6 +26,9 @@ export default function CreateEvent() {
   
   const [successStatus, setSuccessStatus] = useState(null);
   const [createdEventId, setCreatedEventId] = useState(null);
+
+
+
 
   const isEditMode = Boolean(eventId);
   const targetEvent = isEditMode ? getEventById(eventId) : null;
@@ -740,10 +743,15 @@ export default function CreateEvent() {
 
       if (isEditMode && targetEvent) {
         updateEvent(targetEvent.id, eventPayload);
-        navigate('/organizer/dashboard');
+        window.location.replace('/organizer/dashboard');
         return true;
       } else {
-        const result = await createEvent(eventPayload);
+        const result = await Promise.race([
+          createEvent(eventPayload),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Event creation is taking too long. Please check your connection and try again.')), 20000)
+          ),
+        ]);
         if (!result?.success) {
           if (result?.suspended) {
             setShowSuspendedModal(true);

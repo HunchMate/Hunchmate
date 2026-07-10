@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { Link, Navigate, useNavigate } from '@/utils/router';
-import { Mail, Lock, User, AlertCircle, X, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User, Phone, AlertCircle, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import Checkbox from '@/components/ui/Checkbox';
 import { ShinyButton } from '@/components/ui/ShinyButton';
@@ -10,7 +10,7 @@ import '@/vite-pages/Auth.css';
 import hunchmateLogo from '@/../HUNCHMATE - Logo Pack (2).png';
 
 export default function HostSignup() {
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'organizer' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', role: 'organizer' });
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,9 +18,7 @@ export default function HostSignup() {
   const navigate = useNavigate();
 
   const getPostAuthPath = useCallback((nextUser) => {
-    if (nextUser?.role === 'admin') {
-      return '/admin/dashboard';
-    }
+    if (nextUser?.role === 'admin') return '/admin/dashboard';
     if (!nextUser?.onboardingCompleted) {
       return nextUser?.role === 'organizer' ? '/host-onboarding' : '/onboarding';
     }
@@ -31,52 +29,30 @@ export default function HostSignup() {
         : '/events';
   }, []);
 
-  // If user is already logged in as organizer, redirect to dashboard
   if (user?.role === 'organizer') {
     return <Navigate to="/organizer/dashboard" replace />;
   }
 
-  // If user is logged in as participant, show upgrade message
   if (user?.role === 'participant') {
     return (
       <main className="auth-modern">
         <section className="auth-modern__card">
           <h1>Create a Host Account</h1>
           <p className="auth-modern__subtitle">
-            Your current account is set up as a Participant. To host events, you'll need to create a separate Host account.
+            Your current account is set up as a Participant. To host events, you'll need a separate Host account.
           </p>
-
-          <div
-            style={{
-              marginTop: '24px',
-              padding: '16px',
-              borderRadius: '8px',
-              backgroundColor: '#f0f4ff',
-              borderLeft: '4px solid #6366f1',
-            }}
-          >
+          <div style={{ marginTop: '24px', padding: '16px', borderRadius: '8px', backgroundColor: '#f0f4ff', borderLeft: '4px solid #6366f1' }}>
             <p style={{ margin: 0, fontSize: '14px', color: '#4f46e5', lineHeight: '1.5' }}>
-              <strong>Next steps:</strong>
-              <br />
-              1. Log out from your current account
-              <br />
-              2. Sign up again with the same or different email
-              <br />
-              3. Select &quot;Host&quot; during registration
-              <br />
+              <strong>Next steps:</strong><br />
+              1. Log out from your current account<br />
+              2. Sign up again with the same or different email<br />
+              3. Select &quot;Host&quot; during registration<br />
               4. Complete host onboarding
             </p>
           </div>
-
-          <Link to="/events" className="auth-modern__submit" style={{ textDecoration: 'none', display: 'block', textAlign: 'center' }}>
+          <Link to="/events" className="auth-modern__submit" style={{ textDecoration: 'none', display: 'block', textAlign: 'center', marginTop: '16px' }}>
             Return to Events
           </Link>
-
-          <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '14px', color: '#666' }}>
-            <Link to="/" style={{ color: '#6366f1', cursor: 'pointer' }}>
-              Go back to Home
-            </Link>
-          </p>
         </section>
       </main>
     );
@@ -86,15 +62,13 @@ export default function HostSignup() {
     e.preventDefault();
     setError('');
     if (!form.name || !form.email || !form.password) {
-      setError('Please fill in all fields');
+      setError('Please fill in all required fields.');
       return;
     }
-
     if (form.password.length < 8) {
       setError('Password must be at least 8 characters long.');
       return;
     }
-
     if (!termsAccepted) {
       setError('Please agree to the Terms and Conditions to continue.');
       return;
@@ -108,15 +82,14 @@ export default function HostSignup() {
       email: form.email.trim(),
       password: form.password,
       role: 'organizer',
+      phoneNumber: form.phone.trim(),
       termsAccepted: true,
       termsAcceptedAt,
     });
+
     if (result.success) {
       const pendingInvite = localStorage.getItem('hm_pending_invite');
-      const path = pendingInvite
-        ? `/invites/${pendingInvite}`
-        : getPostAuthPath(result.user);
-      navigate(path);
+      navigate(pendingInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user));
     } else {
       setError(result.error);
     }
@@ -125,12 +98,10 @@ export default function HostSignup() {
 
   const handleGoogleSignup = async () => {
     setError('');
-
     if (!termsAccepted) {
       setError('Please agree to the Terms and Conditions to continue.');
       return;
     }
-
     setLoading(true);
     const termsAcceptedAt = new Date().toISOString();
     const result = await googleAuth({
@@ -139,13 +110,9 @@ export default function HostSignup() {
       termsAccepted: true,
       termsAcceptedAt,
     });
-
     if (result.success) {
       const pendingInvite = localStorage.getItem('hm_pending_invite');
-      const path = pendingInvite
-        ? `/invites/${pendingInvite}`
-        : getPostAuthPath(result.user);
-      navigate(path);
+      navigate(pendingInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user));
     } else {
       setError(result.error);
     }
@@ -160,16 +127,9 @@ export default function HostSignup() {
 
         {error ? (
           <div className="auth-modern__error" role="alert" aria-live="polite">
-            <span className="auth-modern__error-icon" aria-hidden="true">
-              <AlertCircle size={14} />
-            </span>
+            <span className="auth-modern__error-icon" aria-hidden="true"><AlertCircle size={14} /></span>
             <span className="auth-modern__error-text">{error}</span>
-            <button
-              type="button"
-              className="auth-modern__error-dismiss"
-              onClick={() => setError('')}
-              aria-label="Dismiss error"
-            >
+            <button type="button" className="auth-modern__error-dismiss" onClick={() => setError('')} aria-label="Dismiss error">
               <X size={14} />
             </button>
           </div>
@@ -191,15 +151,28 @@ export default function HostSignup() {
           </label>
 
           <label>
-            Email
+            Work email
             <div className="auth-modern__field">
               <Mail size={16} />
               <input
                 type="email"
-                placeholder="you@example.com"
+                placeholder="you@organisation.com"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 required
+              />
+            </div>
+          </label>
+
+          <label>
+            Mobile number
+            <div className="auth-modern__field">
+              <Phone size={16} />
+              <input
+                type="tel"
+                placeholder="+91 98765 43210"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
               />
             </div>
           </label>
@@ -210,24 +183,13 @@ export default function HostSignup() {
               <Lock size={16} />
               <input
                 type="password"
-                placeholder="Create a password"
+                placeholder="Create a password (min. 8 characters)"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 required
               />
             </div>
           </label>
-
-          <ShinyButton type="submit" disabled={loading}>
-            {loading ? 'Creating account…' : 'Create Host Account'}
-          </ShinyButton>
-
-          <div className="auth-modern__divider">or continue with</div>
-          <div className="auth-modern__socials">
-            <button type="button" onClick={handleGoogleSignup} disabled={loading}>
-              Continue with Google
-            </button>
-          </div>
 
           <div className="auth-modern__consent">
             <Checkbox
@@ -244,10 +206,21 @@ export default function HostSignup() {
               }
             />
           </div>
+
+          <ShinyButton type="submit" disabled={loading}>
+            {loading ? 'Creating account…' : 'Create Host Account'}
+          </ShinyButton>
+
+          <div className="auth-modern__divider">or continue with</div>
+          <div className="auth-modern__socials">
+            <button type="button" onClick={handleGoogleSignup} disabled={loading}>
+              Continue with Google
+            </button>
+          </div>
         </form>
 
         <p className="auth-modern__switch">
-          Want to explore events as a participant instead? <Link to="/events">Browse Events</Link>
+          Already have a host account? <Link to="/login">Sign in</Link>
         </p>
       </section>
     </main>

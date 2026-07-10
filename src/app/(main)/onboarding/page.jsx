@@ -161,7 +161,7 @@ function TagInput({ label, value, onChange, options, placeholder, error, require
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Onboarding() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
@@ -209,7 +209,7 @@ export default function Onboarding() {
 
   // Initialize from existing user data
   useEffect(() => {
-    if (!user) return;
+    if (authLoading || !user) return;
     if (hasCompletedOnboarding(user)) {
       const path = user.role === 'admin' ? '/admin/dashboard'
         : user.role === 'organizer' ? '/organizer/dashboard' : '/events';

@@ -39,6 +39,11 @@ export default function EventCard({ event, index = 0 }) {
   const gradient = gradientMap[category] || gradientMap.Hackathon;
   const currentRegistration = user ? getEventRegistrationForUser(id, user) : null;
 
+  const now = Date.now();
+  const regEndRaw = timeline?.registrationEnd || event.registrationDeadline;
+  const regEndMs = regEndRaw ? new Date(regEndRaw).getTime() : now + 86400000;
+  const isClosed = (regEndMs - now) < 0;
+
   const statusLabel = {
     open: 'Open',
     upcoming: 'Upcoming',
@@ -105,10 +110,15 @@ export default function EventCard({ event, index = 0 }) {
             <span>{registeredCount || 0} Participants</span>
           </div>
           <div
-            className={`hc-card__cta ${currentRegistration ? 'is-registered' : ''}`}
-            style={{ background: colors.bg }}
+            className={`hc-card__cta ${currentRegistration ? 'is-registered' : ''} ${!currentRegistration && isClosed ? 'is-closed' : ''}`}
+            style={{ background: (!currentRegistration && isClosed) ? '#94a3b8' : colors.bg, cursor: (!currentRegistration && isClosed) ? 'not-allowed' : 'pointer' }}
+            onClick={(e) => {
+              if (!currentRegistration && isClosed) {
+                e.preventDefault();
+              }
+            }}
           >
-            {currentRegistration ? 'Already Registered' : 'Register Now'} <Zap size={14} />
+            {currentRegistration ? 'Already Registered' : isClosed ? 'Registration Closed' : 'Register Now'} {!currentRegistration && !isClosed && <Zap size={14} />}
           </div>
         </div>
       </div>

@@ -1,9 +1,9 @@
 .create-event {
   min-height: 100vh;
   background:
-    radial-gradient(920px 360px at -8% 2%, rgba(99, 102, 241, 0.16), transparent 64%),
-    radial-gradient(860px 320px at 104% 12%, rgba(94, 234, 212, 0.12), transparent 62%),
-    #eff2f8;
+    radial-gradient(circle at 0% 0%, rgba(255, 107, 0, 0.12), transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(37, 89, 189, 0.12), transparent 40%),
+    #f8f9ff;
 }
 
 .create-event__hero {
@@ -71,6 +71,10 @@
 
 .create-event__content {
   min-height: 250px;
+}
+
+.create-event__footer {
+  padding: 0 1.5rem 1.5rem;
 }
 
 .create-event__footer .next-button {
@@ -171,9 +175,9 @@
 }
 
 .create-event__toggle.is-on {
-  border-color: #7f97d8;
-  color: #2b3f70;
-  background: linear-gradient(135deg, #eef3ff 0%, #f3edff 100%);
+  border-color: #ff6b00;
+  color: #a04100;
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.08) 0%, rgba(255, 107, 0, 0.02) 100%);
 }
 
 .create-event__credential-fields {
@@ -200,9 +204,9 @@
 }
 
 .create-event__section-pill.is-on {
-  border-color: #869ddf;
-  background: linear-gradient(135deg, #eef3ff 0%, #f4edff 100%);
-  color: #243a6d;
+  border-color: #ff6b00;
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.08) 0%, rgba(255, 107, 0, 0.02) 100%);
+  color: #a04100;
 }
 
 .create-event__optional-block {
@@ -409,10 +413,10 @@
 }
 
 .create-event__pill.is-active {
-  border-color: #5227FF;
-  background: linear-gradient(135deg, #eef3ff 0%, #f4edff 100%);
-  color: #243a6d;
-  box-shadow: 0 0 0 2px rgba(82, 39, 255, 0.12);
+  border-color: #ff6b00;
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.08) 0%, rgba(255, 107, 0, 0.02) 100%);
+  color: #a04100;
+  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.12);
 }
 
 .create-event__remove-btn {

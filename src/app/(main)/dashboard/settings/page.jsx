@@ -19,7 +19,7 @@ import {
   Settings2,
   User,
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { useAuth } from '@/context/AuthContext';
 import { useEvents } from '@/context/EventContext';
 import { buildEventDetailPath, formatDate } from '@/utils/helpers';
@@ -83,6 +83,7 @@ function buildForm(user) {
     linkedin: user?.socials?.linkedin || '',
     github: user?.socials?.github || '',
     interests: Array.isArray(user?.socials?.interests) ? user.socials.interests : [],
+    phoneNumber: user?.phoneNumber || '',
   };
 }
 
@@ -358,6 +359,7 @@ export default function Profile() {
         currentDesignation: form.profileType === 'working_professional' ? form.currentDesignation : '',
         workSummary: form.profileType === 'working_professional' ? form.workSummary : '',
         headline: form.profileType === 'working_professional' ? form.currentDesignation : '',
+        phoneNumber: String(form.phoneNumber || '').trim(),
         skills: Array.isArray(form.skills) ? form.skills.map((item) => item.trim()).filter(Boolean) : [],
         socials: {
           linkedin: urlFields[0] || '',
@@ -402,6 +404,12 @@ export default function Profile() {
 
   const addUrlField = () => {
     setUrlFields((current) => [...current, '']);
+  };
+
+  const removeUrlField = (indexToRemove) => {
+    setUrlFields((current) => current.filter((_, idx) => idx !== indexToRemove));
+    if (indexToRemove === 0) setForm((current) => ({ ...current, linkedin: '' }));
+    if (indexToRemove === 1) setForm((current) => ({ ...current, github: '' }));
   };
 
   const addSkill = () => {
@@ -468,22 +476,19 @@ export default function Profile() {
             </button>
           </header>
 
-          <div className="profile-page__settings-layout">
-            <aside className="profile-page__settings-side">
-              <button type="button" className="is-active"><User size={14} /> Profile</button>
-            </aside>
+          <div className="profile-page__settings-layout" style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
 
-            <form onSubmit={handleSave} className="profile-page__settings-card profile-page__panel-card">
-              <div className="profile-page__settings-profile-row">
-                <div className="profile-page__settings-avatar" style={{ '--avatar-backdrop': form.avatarBackdrop }}>
+            <form onSubmit={handleSave} className="profile-page__settings-card profile-page__panel-card profile-page__form-container">
+              <div className="profile-page__avatar-edit">
+                <div className="profile-page__avatar-preview" style={{ '--avatar-backdrop': form.avatarBackdrop }}>
                   {form.avatar ? <img src={form.avatar} alt={form.name || 'Profile avatar'} /> : <span>{form.name?.charAt(0) || 'U'}</span>}
                 </div>
-                <div className="profile-page__settings-actions-stack">
-                  <label className="profile-page__settings-upload-btn">
+                <div className="profile-page__upload-actions">
+                  <label className="profile-page__upload-btn">
                     Upload image
                     <input type="file" accept="image/*" onChange={handleAvatarUpload} />
                   </label>
-                  <label className="profile-page__settings-upload-btn">
+                  <label className="profile-page__upload-btn">
                     Upload backdrop
                     <input type="file" accept="image/*" onChange={handlePosterUpload} />
                   </label>
@@ -497,42 +502,59 @@ export default function Profile() {
               )}
 
               <div className="profile-page__settings-grid">
-                <label>
-                  Full name
+                <label className="profile-page__field">
+                  <span>Full name</span>
                   <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
                 </label>
 
-                <label>
-                  Email
+                <label className="profile-page__field">
+                  <span>Email</span>
                   <select value={user.email || ''} disabled>
                     <option value={user.email || ''}>{user.email || 'Select a verified email to display'}</option>
                   </select>
                 </label>
 
-                <label className="profile-page__span-2">
-                  Bio
+                <label className="profile-page__field">
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Phone size={14} /> Mobile number
+                  </span>
+                  <input
+                    type="tel"
+                    value={form.phoneNumber}
+                    onChange={(event) => {
+                      // Allow only digits, spaces, +, -, (, )
+                      const cleaned = event.target.value.replace(/[^\d\s+()\-]/g, '');
+                      setForm({ ...form, phoneNumber: cleaned });
+                    }}
+                    placeholder="e.g. +91 98765 43210"
+                    maxLength={20}
+                  />
+                </label>
+
+                <label className="profile-page__field full-width">
+                  <span>Bio</span>
                   <textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} rows={4} />
                 </label>
 
-                <label>
-                  City
+                <label className="profile-page__field">
+                  <span>City</span>
                   <input value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} />
                 </label>
 
-                <label>
-                  State
+                <label className="profile-page__field">
+                  <span>State</span>
                   <input value={form.state} onChange={(event) => setForm({ ...form, state: event.target.value })} />
                 </label>
 
-                <label>
-                  Institution
+                <label className="profile-page__field full-width">
+                  <span>Institution</span>
                   <input value={form.institutionName} onChange={(event) => setForm({ ...form, institutionName: event.target.value })} />
                 </label>
 
-                <div className="onboarding__field onboarding__field--full" style={{ gridColumn: '1 / -1' }}>
-                  <label>Skills</label>
+                <div className="profile-page__field full-width">
+                  <span>Skills</span>
                   <div className="onboarding__skills-row">
-                    <label className="onboarding__field mb-0">
+                    <label className="onboarding__field mb-0" style={{ flex: 1 }}>
                       <input
                         value={selectedSkill}
                         onChange={(event) => setSelectedSkill(event.target.value)}
@@ -554,7 +576,7 @@ export default function Profile() {
                           ))}
                       </datalist>
                     </label>
-                    <button type="button" className="onboarding__add-btn" onClick={addSkill}>Add</button>
+                    <button type="button" className="profile-page__btn-secondary" style={{ padding: '0 1.5rem', borderRadius: 12 }} onClick={addSkill}>Add</button>
                   </div>
                   <div className="onboarding__chips mt-3">
                     {(form.skills || []).length ? (form.skills || []).map((skill) => (
@@ -565,8 +587,8 @@ export default function Profile() {
                   </div>
                 </div>
 
-                <div className="onboarding__field onboarding__field--full" style={{ gridColumn: '1 / -1' }}>
-                  <label>Interests</label>
+                <div className="profile-page__field full-width">
+                  <span>Interests</span>
                   <span className="profile-page__field-note">Select the capsules that best describe you.</span>
                   <div className="onboarding__chips mt-3">
                     {INTEREST_OPTIONS.map((interest) => {
@@ -602,25 +624,50 @@ export default function Profile() {
                   </div>
                 </div>
 
-                <label className="profile-page__span-2">
-                  Social URLs
+                <div className="profile-page__field full-width">
+                  <span>Social URLs</span>
                   <span className="profile-page__field-note">Add your public links for the profile surface.</span>
-                </label>
-
-                <div className="profile-page__settings-url-list profile-page__span-2">
-                  {urlFields.map((url, index) => (
-                    <input
-                      key={`url-${index}`}
-                      value={url}
-                      onChange={(event) => handleUrlChange(index, event.target.value)}
-                      placeholder={index === 0 ? 'https://linkedin.com/in/you' : index === 1 ? 'https://github.com/you' : 'https://example.com'}
-                    />
-                  ))}
+                  <div className="profile-page__settings-url-list" style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {urlFields.map((url, index) => (
+                      <div key={`url-${index}`} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          value={url}
+                          onChange={(event) => handleUrlChange(index, event.target.value)}
+                          placeholder={index === 0 ? 'https://linkedin.com/in/you' : index === 1 ? 'https://github.com/you' : 'https://example.com'}
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeUrlField(index)}
+                          style={{
+                            background: '#fee2e2',
+                            color: '#b91c1c',
+                            border: 'none',
+                            borderRadius: '8px',
+                            width: '36px',
+                            height: '36px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                            fontWeight: 'bold'
+                          }}
+                          aria-label="Remove URL"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" className="profile-page__btn-secondary" style={{ alignSelf: 'flex-start', padding: '6px 12px', fontSize: '0.85rem' }} onClick={addUrlField}>+ Add URL</button>
                 </div>
               </div>
 
               <div className="profile-page__settings-actions-row">
-                <button type="button" className="profile-page__btn-secondary" onClick={addUrlField}>Add URL</button>
+                <button className="profile-page__btn-secondary" type="button" onClick={() => navigate('/dashboard')}>
+                  Close
+                </button>
                 <button type="submit" className="profile-page__settings-submit">Save changes</button>
                 {saved && (
                   <div className="fixed bottom-4 right-4 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 z-[9999] animate-in slide-in-from-bottom-5 duration-300">
@@ -630,9 +677,6 @@ export default function Profile() {
                     <span className="font-medium text-sm tracking-wide">Changes are saved</span>
                   </div>
                 )}
-                <button className="profile-page__dropdown-close" type="button" onClick={() => navigate('/dashboard')}>
-                  Close
-                </button>
               </div>
             </form>
           </div>
@@ -997,9 +1041,9 @@ export default function Profile() {
       <Modal isOpen={!!selectedQrRegistration} onClose={closeQrModal} title="Event QR Pass" size="sm">
         {selectedQrRegistration ? (
           <div className="profile-page__qr-modal">
-            <div className="profile-page__qr-box">
-              <QRCodeSVG
-                value={selectedQrRegistration.qrToken}
+            <div className="profile-page__qr-box" id="profile-qr-canvas-wrap">
+              <QRCodeCanvas
+                value={selectedQrRegistration.qrToken || selectedQrRegistration.id}
                 size={220}
                 bgColor="#F8FAFC"
                 fgColor="#111827"
@@ -1008,6 +1052,22 @@ export default function Profile() {
             </div>
             <p className="profile-page__qr-token">{selectedQrRegistration.qrToken}</p>
             <p className="profile-page__qr-hint">Show this QR while validating your entry.</p>
+            <button
+              type="button"
+              className="profile-page__registered-qr-btn"
+              style={{ marginTop: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              onClick={() => {
+                const canvas = document.querySelector('#profile-qr-canvas-wrap canvas');
+                if (!canvas) return;
+                const url = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `hunchmate-qr-${String(selectedQrRegistration.id || 'pass').split('-')[0]}.png`;
+                a.click();
+              }}
+            >
+              <Download size={14} /> Download QR Pass
+            </button>
           </div>
         ) : null}
       </Modal>

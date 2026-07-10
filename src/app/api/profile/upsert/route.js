@@ -9,7 +9,7 @@ import { createClient } from '../../../../utils/supabase/server';
  * Runs SERVER-SIDE with cookie-based auth — auth.uid() is always correctly
  * populated in RLS policies, with no client-side session timing issues.
  *
- * Body: { name?, role?, provider?, termsAccepted?, termsAcceptedAt? }
+ * Body: { name?, role?, provider?, termsAccepted?, termsAcceptedAt?, phoneNumber? }
  */
 export async function POST(request) {
   try {
@@ -35,8 +35,20 @@ export async function POST(request) {
       name,
       role,
       provider,
+      ...(body.phoneNumber !== undefined && { phone_number: String(body.phoneNumber || '').trim() }),
       ...(body.termsAccepted !== undefined && { terms_accepted: Boolean(body.termsAccepted) }),
       ...(body.termsAcceptedAt !== undefined && { terms_accepted_at: body.termsAcceptedAt }),
+      // Host onboarding fields
+      ...(body.organisationName !== undefined && { organisation_name: String(body.organisationName || '').trim() }),
+      ...(body.hostCategory !== undefined && { host_category: String(body.hostCategory || '').trim() }),
+      ...(body.hostType !== undefined && { host_type: String(body.hostType || '').trim() }),
+      ...(body.orgLogo !== undefined && { org_logo: body.orgLogo }),
+      ...(body.website !== undefined && { website: String(body.website || '').trim() }),
+      ...(body.linkedin !== undefined && { linkedin: String(body.linkedin || '').trim() }),
+      ...(body.country !== undefined && { country: String(body.country || '').trim() }),
+      ...(body.state !== undefined && { state: String(body.state || '').trim() }),
+      ...(body.city !== undefined && { city: String(body.city || '').trim() }),
+      ...(body.hostOnboardingCompleted !== undefined && { host_onboarding_completed: Boolean(body.hostOnboardingCompleted) }),
       updated_at: new Date().toISOString(),
     };
 

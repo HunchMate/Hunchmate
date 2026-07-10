@@ -98,6 +98,13 @@ function mapProfileToApp(row) {
     country: row.country || '',
     orgLogo: row.org_logo || '',
     linkedin: row.linkedin || '',
+    hostCategory: row.host_category || '',
+    institutionType: row.institution_type || '',
+    organisationName: row.organisation_name || '',
+    organisationType: row.organisation_type || '',
+    contactPerson: row.contact_person || '',
+    registrationNumber: row.registration_number || '',
+    hrContactPerson: row.hr_contact_person || '',
     socials: row.socials || { linkedin: '', github: '', instagram: '' },
     termsAccepted: row.terms_accepted,
     termsAcceptedAt: row.terms_accepted_at,
@@ -159,6 +166,13 @@ function mapProfileToDb(app) {
   if (app.country !== undefined) db.country = app.country;
   if (app.orgLogo !== undefined) db.org_logo = app.orgLogo;
   if (app.linkedin !== undefined) db.linkedin = app.linkedin;
+  if (app.hostCategory !== undefined) db.host_category = app.hostCategory;
+  if (app.institutionType !== undefined) db.institution_type = app.institutionType;
+  if (app.organisationName !== undefined) db.organisation_name = app.organisationName;
+  if (app.organisationType !== undefined) db.organisation_type = app.organisationType;
+  if (app.contactPerson !== undefined) db.contact_person = app.contactPerson;
+  if (app.registrationNumber !== undefined) db.registration_number = app.registrationNumber;
+  if (app.hrContactPerson !== undefined) db.hr_contact_person = app.hrContactPerson;
   if (app.socials !== undefined) db.socials = app.socials;
   if (app.termsAccepted !== undefined) db.terms_accepted = app.termsAccepted;
   if (app.termsAcceptedAt !== undefined) db.terms_accepted_at = app.termsAcceptedAt;
@@ -240,16 +254,25 @@ function mapEventToApp(row) {
 function mapRegistrationToApp(row) {
   if (!row) return null;
   return {
+    // Spread first so any extra DB columns are preserved as-is
     ...row,
+    // Always expose camelCase — handles both DB rows (snake_case) and in-memory objects
     id: String(row.id),
-    eventId: row.event_id || row.eventId,
-    userId: row.user_id || row.userId,
-    teamName: row.team_name || row.teamName,
-    qrToken: row.qr_token || row.qrToken,
-    checkedIn: row.checked_in !== undefined ? row.checked_in : row.checkedIn,
-    checkedInAt: row.checked_in_at || row.checkedInAt,
-    createdAt: row.created_at || row.createdAt,
-    updatedAt: row.updated_at || row.updatedAt,
+    userId: row.user_id || row.userId || '',
+    eventId: String(row.event_id || row.eventId || ''),
+    teamId: row.team_id ?? row.teamId ?? null,
+    teamName: row.team_name ?? row.teamName ?? null,
+    teamLeadId: row.team_lead_id ?? row.teamLeadId ?? null,
+    teamLeadName: row.team_lead_name ?? row.teamLeadName ?? null,
+    teamSize: row.team_size ?? row.teamSize ?? null,
+    qrToken: row.qr_token || row.qrToken || null,
+    checkedIn: row.checked_in ?? row.checkedIn ?? false,
+    checkedInAt: row.checked_in_at ?? row.checkedInAt ?? null,
+    status: row.status || 'approved',
+    participant: row.participant || {},
+    members: row.members || [],
+    createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+    updatedAt: row.updated_at || row.updatedAt || null,
   };
 }
 
@@ -297,6 +320,7 @@ export async function upsertUserProfileFromAuthUser(authUser, options = {}) {
           name: resolvedName,
           role: resolvedRole,
           provider: resolvedProvider,
+          ...(options.phoneNumber !== undefined && { phoneNumber: options.phoneNumber }),
           termsAccepted: options.termsAccepted,
           termsAcceptedAt: options.termsAcceptedAt,
         }),
@@ -599,18 +623,33 @@ export async function deleteEventRecord(eventId) {
 // REGISTRATIONS
 // ==========================================
 export async function listRegistrations() {
-  const { data, error } = await supabase
-    .from('registrations')
-    .select('*')
-    .order('created_at', { ascending: false });
+  try {
+    // Use the server-side API route which uses the service role key to bypass
+    // RLS — this ensures organizers can see ALL registrations for their events,
+    // not just their own rows (which the anon client restricts via RLS policies).
+    const cacheBuster = Date.now();
+    const res = await fetch(`/api/registrations?cb=${cacheBuster}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
 
-  if (error) {
-    if (error.message !== 'JWT expired') {
-      console.error('listRegistrations error:', error.message);
+    if (!res.ok) {
+      console.error('listRegistrations fetch error:', res.statusText);
+      return [];
     }
+
+    const json = await res.json();
+    if (json.error) {
+      console.error('listRegistrations api error:', json.error);
+      return [];
+    }
+
+    return (json.registrations || []).map(mapRegistrationToApp);
+  } catch (error) {
+    console.error('listRegistrations unexpected error:', error.message);
     return [];
   }
-  return data.map(mapRegistrationToApp);
 }
 
 export async function createRegistrationRecord(eventId, registration) {
@@ -625,8 +664,15 @@ export async function createRegistrationRecord(eventId, registration) {
 
   if (!res.ok || !json.success) {
     const message = json?.error || 'Failed to create registration on server';
-    console.error('createRegistrationRecord server error:', message);
-    throw new Error(message);
+    const isKnownCase = json?.alreadyRegistered || res.status === 409;
+    // Only log unexpected server errors — "already registered" is a normal user-facing case
+    if (!isKnownCase) {
+      console.error('createRegistrationRecord server error:', message);
+    }
+    const err = new Error(message);
+    // Attach the alreadyRegistered flag so callers can show a specific UI message
+    err.alreadyRegistered = Boolean(json?.alreadyRegistered);
+    throw err;
   }
 
   return {

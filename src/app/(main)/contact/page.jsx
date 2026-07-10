@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Mail, MessageSquare, Phone, Send, MapPin, Building2 } from 'lucide-react';
+import { motion } from 'motion/react';
 import '@/vite-pages/Contact.css';
 
 const INITIAL_FORM = {
@@ -10,6 +11,25 @@ const INITIAL_FORM = {
   email: '',
   subject: '',
   message: '',
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: 'easeOut' },
+  },
 };
 
 export default function Contact() {
@@ -72,47 +92,65 @@ export default function Contact() {
 
   return (
     <section className="contact-page">
-      <div className="container contact-page__shell">
-        <header className="contact-page__hero">
-          <p className="contact-page__eyebrow">Contact us</p>
-          <h1>Chat to our friendly team</h1>
+      <div className="contact-page__shell">
+        <motion.header 
+          className="contact-page__hero"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+        >
+          <span className="contact-page__eyebrow">Contact us</span>
+          <h1>Chat to our <span>friendly team</span></h1>
           <p>
             We&apos;d love to hear from you. Please fill out this form or shoot us an email.
           </p>
-        </header>
+        </motion.header>
 
         <div className="contact-page__grid">
-          <aside className="contact-page__panel contact-page__panel--channels">
-            <article className="contact-channel-card">
-              <span className="contact-channel-card__icon"><Mail size={18} /></span>
+          
+          {/* LEFT PANEL - CONTACT CHANNELS */}
+          <motion.aside 
+            className="contact-page__channels-grid"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <motion.article className="contact-channel-card" variants={itemVariants}>
+              <span className="contact-channel-card__icon"><Mail size={24} /></span>
               <h2>Email</h2>
               <p>Our friendly team is here to help.</p>
               <a href="mailto:hunchmate@gmail.com">hunchmate@gmail.com</a>
-            </article>
+            </motion.article>
 
-            <article className="contact-channel-card">
-              <span className="contact-channel-card__icon"><MessageSquare size={18} /></span>
+            <motion.article className="contact-channel-card" variants={itemVariants}>
+              <span className="contact-channel-card__icon"><MessageSquare size={24} /></span>
               <h2>Live chat</h2>
               <p>Connect with us for quick support.</p>
               <a href="https://hunchmate.com" target="_blank" rel="noreferrer">Start new chat</a>
-            </article>
+            </motion.article>
 
-            <article className="contact-channel-card">
-              <span className="contact-channel-card__icon"><Building2 size={18} /></span>
+            <motion.article className="contact-channel-card" variants={itemVariants}>
+              <span className="contact-channel-card__icon"><Building2 size={24} /></span>
               <h2>Office</h2>
               <p>Come say hello at our office HQ.</p>
-              <p>Geenovate TBI,<br/>Hyderabad, Telangana - 501301</p>
-            </article>
+              <p style={{ color: '#4f5f82', fontSize: '0.9rem', marginTop: '4px' }}>Geenovate TBI,<br/>Hyderabad, TS 501301</p>
+            </motion.article>
 
-            <article className="contact-channel-card">
-              <span className="contact-channel-card__icon"><Phone size={18} /></span>
+            <motion.article className="contact-channel-card" variants={itemVariants}>
+              <span className="contact-channel-card__icon"><Phone size={24} /></span>
               <h2>Phone</h2>
               <p>Mon-Fri from 8am to 5pm.</p>
               <a href="tel:+917993662605">+91 79936 62605</a>
-            </article>
-          </aside>
+            </motion.article>
+          </motion.aside>
 
-          <article className="contact-page__panel contact-page__panel--form">
+          {/* RIGHT PANEL - FORM */}
+          <motion.article 
+            className="contact-page__form-panel"
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+          >
             <form onSubmit={handleSubmit} className="contact-form">
               <div className="contact-form__row">
                 <label>
@@ -139,7 +177,6 @@ export default function Contact() {
               <label>
                 Message
                 <textarea
-                  rows={7}
                   value={form.message}
                   onChange={handleChange('message')}
                   placeholder="Tell us a little about your request"
@@ -148,22 +185,31 @@ export default function Contact() {
               </label>
 
               <button type="submit" disabled={!canSubmit || loading}>
-                <Send size={16} /> {loading ? 'Sending...' : 'Send message'}
+                <Send size={18} /> {loading ? 'Sending...' : 'Send message'}
               </button>
 
               {notice.text ? (
-                <p className={`contact-form__notice ${notice.type === 'error' ? 'contact-form__notice--error' : ''}`}>
+                <motion.p 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className={`contact-form__notice ${notice.type === 'error' ? 'contact-form__notice--error' : ''}`}
+                >
                   {notice.text}
-                </p>
+                </motion.p>
               ) : null}
             </form>
-          </article>
+          </motion.article>
         </div>
 
-        <div className="contact-page__map-note">
-          <span><MapPin size={16} /></span>
-          <p>Best response time: within 24 hours on business days.</p>
-        </div>
+        <motion.div 
+          className="contact-page__map-note"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8 }}
+        >
+          <span><MapPin size={20} /></span>
+          Best response time: within 24 hours on business days.
+        </motion.div>
       </div>
     </section>
   );

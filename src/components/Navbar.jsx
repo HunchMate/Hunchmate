@@ -37,7 +37,8 @@ export default function Navbar() {
   const location = useLocation()
   const profileMenuRef = useRef(null)
 
-  const isLightPage = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/profile')
+  const lightThemePaths = ['/dashboard', '/organizer', '/profile', '/events', '/contact', '/host-event', '/login', '/signup', '/host-signup', '/host-onboarding'];
+  const isLightPage = lightThemePaths.some(p => location.pathname.startsWith(p));
 
   const organizerNotifications = user?.role === 'organizer' ? getOrganizerNotifications(user.id) : []
   const unreadCount = organizerNotifications.filter((item) => !item.read).length
@@ -137,35 +138,30 @@ export default function Navbar() {
 
       {/* Pill-shaped centered navbar */}
       <div
-        className="flex h-14 items-center rounded-full relative pointer-events-auto"
+        className="flex h-14 items-center rounded-full pointer-events-auto px-2 sm:px-2 w-full sm:w-auto sm:ml-auto md:mx-auto justify-end sm:justify-center"
         style={{
           background: 'rgba(35,35,40,0.6)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
           border: '1px solid rgba(255,255,255,0.1)',
-          minWidth: 'min(420px, 100%)',
-          maxWidth: 'min(640px, calc(100vw - 48px))',
-          width: '100%',
         }}
       >
         {/* Desktop Links */}
-        <div className="absolute inset-0 hidden sm:flex items-center justify-center pointer-events-none">
-          <div className="flex items-center gap-4 pointer-events-auto">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.label}
-                to={link.to}
-                className="text-white/70 hover:text-white/90 text-[13px] transition-colors duration-200 font-medium"
-                style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
+        <div className="hidden sm:flex items-center gap-6 pl-6 pr-5 pointer-events-auto border-r border-white/10 mr-2">
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.label}
+              to={link.to}
+              className="text-white/70 hover:text-white/90 text-[13px] transition-colors duration-200 font-medium"
+              style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+            >
+              {link.label}
+            </Link>
+          ))}
         </div>
 
         {/* Right Side - Profile or Auth Buttons */}
-        <div className="hidden sm:flex items-center justify-end gap-3 flex-shrink-0 absolute right-4 top-1/2 -translate-y-1/2 w-[150px]">
+        <div className="hidden sm:flex items-center justify-end gap-3 flex-shrink-0 pr-1">
           {user ? (
             <div className="relative" ref={profileMenuRef}>
               <button
@@ -341,7 +337,7 @@ export default function Navbar() {
 
         {/* Mobile Hamburger */}
         <button
-          className="sm:hidden text-white/80 hover:text-white p-1 flex-shrink-0"
+          className="sm:hidden text-white/80 hover:text-white p-1 mr-2 flex-shrink-0"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Toggle menu"
         >

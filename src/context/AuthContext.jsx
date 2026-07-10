@@ -183,6 +183,7 @@ export function AuthProvider({ children }) {
         name,
         email,
         role: userData?.role || 'participant',
+        phoneNumber: userData?.phoneNumber || '',
         termsAccepted: Boolean(userData?.termsAccepted),
         termsAcceptedAt: userData?.termsAcceptedAt || null,
         provider: 'email',
@@ -310,7 +311,7 @@ export function AuthProvider({ children }) {
         const { data, error: googleError } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/home` : undefined,
+            redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/events` : undefined,
             queryParams: {
               prompt: 'select_account',
             },

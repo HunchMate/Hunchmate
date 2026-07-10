@@ -36,12 +36,16 @@ export default function Navbar() {
     return '/dashboard';
   };
 
-  // Determine if navbar is in "transparent" mode (floating completely seamlessly over the page background)
+  // Determine if navbar is in "transparent" mode
   const isTransparent = !scrolled;
+  
+  // Routes that have a light background in their hero section
+  const lightThemeRoutes = ['/events', '/contact', '/host-event', '/dashboard', '/organizer', '/admin'];
+  const isLightTheme = lightThemeRoutes.some(route => location.pathname.startsWith(route));
 
   return (
     <nav
-      className={`navbar ${scrolled ? 'navbar--scrolled' : ''} ${isTransparent ? 'navbar--transparent' : ''}`}
+      className={`navbar ${scrolled ? 'navbar--scrolled' : ''} ${isTransparent ? 'navbar--transparent' : ''} ${isLightTheme ? 'navbar--theme-light' : 'navbar--theme-dark'}`}
       style={{ paddingTop: '16px' }}
     >
       <div

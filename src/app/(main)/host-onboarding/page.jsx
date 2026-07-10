@@ -2,55 +2,38 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@/utils/router';
-import { CheckCircle, ChevronRight, AlertCircle, Building2, MapPin, UserCircle } from 'lucide-react';
+import { AlertCircle, ChevronRight, ChevronLeft, Building2, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/context/AuthContext';
 import '@/vite-pages/HostOnboarding.css';
 
-const ORGANIZATION_TYPES = [
-  { value: 'ngo', label: 'NGO' },
-  { value: 'social_enterprise', label: 'Social Enterprise' },
-  { value: 'startup', label: 'Startup' },
-  { value: 'nonprofit', label: 'Nonprofit' },
-  { value: 'incubator', label: 'Incubator' },
-  { value: 'community', label: 'Community' },
-  { value: 'other', label: 'Other' },
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const ORG_TYPES = [
+  { value: 'college_university', label: 'College / University', icon: '🏫' },
+  { value: 'company', label: 'Company', icon: '🏢' },
+  { value: 'startup', label: 'Startup', icon: '🚀' },
+  { value: 'incubator', label: 'Incubator', icon: '💡' },
+  { value: 'community', label: 'Community', icon: '🌍' },
+  { value: 'ngo', label: 'NGO', icon: '🤝' },
+  { value: 'others', label: 'Others', icon: '✨' },
 ];
 
-const CORPORATE_SECTORS = [
-  { value: 'technology', label: 'Technology' },
-  { value: 'finance', label: 'Finance' },
-  { value: 'healthcare', label: 'Healthcare' },
-  { value: 'retail', label: 'Retail' },
-  { value: 'manufacturing', label: 'Manufacturing' },
-  { value: 'others', label: 'Others' },
-];
-
-const INSTITUTION_TYPES = [
-  { value: 'school', label: 'School' },
-  { value: 'college', label: 'College' },
-  { value: 'university', label: 'University' },
-  { value: 'training_center', label: 'Training Center' },
-];
-
-const HOST_TYPES = [
-  { value: 'hod', label: 'HOD' },
-  { value: 'principal', label: 'Principal' },
-  { value: 'club_representative', label: 'Club Representative' },
-  { value: 'faculty', label: 'Faculty' },
+const ROLE_OPTIONS = [
   { value: 'founder', label: 'Founder' },
   { value: 'director', label: 'Director' },
+  { value: 'principal', label: 'Principal' },
+  { value: 'hod', label: 'HOD' },
+  { value: 'faculty', label: 'Faculty' },
+  { value: 'club_representative', label: 'Club Representative' },
+  { value: 'hr_manager', label: 'HR Manager' },
+  { value: 'other', label: 'Other' },
 ];
 
 const COUNTRIES = [
   'India', 'United States', 'United Kingdom', 'Canada', 'Australia',
   'Germany', 'Singapore', 'UAE', 'Japan', 'South Korea', 'France',
   'Netherlands', 'Other',
-];
-
-const HOST_CATEGORIES = [
-  { value: 'institution', label: 'Institution', icon: '🏫' },
-  { value: 'organisation', label: 'Organisation', icon: '🏢' },
-  { value: 'corporate', label: 'Corporate', icon: '💼' },
 ];
 
 const INDIA_STATE_CITY = {
@@ -67,84 +50,29 @@ const INDIA_STATE_CITY = {
   'Uttar Pradesh': ['Lucknow', 'Noida', 'Kanpur'],
   'West Bengal': ['Kolkata', 'Howrah', 'Durgapur'],
 };
-
 const STATE_OPTIONS = Object.keys(INDIA_STATE_CITY);
 
-function SearchableDropdown({
-  label,
-  options,
-  value,
-  onChange,
-  placeholder,
-  disabled = false,
-  error = '',
-}) {
-  const containerRef = useRef(null);
-  const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
+const STEPS = [
+  { id: 1, label: 'Your Organisation' },
+  { id: 2, label: 'Your Role' },
+  { id: 3, label: 'Org Profile' },
+];
 
-  const selectedOption = useMemo(
-    () => options.find((option) => option.value === value) || null,
-    [options, value]
-  );
+const slideVariants = {
+  enter: (dir) => ({ opacity: 0, x: dir > 0 ? 60 : -60 }),
+  center: { opacity: 1, x: 0, transition: { duration: 0.35, ease: 'easeOut' } },
+  exit: (dir) => ({ opacity: 0, x: dir > 0 ? -60 : 60, transition: { duration: 0.25 } }),
+};
 
-  useEffect(() => {
-    setQuery(selectedOption?.label || '');
-  }, [selectedOption]);
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-  const filtered = useMemo(() => {
-    const normalized = String(query || '').trim().toLowerCase();
-    if (!normalized) return options;
-    return options.filter((option) => option.label.toLowerCase().includes(normalized));
-  }, [options, query]);
-
-  useEffect(() => {
-    const onOutsideClick = (event) => {
-      if (!containerRef.current?.contains(event.target)) {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', onOutsideClick);
-    return () => document.removeEventListener('mousedown', onOutsideClick);
-  }, []);
-
-  return (
-    <label className="host-onboarding__field" ref={containerRef}>
-      <span>{label}</span>
-      <input
-        value={query}
-        onChange={(event) => {
-          setQuery(event.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        placeholder={placeholder}
-        disabled={disabled}
-        autoComplete="off"
-      />
-
-      {open && !disabled ? (
-        <div className="host-onboarding__dropdown">
-          {filtered.length ? filtered.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={`host-onboarding__option ${value === option.value ? 'is-active' : ''}`}
-              onClick={() => {
-                onChange(option.value);
-                setQuery(option.label);
-                setOpen(false);
-              }}
-            >
-              {option.label}
-            </button>
-          )) : <p className="host-onboarding__no-result">No results found</p>}
-        </div>
-      ) : null}
-
-      {error ? <small className="host-onboarding__error-text">{error}</small> : null}
-    </label>
+function hasCompletedHostOnboarding(user) {
+  if (!user) return false;
+  if (user.hostOnboardingCompleted) return true;
+  return Boolean(
+    String(user.institutionName || user.organisationName || user.companyName || '').trim() &&
+    String(user.hostType || '').trim() &&
+    String(user.name || '').trim()
   );
 }
 
@@ -152,63 +80,95 @@ function toOptions(items) {
   return items.map((item) => ({ value: item, label: item }));
 }
 
-function hasCompletedHostOnboarding(user) {
-  if (!user) return false;
-  if (user.hostOnboardingCompleted) return true;
+// ─── SearchableDropdown ───────────────────────────────────────────────────────
 
-  return Boolean(
-    String(user.institutionName || '').trim()
-    && String(user.hostType || '').trim()
-    && String(user.name || '').trim()
-    && String(user.phoneNumber || '').trim()
-    && String(user.state || '').trim()
-    && String(user.city || '').trim()
+function SearchableDropdown({ label, options, value, onChange, placeholder, disabled = false, error = '' }) {
+  const containerRef = useRef(null);
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+
+  const selectedOption = useMemo(() => options.find((o) => o.value === value) || null, [options, value]);
+  useEffect(() => { setQuery(selectedOption?.label || ''); }, [selectedOption]);
+
+  const filtered = useMemo(() => {
+    const n = String(query || '').trim().toLowerCase();
+    if (!n) return options;
+    return options.filter((o) => o.label.toLowerCase().includes(n));
+  }, [options, query]);
+
+  useEffect(() => {
+    const handler = (e) => { if (!containerRef.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <label className="host-onboarding__field" ref={containerRef}>
+      <span>{label}</span>
+      <input
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+        disabled={disabled}
+        autoComplete="off"
+      />
+      <AnimatePresence>
+        {open && !disabled && (
+          <motion.div
+            className="host-onboarding__dropdown"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.15 }}
+          >
+            {filtered.length
+              ? filtered.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  className={`host-onboarding__option ${value === o.value ? 'is-active' : ''}`}
+                  onClick={() => { onChange(o.value); setQuery(o.label); setOpen(false); }}
+                >
+                  {o.label}
+                </button>
+              ))
+              : <p className="host-onboarding__no-result">No results found</p>
+            }
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {error && <small className="host-onboarding__error-text">{error}</small>}
+    </label>
   );
 }
 
-function getHostOnboardingCacheKey(user) {
-  const identity = String(user?.id || user?.email || '').trim();
-  return identity ? `hm_host_onboarding_completed_${identity}` : '';
-}
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function HostOnboarding() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Host category state (institution, organisation, corporate)
-  const [hostCategory, setHostCategory] = useState('');
+  const [step, setStep] = useState(1);
+  const [dir, setDir] = useState(1); // animation direction
 
-  // Common fields
-  const [name, setName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [email, setEmail] = useState('');
-  const [state, setState] = useState('');
-  const [city, setCity] = useState('');
+  // Step 1 — Organisation
+  const [orgName, setOrgName] = useState('');
+  const [orgType, setOrgType] = useState('');
 
-  // Institution specific
-  const [institutionName, setInstitutionName] = useState('');
-  const [institutionType, setInstitutionType] = useState('');
-  const [hostType, setHostType] = useState('');
+  // Step 2 — Role
+  const [role, setRole] = useState('');
 
-  // Organisation specific
-  const [organisationName, setOrganisationName] = useState('');
-  const [organisationType, setOrganisationType] = useState('');
-  const [contactPerson, setContactPerson] = useState('');
-
-  // Corporate specific
-  const [companyName, setCompanyName] = useState('');
-  const [industry, setIndustry] = useState('');
-  const [registrationNumber, setRegistrationNumber] = useState('');
-  const [hrContactPerson, setHrContactPerson] = useState('');
-
-  // New fields: country, org profile
-  const [country, setCountry] = useState('India');
+  // Step 3 — Org Profile
   const [orgLogo, setOrgLogo] = useState('');
   const [website, setWebsite] = useState('');
   const [linkedin, setLinkedin] = useState('');
+  const [country, setCountry] = useState('India');
+  const [state, setState] = useState('');
+  const [city, setCity] = useState('');
 
-  const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
+  const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const cityOptions = useMemo(() => {
@@ -217,612 +177,340 @@ export default function HostOnboarding() {
   }, [state]);
 
   useEffect(() => {
-    if (!user) return;
+    // Wait until auth has fully resolved before running guards
+    if (authLoading) return;
+    if (!user) { navigate('/host-signup', { replace: true }); return; }
+    if (user.role !== 'organizer') { navigate('/events', { replace: true }); return; }
+    if (hasCompletedHostOnboarding(user)) { navigate('/organizer/dashboard', { replace: true }); return; }
 
-    if (user.role !== 'organizer') {
-      navigate('/events', { replace: true });
-      return;
-    }
-
-    if (hasCompletedHostOnboarding(user)) {
-      navigate('/organizer/dashboard', { replace: true });
-      return;
-    }
-
-    // Initialize fields
-    setName(user.name || '');
-    setPhoneNumber(user.phoneNumber || '');
-    setEmail(user.email || '');
-    setState(user.state || '');
-    setCity(user.city || '');
-    setHostCategory(user.hostCategory || '');
-
-    // Institution fields
-    setInstitutionName(user.institutionName || '');
-    setInstitutionType(user.institutionType || '');
-    setHostType(user.hostType || '');
-
-    // Organisation fields
-    setOrganisationName(user.organisationName || '');
-    setOrganisationType(user.organisationType || '');
-    setContactPerson(user.contactPerson || '');
-
-    // Corporate fields
-    setCompanyName(user.companyName || '');
-    setIndustry(user.industry || '');
-    setRegistrationNumber(user.registrationNumber || '');
-    setHrContactPerson(user.hrContactPerson || '');
-
-    // New fields
-    setCountry(user.country || 'India');
-    setOrgLogo(user.orgLogo || '');
+    // Pre-fill from existing profile
+    setOrgName(user.organisationName || user.institutionName || user.companyName || '');
+    setOrgType(user.hostCategory || '');
+    setRole(user.hostType || '');
     setWebsite(user.website || '');
     setLinkedin(user.linkedin || '');
-  }, [navigate, user]);
+    setCountry(user.country || 'India');
+    setState(user.state || '');
+    setCity(user.city || '');
+    setOrgLogo(user.orgLogo || '');
+  }, [navigate, user, authLoading]);
 
-  const validate = () => {
-    const errors = {};
+  // Progress percentage
+  const progress = useMemo(() => {
+    let done = 0;
+    if (orgName) done++;
+    if (orgType) done++;
+    if (role) done++;
+    if (country !== 'India' || (state && city)) done++;
+    return Math.round((done / 4) * 100);
+  }, [orgName, orgType, role, country, state, city]);
 
-    // Common validation
-    if (!hostCategory.trim()) {
-      errors.hostCategory = 'Please select a category';
+  const goNext = () => {
+    const errs = {};
+    if (step === 1) {
+      if (!orgName.trim()) errs.orgName = 'Organisation name is required';
+      if (!orgType) errs.orgType = 'Please select an organisation type';
     }
-
-    if (!name.trim()) {
-      errors.name = 'Name is required';
+    if (step === 2) {
+      if (!role) errs.role = 'Please select your role or designation';
     }
+    if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
+    setFieldErrors({});
+    setDir(1);
+    setStep((s) => s + 1);
+  };
 
-    if (!phoneNumber.trim()) {
-      errors.phoneNumber = 'Phone number is required';
-    }
-
-    const phoneRegex = /^[\d\s\-+]{10,}$/;
-    if (phoneNumber.trim() && !phoneRegex.test(phoneNumber)) {
-      errors.phoneNumber = 'Please enter a valid phone number';
-    }
-
-    if (country === 'India') {
-      if (!state.trim()) {
-        errors.state = 'State is required';
-      }
-
-      if (!city.trim()) {
-        errors.city = 'City is required';
-      }
-    }
-
-    // Institution validation
-    if (hostCategory === 'institution') {
-      if (!institutionName.trim()) {
-        errors.institutionName = 'Institution name is required';
-      }
-      if (!institutionType.trim()) {
-        errors.institutionType = 'Institution type is required';
-      }
-      if (!hostType.trim()) {
-        errors.hostType = 'Please select your role';
-      }
-    }
-
-    // Organisation validation
-    if (hostCategory === 'organisation') {
-      if (!organisationName.trim()) {
-        errors.organisationName = 'Organisation name is required';
-      }
-      if (!organisationType.trim()) {
-        errors.organisationType = 'Organisation type is required';
-      }
-      if (!contactPerson.trim()) {
-        errors.contactPerson = 'Contact person name is required';
-      }
-    }
-
-    // Corporate validation
-    if (hostCategory === 'corporate') {
-      if (!companyName.trim()) {
-        errors.companyName = 'Company name is required';
-      }
-      if (!industry.trim()) {
-        errors.industry = 'Industry/Sector is required';
-      }
-      if (!registrationNumber.trim()) {
-        errors.registrationNumber = 'Company registration number is required';
-      }
-      if (!hrContactPerson.trim()) {
-        errors.hrContactPerson = 'Contact person (HR/Manager) name is required';
-      }
-    }
-
-    return errors;
+  const goBack = () => {
+    setFieldErrors({});
+    setDir(-1);
+    setStep((s) => s - 1);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-
-    const newErrors = validate();
-    if (Object.keys(newErrors).length > 0) {
-      setFieldErrors(newErrors);
-      return;
+    const errs = {};
+    if (country === 'India') {
+      if (!state.trim()) errs.state = 'Please select a state';
+      if (!city.trim()) errs.city = 'Please select a city';
     }
+    if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
 
+    setError('');
     setSubmitting(true);
 
     try {
-      const profileData = {
-        name: name.trim(),
-        phoneNumber: phoneNumber.trim(),
-        email: email.trim(),
-        country: country.trim(),
-        state: country === 'India' ? state.trim() : '',
-        city: country === 'India' ? city.trim() : '',
-        hostCategory: hostCategory.trim(),
-        orgLogo: orgLogo,
-        website: website.trim(),
-        linkedin: linkedin.trim(),
-        hostOnboardingCompleted: true,
-      };
+      // Use the server-side upsert route (cookie auth, no RLS cold-start issues)
+      const res = await fetch('/api/profile/upsert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          organisationName: orgName.trim(),
+          hostCategory: orgType,
+          hostType: role,
+          orgLogo,
+          website: website.trim(),
+          linkedin: linkedin.trim(),
+          country: country.trim(),
+          state: country === 'India' ? state.trim() : '',
+          city: country === 'India' ? city.trim() : '',
+          hostOnboardingCompleted: true,
+        }),
+      });
 
-      // Add type-specific fields
-      if (hostCategory === 'institution') {
-        profileData.institutionName = institutionName.trim();
-        profileData.institutionType = institutionType.trim();
-        profileData.hostType = hostType.trim();
-      } else if (hostCategory === 'organisation') {
-        profileData.organisationName = organisationName.trim();
-        profileData.organisationType = organisationType.trim();
-        profileData.contactPerson = contactPerson.trim();
-      } else if (hostCategory === 'corporate') {
-        profileData.companyName = companyName.trim();
-        profileData.industry = industry.trim();
-        profileData.registrationNumber = registrationNumber.trim();
-        profileData.hrContactPerson = hrContactPerson.trim();
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || `Server error (${res.status})`);
       }
 
-      await updateProfile(profileData);
-
-      const cacheKey = getHostOnboardingCacheKey(user);
-      if (cacheKey) {
-        localStorage.setItem(cacheKey, '1');
-      }
-
-      setTimeout(() => {
-        navigate('/organizer/dashboard', { replace: true });
-      }, 300);
-    } catch (submitError) {
-      setError(submitError?.message || 'Failed to save information. Please try again.');
-    } finally {
+      const cacheKey = user?.id ? `hm_host_onboarding_completed_${user.id}` : '';
+      if (cacheKey) localStorage.setItem(cacheKey, '1');
+      window.location.replace('/organizer/dashboard');
+    } catch (err) {
+      setError(err?.message || 'Failed to save. Please try again.');
       setSubmitting(false);
     }
   };
 
-  const progressSteps = useMemo(() => {
-    const steps = [
-      { label: 'Started', done: true },
-      { label: 'Select category', done: Boolean(hostCategory) },
-    ];
-
-    if (hostCategory === 'institution') {
-      steps.push(
-        { label: 'Institution details', done: Boolean(institutionName && institutionType && hostType) },
-        { label: 'Contact details', done: Boolean(name && phoneNumber) },
-        { label: 'Location', done: Boolean(state && city) }
-      );
-    } else if (hostCategory === 'organisation') {
-      steps.push(
-        { label: 'Organisation details', done: Boolean(organisationName && organisationType) },
-        { label: 'Contact details', done: Boolean(contactPerson && phoneNumber && name) },
-        { label: 'Location', done: Boolean(state && city) }
-      );
-    } else if (hostCategory === 'corporate') {
-      steps.push(
-        { label: 'Company details', done: Boolean(companyName && industry && registrationNumber) },
-        { label: 'Contact details', done: Boolean(hrContactPerson && phoneNumber && name) },
-        { label: 'Location', done: Boolean(state && city) }
-      );
-    }
-
-    return steps;
-  }, [hostCategory, institutionName, institutionType, hostType, name, phoneNumber, state, city, organisationName, organisationType, contactPerson, companyName, industry, registrationNumber, hrContactPerson]);
-
-  const completedSteps = progressSteps.filter((step) => step.done).length;
-  const progress = Math.round((completedSteps / progressSteps.length) * 100);
-
   return (
     <div className="host-onboarding">
-      <div className="host-onboarding__shell">
-        <aside className="host-onboarding__intro">
-          <div className="host-onboarding__progress-wrapper">
-            <div className="host-onboarding__progress-label">Profile completion</div>
-            <div
-              className="host-onboarding__progress-ring"
-              style={{ '--progress': `${progress}%` }}
-              data-label={`${progress}%`}
-            />
+      <div className="host-onboarding__container">
+
+        {/* ── Step Tracker ── */}
+        <div className="host-onboarding__card host-onboarding__tracker">
+          <div className="host-onboarding__tracker-steps">
+            {STEPS.map((s, i) => {
+              const status = step > s.id ? 'completed' : step === s.id ? 'active' : 'pending';
+              return (
+                <div key={s.id} className="host-onboarding__tracker-item">
+                  <div className={`host-onboarding__step-dot ${status}`}>
+                    {status === 'completed' ? <Check size={14} /> : s.id}
+                  </div>
+                  <span className={`host-onboarding__step-text ${status}`}>{s.label}</span>
+                  {i < STEPS.length - 1 && (
+                    <div className={`host-onboarding__step-line ${step > s.id ? 'completed' : ''}`} />
+                  )}
+                </div>
+              );
+            })}
           </div>
-
-          <div className="host-onboarding__facts">
-            {progressSteps.map((step, index) => (
-              <div key={step.label} className={`host-onboarding__fact ${step.done ? 'is-done' : ''}`}>
-                <span className="host-onboarding__fact-marker">{step.done ? <CheckCircle size={14} /> : index + 1}</span>
-                <p>{step.label}</p>
-              </div>
-            ))}
-          </div>
-        </aside>
-
-        <main className="host-onboarding__form-wrap">
-          <header className="host-onboarding__header">
-            <h1>Get Started as a Host</h1>
-            <p>Select your category and provide details so we can personalize your experience.</p>
-          </header>
-
-          <div className="host-onboarding__category-selector">
-            <p className="host-onboarding__category-label">What type of host are you?</p>
-            <div className="host-onboarding__category-buttons">
-              {HOST_CATEGORIES.map((category) => (
-                <button
-                  key={category.value}
-                  type="button"
-                  className={`host-onboarding__category-btn ${hostCategory === category.value ? 'is-active' : ''}`}
-                  onClick={() => {
-                    setHostCategory(category.value);
-                    setFieldErrors((prev) => {
-                      const next = { ...prev };
-                      delete next.hostCategory;
-                      return next;
-                    });
-                  }}
-                >
-                  <span className="host-onboarding__category-icon">{category.icon}</span>
-                  <span className="host-onboarding__category-name">{category.label}</span>
-                </button>
-              ))}
+          <div className="host-onboarding__tracker-progress">
+            <div className="host-onboarding__tracker-bar">
+              <div className="host-onboarding__tracker-fill" style={{ width: `${progress}%` }} />
             </div>
-            {fieldErrors.hostCategory ? <small className="host-onboarding__error-text">{fieldErrors.hostCategory}</small> : null}
+            <span className="host-onboarding__tracker-pct">{progress}% complete</span>
           </div>
+        </div>
 
-          <form className="host-onboarding__form" onSubmit={handleSubmit}>
-            {error ? (
-              <div className="host-onboarding__error-box">
-                <AlertCircle size={18} />
-                <p>{error}</p>
-              </div>
-            ) : null}
+        {/* ── Form Card ── */}
+        <div className="host-onboarding__card host-onboarding__form-container">
+          <AnimatePresence mode="wait" custom={dir}>
+            {/* ─────── STEP 1: Organisation ─────── */}
+            {step === 1 && (
+              <motion.div key="step-1" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit">
+                <div className="host-onboarding__header">
+                  <p className="host-onboarding__step-badge">Step 1 of 3</p>
+                  <h2>Tell us about your organisation</h2>
+                  <p>We'll use this to personalise your host dashboard.</p>
+                </div>
 
-            {/* INSTITUTION FORM */}
-            {hostCategory === 'institution' && (
-              <>
-                <fieldset className="host-onboarding__fieldset">
-                  <legend className="host-onboarding__legend">Institution Information</legend>
+                {fieldErrors.orgName || fieldErrors.orgType ? (
+                  <div className="host-onboarding__error-box">
+                    <AlertCircle size={18} />
+                    <p>Please fill in all required fields before continuing.</p>
+                  </div>
+                ) : null}
 
-                  <label className="host-onboarding__field">
-                    <span>Institution name</span>
-                    <input
-                      type="text"
-                      value={institutionName}
-                      onChange={(e) => {
-                        setInstitutionName(e.target.value);
-                        setFieldErrors((prev) => { const next = { ...prev }; delete next.institutionName; return next; });
-                      }}
-                      placeholder="e.g. Delhi Institute of Technology"
-                    />
-                    {fieldErrors.institutionName ? <small className="host-onboarding__error-text">{fieldErrors.institutionName}</small> : null}
-                  </label>
-
-                  <SearchableDropdown
-                    label="Institution type"
-                    options={INSTITUTION_TYPES}
-                    value={institutionType}
-                    onChange={(value) => {
-                      setInstitutionType(value);
-                      setFieldErrors((prev) => { const next = { ...prev }; delete next.institutionType; return next; });
-                    }}
-                    placeholder="Select institution type"
-                    error={fieldErrors.institutionType}
+                <div className="host-onboarding__field" style={{ marginBottom: '28px' }}>
+                  <span>Organisation name <span className="host-onboarding__required">*</span></span>
+                  <input
+                    type="text"
+                    value={orgName}
+                    onChange={(e) => { setOrgName(e.target.value); setFieldErrors((p) => { const n = { ...p }; delete n.orgName; return n; }); }}
+                    placeholder="e.g. Delhi Institute of Technology"
                   />
+                  {fieldErrors.orgName && <small className="host-onboarding__error-text">{fieldErrors.orgName}</small>}
+                </div>
 
-                  <SearchableDropdown
-                    label="Your role"
-                    options={HOST_TYPES}
-                    value={hostType}
-                    onChange={(value) => {
-                      setHostType(value);
-                      setFieldErrors((prev) => { const next = { ...prev }; delete next.hostType; return next; });
-                    }}
-                    placeholder="Select your role"
-                    error={fieldErrors.hostType}
-                  />
-                </fieldset>
-              </>
+                <div className="host-onboarding__field-label">
+                  Organisation type <span className="host-onboarding__required">*</span>
+                  {fieldErrors.orgType && <small className="host-onboarding__error-text" style={{ marginLeft: 8 }}>{fieldErrors.orgType}</small>}
+                </div>
+                <div className="host-onboarding__type-grid">
+                  {ORG_TYPES.map((t) => (
+                    <button
+                      key={t.value}
+                      type="button"
+                      className={`host-onboarding__type-card ${orgType === t.value ? 'is-active' : ''}`}
+                      onClick={() => { setOrgType(t.value); setFieldErrors((p) => { const n = { ...p }; delete n.orgType; return n; }); }}
+                    >
+                      <span className="host-onboarding__type-icon">{t.icon}</span>
+                      <span className="host-onboarding__type-label">{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="host-onboarding__actions">
+                  <button type="button" className="host-onboarding__next-btn" onClick={goNext}>
+                    Continue <ChevronRight size={18} />
+                  </button>
+                </div>
+              </motion.div>
             )}
 
-            {/* ORGANISATION FORM */}
-            {hostCategory === 'organisation' && (
-              <>
-                <fieldset className="host-onboarding__fieldset">
-                  <legend className="host-onboarding__legend">Organisation Information</legend>
+            {/* ─────── STEP 2: Role ─────── */}
+            {step === 2 && (
+              <motion.div key="step-2" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit">
+                <div className="host-onboarding__header">
+                  <p className="host-onboarding__step-badge">Step 2 of 3</p>
+                  <h2>What's your role or designation?</h2>
+                  <p>Select the option that best describes your position in the organisation.</p>
+                </div>
 
-                  <label className="host-onboarding__field">
-                    <span>Organisation name</span>
-                    <input
-                      type="text"
-                      value={organisationName}
-                      onChange={(e) => {
-                        setOrganisationName(e.target.value);
-                        setFieldErrors((prev) => { const next = { ...prev }; delete next.organisationName; return next; });
-                      }}
-                      placeholder="e.g. Social Impact Initiative"
-                    />
-                    {fieldErrors.organisationName ? <small className="host-onboarding__error-text">{fieldErrors.organisationName}</small> : null}
-                  </label>
+                {fieldErrors.role ? (
+                  <div className="host-onboarding__error-box">
+                    <AlertCircle size={18} />
+                    <p>{fieldErrors.role}</p>
+                  </div>
+                ) : null}
 
-                  <SearchableDropdown
-                    label="Organisation type"
-                    options={ORGANIZATION_TYPES}
-                    value={organisationType}
-                    onChange={(value) => {
-                      setOrganisationType(value);
-                      setFieldErrors((prev) => { const next = { ...prev }; delete next.organisationType; return next; });
-                    }}
-                    placeholder="Select organisation type"
-                    error={fieldErrors.organisationType}
-                  />
-                </fieldset>
-              </>
+                <div className="host-onboarding__role-grid">
+                  {ROLE_OPTIONS.map((r) => (
+                    <button
+                      key={r.value}
+                      type="button"
+                      className={`host-onboarding__role-card ${role === r.value ? 'is-active' : ''}`}
+                      onClick={() => { setRole(r.value); setFieldErrors((p) => { const n = { ...p }; delete n.role; return n; }); }}
+                    >
+                      {role === r.value && <Check size={14} className="host-onboarding__role-check" />}
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="host-onboarding__actions host-onboarding__actions--two">
+                  <button type="button" className="host-onboarding__back-btn" onClick={goBack}>
+                    <ChevronLeft size={18} /> Back
+                  </button>
+                  <button type="button" className="host-onboarding__next-btn" onClick={goNext}>
+                    Continue <ChevronRight size={18} />
+                  </button>
+                </div>
+              </motion.div>
             )}
 
-            {/* CORPORATE FORM */}
-            {hostCategory === 'corporate' && (
-              <>
-                <fieldset className="host-onboarding__fieldset">
-                  <legend className="host-onboarding__legend">Company Information</legend>
+            {/* ─────── STEP 3: Org Profile ─────── */}
+            {step === 3 && (
+              <motion.div key="step-3" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit">
+                <div className="host-onboarding__header">
+                  <p className="host-onboarding__step-badge">Step 3 of 3</p>
+                  <h2>Set up your org profile</h2>
+                  <p>Add a logo and contact details so participants can find you easily.</p>
+                </div>
 
-                  <label className="host-onboarding__field">
-                    <span>Company name</span>
-                    <input
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => {
-                        setCompanyName(e.target.value);
-                        setFieldErrors((prev) => { const next = { ...prev }; delete next.companyName; return next; });
-                      }}
-                      placeholder="e.g. Tech Solutions Ltd."
-                    />
-                    {fieldErrors.companyName ? <small className="host-onboarding__error-text">{fieldErrors.companyName}</small> : null}
-                  </label>
+                {error && (
+                  <motion.div className="host-onboarding__error-box" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <AlertCircle size={18} />
+                    <p>{error}</p>
+                  </motion.div>
+                )}
 
-                  <SearchableDropdown
-                    label="Industry/Sector"
-                    options={CORPORATE_SECTORS}
-                    value={industry}
-                    onChange={(value) => {
-                      setIndustry(value);
-                      setFieldErrors((prev) => { const next = { ...prev }; delete next.industry; return next; });
-                    }}
-                    placeholder="Select industry"
-                    error={fieldErrors.industry}
-                  />
+                <form onSubmit={handleSubmit}>
+                  {/* Logo */}
+                  <div className="host-onboarding__field" style={{ marginBottom: '24px' }}>
+                    <span>Organisation logo</span>
+                    <div className="host-onboarding__logo-row">
+                      {orgLogo
+                        ? <img src={orgLogo} alt="Logo preview" className="host-onboarding__logo-preview" />
+                        : <div className="host-onboarding__logo-placeholder"><Building2 size={22} color="#94a3b8" /></div>
+                      }
+                      <div className="host-onboarding__logo-upload">
+                        <label htmlFor="org-logo-input" className="host-onboarding__logo-btn">
+                          {orgLogo ? 'Change logo' : 'Upload logo'}
+                        </label>
+                        <input
+                          id="org-logo-input"
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 2 * 1024 * 1024) { setFieldErrors((p) => ({ ...p, orgLogo: 'Image must be under 2MB' })); return; }
+                            const reader = new FileReader();
+                            reader.onload = (ev) => { setOrgLogo(ev.target.result); setFieldErrors((p) => { const n = { ...p }; delete n.orgLogo; return n; }); };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                        <p className="host-onboarding__logo-hint">PNG, JPG up to 2MB</p>
+                        {fieldErrors.orgLogo && <small className="host-onboarding__error-text">{fieldErrors.orgLogo}</small>}
+                      </div>
+                    </div>
+                  </div>
 
-                  <label className="host-onboarding__field">
-                    <span>Company registration number</span>
-                    <input
-                      type="text"
-                      value={registrationNumber}
-                      onChange={(e) => {
-                        setRegistrationNumber(e.target.value);
-                        setFieldErrors((prev) => { const next = { ...prev }; delete next.registrationNumber; return next; });
-                      }}
-                      placeholder="e.g. CIN or GST number"
-                    />
-                    {fieldErrors.registrationNumber ? <small className="host-onboarding__error-text">{fieldErrors.registrationNumber}</small> : null}
-                  </label>
-                </fieldset>
-              </>
-            )}
+                  {/* Website */}
+                  <div className="host-onboarding__field" style={{ marginBottom: '20px' }}>
+                    <span>Website <span className="host-onboarding__optional">(optional)</span></span>
+                    <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://yourorganisation.com" />
+                  </div>
 
-            {/* COMMON FIELDS - Contact Details */}
-            {hostCategory && (
-              <>
-                <fieldset className="host-onboarding__fieldset">
-                  <legend className="host-onboarding__legend">Contact Person Details</legend>
+                  {/* LinkedIn */}
+                  <div className="host-onboarding__field" style={{ marginBottom: '28px' }}>
+                    <span>LinkedIn <span className="host-onboarding__optional">(optional)</span></span>
+                    <input type="url" value={linkedin} onChange={(e) => setLinkedin(e.target.value)} placeholder="https://linkedin.com/company/yourorg" />
+                  </div>
 
-                  {hostCategory === 'corporate' && (
-                    <label className="host-onboarding__field">
-                      <span>Contact person (HR/Manager)</span>
-                      <input
-                        type="text"
-                        value={hrContactPerson}
-                        onChange={(e) => {
-                          setHrContactPerson(e.target.value);
-                          setFieldErrors((prev) => { const next = { ...prev }; delete next.hrContactPerson; return next; });
-                        }}
-                        placeholder="Full name"
-                      />
-                      {fieldErrors.hrContactPerson ? <small className="host-onboarding__error-text">{fieldErrors.hrContactPerson}</small> : null}
-                    </label>
-                  )}
-
-                  {hostCategory === 'organisation' && (
-                    <label className="host-onboarding__field">
-                      <span>Contact person name</span>
-                      <input
-                        type="text"
-                        value={contactPerson}
-                        onChange={(e) => {
-                          setContactPerson(e.target.value);
-                          setFieldErrors((prev) => { const next = { ...prev }; delete next.contactPerson; return next; });
-                        }}
-                        placeholder="Full name"
-                      />
-                      {fieldErrors.contactPerson ? <small className="host-onboarding__error-text">{fieldErrors.contactPerson}</small> : null}
-                    </label>
-                  )}
-
-                  <label className="host-onboarding__field">
-                    <span>Your name</span>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => {
-                        setName(e.target.value);
-                        setFieldErrors((prev) => { const next = { ...prev }; delete next.name; return next; });
-                      }}
-                      placeholder="Your full name"
-                    />
-                    {fieldErrors.name ? <small className="host-onboarding__error-text">{fieldErrors.name}</small> : null}
-                  </label>
-
-                  <label className="host-onboarding__field">
-                    <span>Phone number</span>
-                    <input
-                      type="tel"
-                      value={phoneNumber}
-                      onChange={(e) => {
-                        setPhoneNumber(e.target.value);
-                        setFieldErrors((prev) => { const next = { ...prev }; delete next.phoneNumber; return next; });
-                      }}
-                      placeholder="10-digit phone number"
-                    />
-                    {fieldErrors.phoneNumber ? <small className="host-onboarding__error-text">{fieldErrors.phoneNumber}</small> : null}
-                  </label>
-
-                  <label className="host-onboarding__field">
-                    <span>Email address</span>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        setFieldErrors((prev) => { const next = { ...prev }; delete next.email; return next; });
-                      }}
-                      placeholder="your.email@example.com"
-                    />
-                    {fieldErrors.email ? <small className="host-onboarding__error-text">{fieldErrors.email}</small> : null}
-                  </label>
-                </fieldset>
-
-                <fieldset className="host-onboarding__fieldset">
-                  <legend className="host-onboarding__legend">Location</legend>
-
+                  {/* Country */}
                   <SearchableDropdown
                     label="Country"
                     options={toOptions(COUNTRIES)}
                     value={country}
-                    onChange={(value) => {
-                      setCountry(value);
-                      if (value !== 'India') {
-                        setState('');
-                        setCity('');
-                      }
-                      setFieldErrors((prev) => { const next = { ...prev }; delete next.country; return next; });
-                    }}
-                    placeholder="Select your country"
+                    onChange={(v) => { setCountry(v); if (v !== 'India') { setState(''); setCity(''); } }}
+                    placeholder="Select country"
                   />
 
+                  {/* State & City */}
                   {country === 'India' && (
-                    <>
-                      <SearchableDropdown
-                        label="State"
-                        options={toOptions(STATE_OPTIONS)}
-                        value={state}
-                        onChange={(value) => {
-                          setState(value);
-                          setCity('');
-                          setFieldErrors((prev) => { const next = { ...prev }; delete next.state; return next; });
-                        }}
-                        placeholder="Select your state"
-                        error={fieldErrors.state}
-                      />
-
-                      <SearchableDropdown
-                        label="City"
-                        options={toOptions(cityOptions)}
-                        value={city}
-                        onChange={(value) => {
-                          setCity(value);
-                          setFieldErrors((prev) => { const next = { ...prev }; delete next.city; return next; });
-                        }}
-                        placeholder={state ? 'Select your city' : 'Select state first'}
-                        disabled={!state}
-                        error={fieldErrors.city}
-                      />
-                    </>
-                  )}
-                </fieldset>
-
-                <fieldset className="host-onboarding__fieldset">
-                  <legend className="host-onboarding__legend">Organization Profile (Optional)</legend>
-
-                  <label className="host-onboarding__field">
-                    <span>Organization Logo</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      {orgLogo && (
-                        <img
-                          src={orgLogo}
-                          alt="Org logo preview"
-                          style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover', border: '1px solid #dbe2ef' }}
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '20px' }}>
+                      <div style={{ flex: '1 1 200px' }}>
+                        <SearchableDropdown
+                          label="State"
+                          options={toOptions(STATE_OPTIONS)}
+                          value={state}
+                          onChange={(v) => { setState(v); setCity(''); setFieldErrors((p) => { const n = { ...p }; delete n.state; return n; }); }}
+                          placeholder="Select state"
+                          error={fieldErrors.state}
                         />
-                      )}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          if (file.size > 2 * 1024 * 1024) {
-                            setFieldErrors((prev) => ({ ...prev, orgLogo: 'Image must be under 2MB' }));
-                            return;
-                          }
-                          const reader = new FileReader();
-                          reader.onload = (ev) => {
-                            setOrgLogo(ev.target.result);
-                            setFieldErrors((prev) => { const next = { ...prev }; delete next.orgLogo; return next; });
-                          };
-                          reader.readAsDataURL(file);
-                        }}
-                        style={{ fontSize: '0.85rem' }}
-                      />
+                      </div>
+                      <div style={{ flex: '1 1 200px' }}>
+                        <SearchableDropdown
+                          label="City"
+                          options={toOptions(cityOptions)}
+                          value={city}
+                          onChange={(v) => { setCity(v); setFieldErrors((p) => { const n = { ...p }; delete n.city; return n; }); }}
+                          placeholder={state ? 'Select city' : 'Select state first'}
+                          disabled={!state}
+                          error={fieldErrors.city}
+                        />
+                      </div>
                     </div>
-                    {fieldErrors.orgLogo ? <small className="host-onboarding__error-text">{fieldErrors.orgLogo}</small> : null}
-                  </label>
-
-                  <label className="host-onboarding__field">
-                    <span>Website (optional)</span>
-                    <input
-                      type="url"
-                      value={website}
-                      onChange={(e) => setWebsite(e.target.value)}
-                      placeholder="https://yourorg.com"
-                    />
-                  </label>
-
-                  <label className="host-onboarding__field">
-                    <span>LinkedIn (optional)</span>
-                    <input
-                      type="url"
-                      value={linkedin}
-                      onChange={(e) => setLinkedin(e.target.value)}
-                      placeholder="https://linkedin.com/company/yourorg"
-                    />
-                  </label>
-                </fieldset>
-
-                <button
-                  type="submit"
-                  className="host-onboarding__submit-btn"
-                  disabled={submitting}
-                >
-                  {submitting ? 'Setting up...' : (
-                    <>
-                      Complete Setup <ChevronRight size={16} />
-                    </>
                   )}
-                </button>
-              </>
+
+                  <div className="host-onboarding__actions host-onboarding__actions--two" style={{ marginTop: '32px' }}>
+                    <button type="button" className="host-onboarding__back-btn" onClick={goBack} disabled={submitting}>
+                      <ChevronLeft size={18} /> Back
+                    </button>
+                    <button type="submit" className="host-onboarding__submit-btn" disabled={submitting}>
+                      {submitting ? 'Saving…' : 'Complete Setup'}
+                      {!submitting && <ChevronRight size={18} />}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
             )}
-          </form>
-        </main>
+          </AnimatePresence>
+        </div>
+
       </div>
     </div>
   );

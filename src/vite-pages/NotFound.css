@@ -68,6 +68,7 @@
   line-height: 1;
   background: linear-gradient(135deg, #ea7a32 0%, #6366f1 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -0.05em;
   filter: drop-shadow(0 10px 20px rgba(234, 122, 50, 0.2));

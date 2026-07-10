@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from '@/utils/router';
 import {
   ArrowLeft,
@@ -19,6 +19,7 @@ import {
   Share2,
   Users,
   Zap,
+  Download,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useEvents } from '@/context/EventContext';
@@ -34,7 +35,7 @@ import Modal from '@/components/ui/Modal';
 import { Tabs } from '@/components/ui/tabs';
 import { HoverBorderGradient } from '@/components/ui/hover-border-gradient';
 import { EventDetailSkeleton } from '@/components/ui/Skeleton';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import '@/vite-pages/EventDetail.css';
 
 function isRenderableImageSrc(raw) {
@@ -1099,8 +1100,8 @@ export default function EventDetail() {
     // All validations passed — directly register (no payment step)
     setSubmitting(true);
     try {
-      const result = isTeamEditMode && currentRegistration && canManageTeam
-        ? await updateTeamRegistration({
+      const registrationPromise = isTeamEditMode && currentRegistration && canManageTeam
+        ? updateTeamRegistration({
             registrationId: currentRegistration.id,
             eventId: event.id,
             teamName: regForm.teamName,
@@ -1111,7 +1112,14 @@ export default function EventDetail() {
               (member) => !teamMembers.some((currentMember) => String(currentMember || '').trim().toLowerCase() === String(member || '').trim().toLowerCase())
             ),
           })
-        : await registerForEvent(event.id, user.id, teamData, user);
+        : registerForEvent(event.id, user.id, teamData, user);
+
+      const result = await Promise.race([
+        registrationPromise,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Registration is taking too long. Please check your connection and try again.')), 15000)
+        ),
+      ]);
 
       if (result?.suspended) {
         setShowRegModal(false);
@@ -1353,18 +1361,21 @@ export default function EventDetail() {
               <HoverBorderGradient
                 as="button"
                 onClick={handleRegister}
-                disabled={Boolean(currentRegistration) && !canManageTeam}
+                disabled={(Boolean(currentRegistration) && !canManageTeam) || (!currentRegistration && daysToClose < 0)}
                 containerClassName="event-detail__register-gradient-btn"
                 className="event-detail__register-gradient-btn-inner"
+                style={{ opacity: (!currentRegistration && daysToClose < 0) ? 0.6 : 1, cursor: (!currentRegistration && daysToClose < 0) ? 'not-allowed' : 'pointer' }}
               >
                 <span className="event-detail__register-gradient-content">
-                  <Zap size={16} /> {currentRegistration
+                  {!currentRegistration && daysToClose < 0 ? null : <Zap size={16} />} {currentRegistration
                     ? (canManageTeam ? 'Edit Team' : 'Already Registered')
-                    : isWaitlistActive
-                      ? 'Join Waitlist'
-                      : event.accessType === 'Invite' && (event.inviteApprovals || event.inviteShortlist)
-                        ? 'Apply for Invite'
-                        : 'Register Now'}
+                    : (!currentRegistration && daysToClose < 0)
+                      ? 'Registration Closed'
+                      : isWaitlistActive
+                        ? 'Join Waitlist'
+                        : event.accessType === 'Invite' && (event.inviteApprovals || event.inviteShortlist)
+                          ? 'Apply for Invite'
+                          : 'Register Now'}
                 </span>
               </HoverBorderGradient>
             )}
@@ -1392,15 +1403,39 @@ export default function EventDetail() {
               <CheckCircle2 size={56} className="text-green-500" />
             </div>
             <h3 className="text-2xl font-black text-gray-900 mb-2">Registration Confirmed!</h3>
-            <p className="text-gray-500 font-medium text-sm max-w-sm mx-auto mb-6">Your QR pass has been generated. Show this code at the event check-in desk. Only this event&apos;s host can validate it.</p>
+            <p className="text-gray-500 font-medium text-sm max-w-sm mx-auto mb-6">Your QR pass has been generated. Show this code at the event check-in desk. You can also access it anytime from your profile.</p>
             
-            <div className="flex justify-center p-6 bg-white border border-gray-100 rounded-2xl shadow-sm mx-auto w-fit mb-4">
-              <QRCodeSVG value={regStatus.registration?.qrToken || regStatus.registration?.id || 'ticket-id'} size={180} />
+            <div
+              id="reg-success-qr-canvas"
+              className="flex justify-center p-6 bg-white border border-gray-100 rounded-2xl shadow-sm mx-auto w-fit mb-4"
+            >
+              <QRCodeCanvas
+                value={regStatus.registration?.qrToken || regStatus.registration?.id || 'ticket-id'}
+                size={180}
+                bgColor="#ffffff"
+                fgColor="#111827"
+                level="H"
+              />
             </div>
             
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
               Ticket ID: <code className="text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{String(regStatus.registration?.id || 'N/A').split('-')[0].toUpperCase()}</code>
             </p>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors"
+              onClick={() => {
+                const canvas = document.querySelector('#reg-success-qr-canvas canvas');
+                if (!canvas) return;
+                const url = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `hunchmate-qr-${String(regStatus.registration?.id || 'pass').split('-')[0]}.png`;
+                a.click();
+              }}
+            >
+              <Download size={13} /> Download QR Pass
+            </button>
           </div>
         ) : (
           <div className="reg-form">

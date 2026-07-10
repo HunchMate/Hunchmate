@@ -21,7 +21,7 @@ export default function Signup() {
   const getPostAuthPath = useCallback((nextUser) => {
     if (nextUser?.role === 'admin') return '/admin/dashboard';
     if (!nextUser?.onboardingCompleted) {
-      return nextUser?.role === 'organizer' ? '/host-onboarding' : '/onboarding';
+      return nextUser?.role === 'organizer' ? '/host-onboarding' : '/events';
     }
     return nextUser.role === 'organizer' ? '/organizer/dashboard' : '/events';
   }, []);
@@ -43,20 +43,31 @@ export default function Signup() {
     }
 
     setLoading(true);
-    const termsAcceptedAt = new Date().toISOString();
-    const result = await signup({
-      name: form.name.trim(),
-      email: form.email.trim(),
-      password: form.password,
-      role: form.role,
-      termsAccepted: true,
-      termsAcceptedAt,
-    });
-    if (result.success) {
-      const pendingInvite = localStorage.getItem('hm_pending_invite');
-      navigate(pendingInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user));
-    } else {
-      setError(result.error);
+    try {
+      const termsAcceptedAt = new Date().toISOString();
+      const result = await Promise.race([
+        signup({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          password: form.password,
+          role: form.role,
+          termsAccepted: true,
+          termsAcceptedAt,
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Account creation is taking too long. Please check your connection and try again.')), 15000)
+        ),
+      ]);
+      if (result.success) {
+        const pendingInvite = localStorage.getItem('hm_pending_invite');
+        // Hard redirect — ensures fresh auth state from cookies
+        window.location.replace(pendingInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user));
+        return;
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError(err?.message || 'Sign-up failed. Please try again.');
     }
     setLoading(false);
   };
@@ -78,17 +89,27 @@ export default function Signup() {
       return;
     }
     setLoading(true);
-    const termsAcceptedAt = new Date().toISOString();
-    const result = await googleAuth({
-      role: form.role,
-      termsAccepted: true,
-      termsAcceptedAt,
-    });
-    if (result.success) {
-      const pendingInvite = localStorage.getItem('hm_pending_invite');
-      navigate(pendingInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user));
-    } else {
-      setError(result.error);
+    try {
+      const termsAcceptedAt = new Date().toISOString();
+      const result = await Promise.race([
+        googleAuth({
+          role: form.role,
+          termsAccepted: true,
+          termsAcceptedAt,
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Google sign-up is taking too long. Please try again.')), 15000)
+        ),
+      ]);
+      if (result.success) {
+        const pendingInvite = localStorage.getItem('hm_pending_invite');
+        window.location.replace(pendingInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user));
+        return;
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError(err?.message || 'Google sign-up failed. Please try again.');
     }
     setLoading(false);
   };

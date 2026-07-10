@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Activity,
   Award,
@@ -16,6 +16,7 @@ import {
   Users2,
   UserCog,
   Settings,
+  X,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useEvents } from '@/context/EventContext'
@@ -28,6 +29,7 @@ import {
   updateUserRoleFirebase,
   updateUserStatusFirebase,
 } from '@/lib/supabase-data'
+import { createClient } from '@/utils/supabase/client'
 import '@/vite-pages/admin/Dashboard.css'
 
 const USER_ROLE_OPTIONS = ['participant', 'organizer', 'admin']
@@ -398,10 +400,11 @@ function buildLocalDashboardData() {
 }
 
 export default function AdminDashboard() {
-  const { token, user, logout, resetPassword } = useAuth()
+  const { token, user, loading: authLoading, logout, resetPassword } = useAuth()
   const { getEventRegistrations, credentials } = useEvents()
   const bypassActive = ALLOW_ADMIN_BYPASS && user?.role !== 'admin'
-  const useLocalMode = !token || bypassActive
+  const useLocalMode = (!token && !authLoading) || bypassActive
+  const realtimeRef = useRef(null)
 
   const [overview, setOverview] = useState(null)
   const [users, setUsers] = useState([])
@@ -600,6 +603,12 @@ export default function AdminDashboard() {
   }, [loadEvents, loadLogs, loadOverview, loadUsers])
 
   useEffect(() => {
+    // While auth is still loading, keep spinner and don't fall into local mode
+    if (authLoading) {
+      setLoading(true)
+      return
+    }
+
     if (!token) {
       const fallback = buildLocalDashboardData()
       setOverview({ metrics: fallback.metrics, recentUsers: fallback.recentUsers, recentEvents: fallback.recentEvents })
@@ -615,7 +624,59 @@ export default function AdminDashboard() {
     }
 
     loadAllInitial()
-  }, [bypassActive, loadAllInitial, token])
+  }, [authLoading, bypassActive, loadAllInitial, token])
+
+  // ── Supabase Realtime: live updates for admin dashboard ──
+  // Subscribe to changes on profiles, events, registrations, and admin_audit_logs
+  // so the dashboard auto-refreshes without manual reload.
+  useEffect(() => {
+    // Don't subscribe in local mode or while auth is loading
+    if (useLocalMode || authLoading) return
+
+    const supabaseClient = createClient()
+    const channel = supabaseClient
+      .channel('admin-dashboard-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        () => {
+          void loadOverview()
+          void loadUsers()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'events' },
+        () => {
+          void loadOverview()
+          void loadEvents()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'registrations' },
+        () => {
+          void loadOverview()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'admin_audit_logs' },
+        () => {
+          void loadLogs()
+        }
+      )
+      .subscribe()
+
+    realtimeRef.current = { client: supabaseClient, channel }
+
+    return () => {
+      if (realtimeRef.current) {
+        realtimeRef.current.client.removeChannel(realtimeRef.current.channel)
+        realtimeRef.current = null
+      }
+    }
+  }, [authLoading, loadEvents, loadLogs, loadOverview, loadUsers, useLocalMode])
 
   // Fires only when the active tab changes — uses stable loaders that do NOT
   // close over search/filter state, so typing in the search box won't re-trigger this.
@@ -627,11 +688,6 @@ export default function AdminDashboard() {
     }
   }, [activeSection, loadUsersForSection, loadEventsForSection])
 
-  useEffect(() => {
-    if (!selectedEventId && events.length > 0) {
-      setSelectedEventId(getEventId(events[0]))
-    }
-  }, [events, selectedEventId])
 
   useEffect(() => {
     if (user?.email && !passwordEmail) {
@@ -851,7 +907,10 @@ export default function AdminDashboard() {
   }, [events, overview])
 
   const selectedEvent = useMemo(
-    () => events.find((event) => getEventId(event) === selectedEventId) || null,
+    () => {
+      if (!selectedEventId) return null
+      return events.find((event) => getEventId(event) === selectedEventId) || null
+    },
     [events, selectedEventId]
   )
 
@@ -1120,10 +1179,22 @@ export default function AdminDashboard() {
       : ''
 
     return (
-      <div className="admin-event-detail">
-        <div className="admin-panel__head">
-          <h2>{selectedEvent.title || 'Selected Event'}</h2>
-          <div className="admin-panel__filters">
+      <div className="admin-modal-overlay" onClick={() => setSelectedEventId('')}>
+        <div className="admin-modal-content admin-event-detail" onClick={(e) => e.stopPropagation()}>
+          <div className="admin-panel__head" style={{ marginBottom: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '1rem' }}>
+              <h2 style={{ fontSize: '1.25rem', margin: 0 }}>{selectedEvent.title || 'Selected Event'}</h2>
+              <button 
+                type="button" 
+                onClick={() => setSelectedEventId('')}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.25rem', color: '#64748b' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+          
+          <div className="admin-panel__filters" style={{ marginBottom: '1.25rem' }}>
             {EVENT_DETAIL_TABS.map((tab) => (
               <button
                 key={tab}
@@ -1135,28 +1206,39 @@ export default function AdminDashboard() {
               </button>
             ))}
           </div>
-        </div>
 
         {activeEventTab === 'Overview' ? (
-          <section className="admin-metrics">
-            <article className="admin-metric-card">
-              <div className="admin-metric-card__icon"><Users2 size={18} /></div>
-              <div><p>Registrations</p><h3>{selectedRegistrations.length}</h3></div>
-            </article>
-            <article className="admin-metric-card">
-              <div className="admin-metric-card__icon"><CheckCheck size={18} /></div>
-              <div><p>Checked In</p><h3>{selectedRegistrations.filter((reg) => reg.checkedIn).length}</h3></div>
-            </article>
-            <article className="admin-metric-card">
-              <div className="admin-metric-card__icon"><Award size={18} /></div>
-              <div><p>Credentials</p><h3>{selectedCredentials.length}</h3></div>
-            </article>
-            <article className="admin-metric-card">
-              <div className="admin-metric-card__icon"><CalendarRange size={18} /></div>
-              <div><p>Status</p><h3>{selectedEvent.status || 'upcoming'}</h3></div>
-            </article>
-          </section>
-        ) : null}
+            <section className="admin-modal-metrics">
+              <article className="admin-modal-metric">
+                <div className="admin-modal-metric__top">
+                  <span className="admin-modal-metric__title">Registrations</span>
+                  <div className="admin-modal-metric__icon"><Users2 size={24} /></div>
+                </div>
+                <div className="admin-modal-metric__value">{selectedRegistrations.length}</div>
+              </article>
+              <article className="admin-modal-metric">
+                <div className="admin-modal-metric__top">
+                  <span className="admin-modal-metric__title">Checked In</span>
+                  <div className="admin-modal-metric__icon"><CheckCheck size={24} /></div>
+                </div>
+                <div className="admin-modal-metric__value">{selectedRegistrations.filter((reg) => reg.checkedIn).length}</div>
+              </article>
+              <article className="admin-modal-metric">
+                <div className="admin-modal-metric__top">
+                  <span className="admin-modal-metric__title">Credentials</span>
+                  <div className="admin-modal-metric__icon"><Award size={24} /></div>
+                </div>
+                <div className="admin-modal-metric__value">{selectedCredentials.length}</div>
+              </article>
+              <article className="admin-modal-metric">
+                <div className="admin-modal-metric__top">
+                  <span className="admin-modal-metric__title">Status</span>
+                  <div className="admin-modal-metric__icon"><CalendarRange size={24} /></div>
+                </div>
+                <div className="admin-modal-metric__value" style={{ textTransform: 'capitalize' }}>{selectedEvent.status || 'upcoming'}</div>
+              </article>
+            </section>
+          ) : null}
 
         {activeEventTab === 'Microsite URL' ? (
           <div className="admin-settings-card admin-settings-card--wide">
@@ -1433,6 +1515,7 @@ export default function AdminDashboard() {
 
           </div>
         ) : null}
+        </div>
       </div>
     )
   }
@@ -1670,8 +1753,8 @@ export default function AdminDashboard() {
                     </div>
                     <div className="admin-log-list">
                       {logs.length === 0 ? <p className="admin-empty">No admin actions recorded yet.</p> : null}
-                      {logs.slice(0, 6).map((entry) => (
-                        <article key={entry._id} className="admin-log-item">
+                      {logs.slice(0, 6).map((entry, idx) => (
+                        <article key={entry.id || entry._id || `log-${idx}`} className="admin-log-item">
                           <div>
                             <strong>{toTitleCase(entry.action || 'audit event')}</strong>
                             <p>{getAuditDescription(entry)}</p>

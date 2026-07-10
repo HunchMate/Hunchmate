@@ -858,154 +858,192 @@ export async function appendAdminAuditLog({ action, actorId, targetType, targetI
 }
 
 export async function getAdminOverview() {
-  const [profilesRes, eventsRes, regsRes, complaintsRes] = await Promise.all([
-    supabase.from('profiles').select('*'),
-    supabase.from('events').select('*'),
-    supabase.from('registrations').select('*'),
-    supabase.from('complaints').select('*'),
-  ]);
+  try {
+    const cacheBuster = Date.now();
+    const res = await fetch(`/api/admin/overview?cb=${cacheBuster}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
 
-  const users = (profilesRes.data || []).map(mapProfileToApp);
-  const events = (eventsRes.data || []).map(mapEventToApp);
-  const registrations = (regsRes.data || []).map(mapRegistrationToApp);
-  const complaints = (complaintsRes.data || []).map(mapComplaintToApp);
+    if (!res.ok) {
+      console.error('getAdminOverview fetch error:', res.statusText);
+      return { metrics: {}, recentUsers: [], recentEvents: [], logs: [] };
+    }
 
-  const roleCounts = users.reduce((acc, u) => {
-    acc[u.role] = (acc[u.role] || 0) + 1;
-    return acc;
-  }, { participant: 0, organizer: 0, admin: 0 });
+    const json = await res.json();
+    if (json.error) {
+      console.error('getAdminOverview api error:', json.error);
+      return { metrics: {}, recentUsers: [], recentEvents: [], logs: [] };
+    }
 
-  const metrics = {
-    totalUsers: users.length,
-    totalEvents: events.length,
-    totalRegistrations: registrations.length,
-    totalCheckIns: registrations.filter((r) => r.checked_in).length,
-    activeSessions: 0,
-    suspendedUsers: users.filter((u) => u.status === 'suspended').length,
-    roleCounts,
-    openComplaints: complaints.filter((c) => c.status !== 'resolved').length,
-  };
-
-  return {
-    metrics,
-    recentUsers: users.slice(0, 5),
-    recentEvents: events.slice(0, 5),
-  };
+    return {
+      metrics: json.metrics || {},
+      recentUsers: (json.recentUsers || []).map(mapProfileToApp),
+      recentEvents: (json.recentEvents || []).map(mapEventToApp),
+      logs: json.logs || [],
+    };
+  } catch (error) {
+    console.error('getAdminOverview unexpected error:', error.message);
+    return { metrics: {}, recentUsers: [], recentEvents: [], logs: [] };
+  }
 }
 
 export async function listUsers(params = {}) {
-  let query = supabase.from('profiles').select('*', { count: 'exact' });
+  try {
+    const searchParams = new URLSearchParams();
+    if (params.role) searchParams.set('role', params.role);
+    if (params.status) searchParams.set('status', params.status);
+    if (params.search) searchParams.set('search', params.search);
+    searchParams.set('limit', String(params.limit || 40));
+    searchParams.set('cb', Date.now());
 
-  if (params.role) query = query.eq('role', params.role);
-  if (params.status) query = query.eq('status', params.status);
-  if (params.search) query = query.or(`name.ilike.%${params.search}%,email.ilike.%${params.search}%`);
+    const res = await fetch(`/api/admin/users?${searchParams.toString()}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
 
-  const limit = params.limit || 40;
-  query = query.limit(limit);
+    if (!res.ok) {
+      console.error('listUsers fetch error:', res.statusText);
+      return { users: [], total: 0 };
+    }
 
-  const { data, count, error } = await query;
-  if (error) {
-    console.error('listUsers error:', error.message);
+    const json = await res.json();
+    if (json.error) {
+      console.error('listUsers api error:', json.error);
+      return { users: [], total: 0 };
+    }
+
+    return {
+      users: (json.users || []).map(mapProfileToApp),
+      total: json.total || 0,
+    };
+  } catch (error) {
+    console.error('listUsers unexpected error:', error.message);
     return { users: [], total: 0 };
   }
-  return {
-    users: data.map(mapProfileToApp),
-    total: count || 0,
-  };
 }
 
 export async function listAdminEvents(params = {}) {
-  let query = supabase.from('events').select('*', { count: 'exact' });
+  try {
+    const searchParams = new URLSearchParams();
+    if (params.status) searchParams.set('status', params.status);
+    if (params.search) searchParams.set('search', params.search);
+    searchParams.set('limit', String(params.limit || 40));
+    searchParams.set('cb', Date.now());
 
-  if (params.status) query = query.eq('status', params.status);
-  if (params.search) query = query.ilike('title', `%${params.search}%`);
+    const res = await fetch(`/api/admin/events?${searchParams.toString()}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
 
-  const limit = params.limit || 40;
-  query = query.limit(limit);
+    if (!res.ok) {
+      console.error('listAdminEvents fetch error:', res.statusText);
+      return { events: [], total: 0 };
+    }
 
-  const { data, count, error } = await query;
-  if (error) {
-    console.error('listAdminEvents error:', error.message);
+    const json = await res.json();
+    if (json.error) {
+      console.error('listAdminEvents api error:', json.error);
+      return { events: [], total: 0 };
+    }
+
+    return {
+      events: (json.events || []).map(mapEventToApp),
+      total: json.total || 0,
+    };
+  } catch (error) {
+    console.error('listAdminEvents unexpected error:', error.message);
     return { events: [], total: 0 };
   }
-  return {
-    events: data.map(mapEventToApp),
-    total: count || 0,
-  };
 }
 
 export async function updateUserRoleFirebase(targetUserId, role, actorId = 'admin') {
-  const { error } = await supabase
-    .from('profiles')
-    .update({ role })
-    .eq('id', targetUserId);
-
-  if (error) {
-    console.error('updateUserRoleFirebase error:', error.message);
-    throw error;
-  }
-
-  await appendAdminAuditLog({
-    action: 'user-role-updated',
-    actorId,
-    targetType: 'user',
-    targetId: targetUserId,
-    metadata: { role },
+  const res = await fetch('/api/admin/actions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({
+      action: 'update-user-role',
+      targetId: targetUserId,
+      payload: { role },
+    }),
   });
+
+  const json = await res.json();
+
+  if (!res.ok || !json.success) {
+    const message = json?.error || 'Failed to update user role';
+    console.error('updateUserRoleFirebase error:', message);
+    throw new Error(message);
+  }
 }
 
 export async function updateUserStatusFirebase(targetUserId, status, actorId = 'admin') {
-  const { error } = await supabase
-    .from('profiles')
-    .update({ status })
-    .eq('id', targetUserId);
-
-  if (error) {
-    console.error('updateUserStatusFirebase error:', error.message);
-    throw error;
-  }
-
-  await appendAdminAuditLog({
-    action: 'user-status-updated',
-    actorId,
-    targetType: 'user',
-    targetId: targetUserId,
-    metadata: { status },
+  const res = await fetch('/api/admin/actions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({
+      action: 'update-user-status',
+      targetId: targetUserId,
+      payload: { status },
+    }),
   });
+
+  const json = await res.json();
+
+  if (!res.ok || !json.success) {
+    const message = json?.error || 'Failed to update user status';
+    console.error('updateUserStatusFirebase error:', message);
+    throw new Error(message);
+  }
 }
 
 export async function updateEventStatusFirebase(eventId, status, actorId = 'admin') {
-  const { error } = await supabase
-    .from('events')
-    .update({ status })
-    .eq('id', eventId);
-
-  if (error) {
-    console.error('updateEventStatusFirebase error:', error.message);
-    throw error;
-  }
-
-  await appendAdminAuditLog({
-    action: 'event-status-updated',
-    actorId,
-    targetType: 'event',
-    targetId: eventId,
-    metadata: { status },
+  const res = await fetch('/api/admin/actions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({
+      action: 'update-event-status',
+      targetId: eventId,
+      payload: { status },
+    }),
   });
+
+  const json = await res.json();
+
+  if (!res.ok || !json.success) {
+    const message = json?.error || 'Failed to update event status';
+    console.error('updateEventStatusFirebase error:', message);
+    throw new Error(message);
+  }
 }
 
 export async function listAdminAuditLogs(limitCount = 50) {
-  const { data, error } = await supabase
-    .from('admin_audit_logs')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(limitCount);
+  // Audit logs are fetched as part of the overview API call.
+  // This function is kept for backwards compatibility but now uses the server API.
+  try {
+    const res = await fetch(`/api/admin/overview?cb=${Date.now()}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
 
-  if (error) {
-    console.error('listAdminAuditLogs error:', error.message);
+    if (!res.ok) {
+      console.error('listAdminAuditLogs fetch error:', res.statusText);
+      return [];
+    }
+
+    const json = await res.json();
+    return json.logs || [];
+  } catch (error) {
+    console.error('listAdminAuditLogs unexpected error:', error.message);
     return [];
   }
-  return data;
 }
 
 export async function listAdminComplaints(params = {}) {

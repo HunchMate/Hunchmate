@@ -58,9 +58,7 @@ export default function Contact() {
     setLoading(true);
     setNotice({ type: '', text: '' });
 
-    const contactApiUrl = (typeof process !== 'undefined' && process.env ? (process.env.NEXT_PUBLIC_CONTACT_EMAIL_API_URL || process.env.VITE_CONTACT_EMAIL_API_URL) : '') ||
-      (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_CONTACT_EMAIL_API_URL : '') ||
-      'http://localhost:8787/api/contact/email';
+    const contactApiUrl = '/api/contact/email';
 
     try {
       const response = await fetch(contactApiUrl, {

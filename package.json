@@ -8,7 +8,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "mail-api": "node server/invite-mail-server.js",
     "auth-api": "node server/auth-server.js",
     "db:bootstrap": "node server/bootstrap-db.js"
   },

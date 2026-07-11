@@ -1062,9 +1062,7 @@ export function EventProvider({ children }) {
     )}`;
 
     const outbound = JSON.parse(localStorage.getItem('hm_outbound_emails') || '[]');
-    const emailApiUrl = (typeof process !== 'undefined' && process.env ? (process.env.NEXT_PUBLIC_INVITE_EMAIL_API_URL || process.env.VITE_INVITE_EMAIL_API_URL) : '') ||
-      (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_INVITE_EMAIL_API_URL : '') ||
-      'http://localhost:8787/api/invitations/email';
+    const emailApiUrl = '/api/invitations/email';
     let emailSent = false;
     let emailError = '';
 

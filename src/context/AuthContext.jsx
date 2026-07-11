@@ -370,13 +370,15 @@ export function AuthProvider({ children }) {
     setLoading(true);
     setError(null);
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        String(email || '').trim().toLowerCase(),
-        {
-          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/reset-password?mode=recovery` : undefined,
-        }
-      );
-      if (resetError) throw resetError;
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: String(email || '').trim().toLowerCase() }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to send reset email');
+      }
       return { success: true };
     } catch (err) {
       const message = err?.message || 'Failed to send reset email';

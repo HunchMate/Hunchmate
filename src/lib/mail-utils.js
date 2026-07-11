@@ -17,6 +17,11 @@ export const contactSchema = z.object({
   message: z.string().trim().min(1).max(4000),
 });
 
+export const resetPasswordSchema = z.object({
+  email: z.string().email().max(320),
+  resetLink: z.string().url(),
+});
+
 function escapeHtml(value) {
   return String(value || '')
     .replaceAll('&', '&amp;')
@@ -173,6 +178,52 @@ export function buildContactEmail({ name, email, subject, message }) {
   ].join('\n');
 
   return { subject: mailSubject, html, text };
+}
+
+export function buildResetPasswordEmail({ email, resetLink }) {
+  const safeEmail = escapeHtml(email);
+  const safeResetLink = escapeHtml(resetLink);
+  const subject = `Reset Your Hunchmate Password`;
+
+  const html = `
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      <tr>
+        <td align="center">
+          <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);">
+            <tr>
+              <td style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); padding: 32px; text-align: center;">
+                <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: -0.025em;">Hunchmate</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 32px;">
+                <h2 style="margin: 0 0 20px; color: #0f172a; font-size: 18px; font-weight: 600;">Reset Your Password</h2>
+                <p style="margin: 0 0 12px; color: #334155; font-size: 15px; line-height: 1.6;">
+                  We received a request to reset the password for your Hunchmate account (<strong>${safeEmail}</strong>).
+                </p>
+                <p style="margin: 0 0 28px; color: #64748b; font-size: 14px;">
+                  If you didn't request this, you can safely ignore this email.
+                </p>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td align="center">
+                      <a href="${safeResetLink}" style="display: inline-block; padding: 12px 28px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; text-align: center;">
+                        Reset Password
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  `;
+
+  const text = `Reset your Hunchmate password. Click here to reset it: ${normalizeString(resetLink)} \n\nIf you didn't request this, you can safely ignore this email.`;
+
+  return { subject, html, text };
 }
 
 export async function sendViaSmtp({ to, subject, html }) {

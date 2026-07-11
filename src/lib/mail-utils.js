@@ -96,25 +96,45 @@ export function buildInvitationEmail({ inviterName, teamName, eventTitle, invite
   const safeJoinUrl = escapeHtml(joinUrl);
   const subject = `Hunchmate Team Invite: ${eventTitle}`;
   const html = `
-      <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.55;">
-        <h2 style="margin: 0 0 12px;">You are invited to join a Hunchmate team</h2>
-        <p style="margin: 0 0 8px;">
-          <strong>${safeInviterName}</strong> invited you to join
-          <strong>${safeTeamName}</strong> for
-          <strong>${safeEventTitle}</strong>.
-        </p>
-        <p style="margin: 0 0 18px; color: #334155;">
-          Invited email: ${safeInvitee}
-        </p>
-        <a href="${safeJoinUrl}" style="display:inline-block;padding:10px 14px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">
-          Join Team
-        </a>
-        <p style="margin: 18px 0 0; color: #64748b; font-size: 13px;">
-          If you are already registered on Hunchmate, you can accept directly.
-          If not, you will be asked to log in or sign up first.
-        </p>
-      </div>
-    `;
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      <tr>
+        <td align="center">
+          <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);">
+            <tr>
+              <td style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); padding: 32px; text-align: center;">
+                <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: -0.025em;">Hunchmate</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 32px;">
+                <h2 style="margin: 0 0 20px; color: #0f172a; font-size: 18px; font-weight: 600;">Team Invitation</h2>
+                <p style="margin: 0 0 12px; color: #334155; font-size: 15px; line-height: 1.6;">
+                  <strong>${safeInviterName}</strong> has invited you to join the team <strong style="color: #0f172a;">${safeTeamName}</strong> for the event <strong>${safeEventTitle}</strong>.
+                </p>
+                <p style="margin: 0 0 28px; color: #64748b; font-size: 14px;">
+                  Invited email: ${safeInvitee}
+                </p>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td align="center">
+                      <a href="${safeJoinUrl}" style="display: inline-block; padding: 12px 28px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; text-align: center;">
+                        Accept Invitation
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 28px 0;" />
+                <p style="margin: 0; color: #64748b; font-size: 13px; line-height: 1.5; text-align: center;">
+                  If you are already registered on Hunchmate, you can accept directly.<br>
+                  If not, you will be asked to log in or sign up first.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  `;
   const text = `${normalizeString(inviterName) || 'A teammate'} invited you to join ${normalizeString(teamName) || 'a team'} for ${normalizeString(eventTitle)}. Join here: ${normalizeString(joinUrl)}`;
 
   return { subject, html, text };

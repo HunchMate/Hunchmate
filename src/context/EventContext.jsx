@@ -1015,52 +1015,74 @@ export function EventProvider({ children }) {
       return { success: false, error: 'Event not found for invitation.' };
     }
 
-    const duplicate = teamInvitations.find(
-      (invite) =>
-        invite.eventId === eventId &&
-        normalizeEmail(invite.inviteeEmail) === normalizedEmail &&
-        invite.status === 'pending'
-    );
-
-    if (duplicate) {
-      const joinUrl = `${window.location.origin}/invites/${duplicate.id}`;
-      return {
-        success: true,
-        existed: true,
-        invite: duplicate,
-        joinUrl,
-        emailSent: false,
-        mailtoUrl: `mailto:${duplicate.inviteeEmail}?subject=${encodeURIComponent(`Hunchmate Team Invite: ${event.title}`)}&body=${encodeURIComponent(
-          `You have been invited by ${inviterName || 'a teammate'} to join the team "${teamName || 'Team'}" for ${event.title}.\n\nJoin here: ${joinUrl}`
-        )}`,
-      };
-    }
-
+    // Generate invite data
+    const inviteId = generateId('inv');
     const users = JSON.parse(localStorage.getItem('hm_users') || '[]');
     const matchedUser = users.find((entry) => normalizeEmail(entry.email) === normalizedEmail);
 
-    const invite = {
-      id: generateId('inv'),
-      eventId,
-      inviterId,
-      inviterName: inviterName || '',
-      teamName: teamName || '',
-      inviteeEmail: normalizedEmail,
-      inviteeUserId: matchedUser?.id || null,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      acceptedAt: null,
-      acceptedByUserId: null,
-    };
+    // Save to Supabase via API route
+    let invite;
+    let existed = false;
+    try {
+      const response = await fetch('/api/invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: inviteId,
+          eventId,
+          inviterId,
+          inviterName: inviterName || '',
+          teamName: teamName || '',
+          inviteeEmail: normalizedEmail,
+          inviteeUserId: matchedUser?.id || null,
+        }),
+      });
 
-    const updatedInvites = [...teamInvitations, invite];
-    saveTeamInvitations(updatedInvites);
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        return { success: false, error: payload?.error || 'Failed to create invitation.' };
+      }
+
+      existed = Boolean(payload.existed);
+      const inv = payload.invitation;
+      invite = {
+        id: inv.id,
+        eventId: inv.event_id,
+        inviterId: inv.inviter_id,
+        inviterName: inv.inviter_name || '',
+        teamName: inv.team_name || '',
+        inviteeEmail: inv.invitee_email,
+        inviteeUserId: inv.invitee_user_id || null,
+        status: inv.status,
+        createdAt: inv.created_at,
+        acceptedAt: inv.accepted_at,
+        acceptedByUserId: inv.accepted_by_user_id,
+      };
+    } catch {
+      return { success: false, error: 'Unable to reach the server. Please try again.' };
+    }
 
     const joinUrl = `${window.location.origin}/invites/${invite.id}`;
     const mailtoUrl = `mailto:${invite.inviteeEmail}?subject=${encodeURIComponent(`Hunchmate Team Invite: ${event.title}`)}&body=${encodeURIComponent(
       `You have been invited by ${inviterName || 'a teammate'} to join the team "${teamName || 'Team'}" for ${event.title}.\n\nClick Join Team: ${joinUrl}`
     )}`;
 
+    if (existed) {
+      return {
+        success: true,
+        existed: true,
+        invite,
+        joinUrl,
+        emailSent: false,
+        mailtoUrl,
+      };
+    }
+
+    // Also keep in local state for the current session
+    const updatedInvites = [...teamInvitations, invite];
+    saveTeamInvitations(updatedInvites);
+
+    // Send email via the mail API
     const outbound = JSON.parse(localStorage.getItem('hm_outbound_emails') || '[]');
     const emailApiUrl = '/api/invitations/email';
     let emailSent = false;

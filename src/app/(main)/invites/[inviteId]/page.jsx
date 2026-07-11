@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from '@/utils/router';
-import { CheckCircle2, LogIn, Mail, Users, XCircle } from 'lucide-react';
+import { CheckCircle2, Loader2, LogIn, Mail, Users, XCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useEvents } from '@/context/EventContext';
 import { buildEventDetailPath } from '@/utils/helpers';
@@ -13,10 +13,70 @@ export default function InviteJoin() {
   const { inviteId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getInvitationById, getEventById, acceptTeamInvitation } = useEvents();
+  const { getEventById } = useEvents();
   const [state, setState] = useState({ loading: false, message: '', error: '' });
+  const [invite, setInvite] = useState(null);
+  const [inviteLoading, setInviteLoading] = useState(true);
+  const [inviteError, setInviteError] = useState('');
 
-  const invite = getInvitationById(inviteId);
+  // Fetch invitation from Supabase on mount
+  useEffect(() => {
+    if (!inviteId) {
+      setInviteLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function fetchInvitation() {
+      try {
+        const response = await fetch(`/api/invitations?id=${encodeURIComponent(inviteId)}`);
+        const payload = await response.json();
+
+        if (cancelled) return;
+
+        if (!response.ok || !payload.success) {
+          setInviteError(payload.error || 'Failed to load invitation.');
+          setInviteLoading(false);
+          return;
+        }
+
+        if (!payload.invitation) {
+          setInviteError('Invitation not found.');
+          setInviteLoading(false);
+          return;
+        }
+
+        // Map snake_case DB fields to camelCase for the UI
+        const inv = payload.invitation;
+        setInvite({
+          id: inv.id,
+          eventId: inv.event_id,
+          inviterId: inv.inviter_id,
+          inviterName: inv.inviter_name,
+          teamName: inv.team_name,
+          inviteeEmail: inv.invitee_email,
+          inviteeUserId: inv.invitee_user_id,
+          status: inv.status,
+          createdAt: inv.created_at,
+          acceptedAt: inv.accepted_at,
+          acceptedByUserId: inv.accepted_by_user_id,
+        });
+      } catch {
+        if (!cancelled) {
+          setInviteError('Unable to reach the server. Please try again.');
+        }
+      } finally {
+        if (!cancelled) {
+          setInviteLoading(false);
+        }
+      }
+    }
+
+    fetchInvitation();
+    return () => { cancelled = true; };
+  }, [inviteId]);
+
   const event = useMemo(() => (invite ? getEventById(invite.eventId) : null), [invite, getEventById]);
 
   const handleGoToLogin = () => {
@@ -24,38 +84,66 @@ export default function InviteJoin() {
     navigate('/login');
   };
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     if (!user) {
       handleGoToLogin();
       return;
     }
 
     setState({ loading: true, message: '', error: '' });
-    const result = acceptTeamInvitation(inviteId, user.id);
 
-    if (!result.success) {
-      setState({ loading: false, message: '', error: result.error || 'Unable to accept invitation.' });
-      return;
+    try {
+      const response = await fetch('/api/invitations/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteId, userId: user.id }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        setState({ loading: false, message: '', error: result.error || 'Unable to accept invitation.' });
+        return;
+      }
+
+      localStorage.removeItem('hm_pending_invite');
+      const successText = result.alreadyRegistered
+        ? 'Invitation accepted. This event is already in your dashboard.'
+        : 'Invitation accepted. The hackathon is now added to your dashboard.';
+      setState({ loading: false, message: successText, error: '' });
+
+      // Update the local invite state to show accepted
+      setInvite((prev) => prev ? { ...prev, status: 'accepted' } : prev);
+
+      window.setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
+    } catch {
+      setState({ loading: false, message: '', error: 'Network error. Please try again.' });
     }
-
-    localStorage.removeItem('hm_pending_invite');
-    const successText = result.alreadyRegistered
-      ? 'Invitation accepted. This event is already in your dashboard.'
-      : 'Invitation accepted. The hackathon is now added to your dashboard.';
-    setState({ loading: false, message: successText, error: '' });
-
-    window.setTimeout(() => {
-      navigate('/dashboard');
-    }, 1000);
   };
 
-  if (!invite || !event) {
+  // Loading state
+  if (inviteLoading) {
+    return (
+      <section className="invite-join invite-join--centered">
+        <article className="invite-join__card" style={{ textAlign: 'center' }}>
+          <Loader2 size={32} className="invite-join__spinner" style={{ animation: 'spin 1s linear infinite' }} />
+          <p style={{ marginTop: 12, color: '#64748b' }}>Loading invitation...</p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </article>
+      </section>
+    );
+  }
+
+  // Not found
+  if (inviteError || !invite || !event) {
     return (
       <section className="invite-join invite-join--centered">
         <article className="invite-join__card">
           <XCircle size={28} />
           <h1>Invitation not found</h1>
-          <p>This invite is invalid or has expired.</p>
+          <p>{inviteError || 'This invite is invalid or has expired.'}</p>
           <Link to="/events">
             <Button variant="primary">Explore Events</Button>
           </Link>

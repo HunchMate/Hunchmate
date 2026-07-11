@@ -118,8 +118,6 @@ export async function POST(request) {
       const newReg = {
         event_id: invite.event_id,
         user_id: userId,
-        team_lead_id: leaderReg?.team_lead_id || leaderReg?.user_id || invite.inviter_id,
-        team_id: teamId,
         team_name: teamName,
         members: [userProfile.name || userProfile.email],
         participant: {
@@ -127,12 +125,9 @@ export async function POST(request) {
           name: userProfile.name || '',
           email: userProfile.email || '',
         },
-        payment_status: leaderReg?.payment_status || 'not-paid',
         qr_token: leaderReg?.qr_token || `qr-${Date.now()}`,
         checked_in: false,
         checked_in_at: null,
-        parent_registration_id: leaderReg?.id || null,
-        joined_via_invite_id: invite.id,
         created_at: new Date().toISOString(),
       };
 

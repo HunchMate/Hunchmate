@@ -553,7 +553,14 @@ export default function EventDetail() {
         <article className="event-detail__metric-card"><p>Team Size</p><strong>{event.teamSize ? `${event.teamSize.min}-${event.teamSize.max} members` : 'Solo'}</strong></article>
         <article className="event-detail__metric-card"><p>Location</p><strong>{venueLabel}</strong></article>
         <article className="event-detail__metric-card"><p>Deadline</p><strong>{formatDate(event.timeline.registrationEnd)}</strong></article>
-        <article className="event-detail__metric-card"><p>Prize / Fee</p><strong>{event.paymentConfig?.type === 'paid' ? `${event.paymentConfig.currency} ${event.paymentConfig.amount}` : event.prize || 'Free'}</strong></article>
+        <article className="event-detail__metric-card">
+          <p>Registration Fee</p>
+          <strong>
+            {event.paymentConfig?.type === 'paid'
+              ? `${event.paymentConfig.currency} ${event.paymentConfig.amount}`
+              : "Free"}
+          </strong>
+        </article>
         <article className="event-detail__metric-card"><p>Registrations</p><strong>{event.registeredCount}</strong></article>
         <article className="event-detail__metric-card"><p>Views</p><strong>{viewsCount.toLocaleString()}</strong></article>
       </section>
@@ -1207,9 +1214,24 @@ export default function EventDetail() {
             </div>
 
             <aside className="event-detail__hero-register">
+              <Button
+                className="event-detail__register-btn"
+                onClick={handleRegister}
+                disabled={daysToClose < 0}
+                style={{
+                  width: "100%",
+                  marginBottom: "18px"
+                }}
+              >
+                {currentRegistration ? "Registered" : "Register Now"}
+              </Button>
               <p>Registration Pulse</p>
-              <strong>{daysToClose < 0 ? 'Closed' : `${daysToClose} Days Left`}</strong>
-              <small>Deadline: {formatDate(event.timeline.registrationEnd)}</small>
+              <strong>
+                {daysToClose < 0 ? "Closed" : `${daysToClose} Days Left`}
+              </strong>
+              <small>
+                Deadline: {formatDate(event.timeline.registrationEnd)}
+              </small>
               <div className="event-detail__hero-register-progress">
                 <div className="event-detail__progress-track">
                   <span style={{ width: `${registrationProgress}%` }} />
@@ -1218,7 +1240,11 @@ export default function EventDetail() {
               </div>
               <div className="event-detail__hero-register-foot">
                 <span>{hoursLeft}h remaining</span>
-                <span>{event.teamSize ? `${event.teamSize.min}-${event.teamSize.max} members` : 'Solo entry'}</span>
+                <span>
+                  {event.teamSize
+                    ? `${event.teamSize.min}-${event.teamSize.max} members`
+                    : "Solo entry"}
+                </span>
               </div>
             </aside>
           </div>
@@ -1285,7 +1311,79 @@ export default function EventDetail() {
                 </button>
               ) : null}
             </div>
-            
+            {event.prizeType === "pool" ? (
+  <div
+    style={{
+      marginBottom: "1rem",
+      padding: "1rem",
+      border: "1px solid rgba(0,0,0,0.08)",
+      borderRadius: "14px",
+      background: "#fff",
+    }}
+  >
+    <p
+      style={{
+        margin: 0,
+        color: "#64748b",
+        fontSize: "0.8rem",
+        textTransform: "uppercase",
+        letterSpacing: "0.05em",
+      }}
+    >
+      Prize Pool
+    </p>
+
+    <h2
+      style={{
+        margin: "8px 0 0",
+        fontSize: "1.8rem",
+        fontWeight: "700",
+      }}
+    >
+      {event.prizePool || "TBA"}
+    </h2>
+  </div>
+) : (
+  <div
+    style={{
+      marginBottom: "1rem",
+      padding: "1rem",
+      border: "1px solid rgba(0,0,0,0.08)",
+      borderRadius: "14px",
+      background: "#fff",
+    }}
+  >
+    <p
+      style={{
+        margin: 0,
+        color: "#64748b",
+        fontSize: "0.8rem",
+        textTransform: "uppercase",
+        letterSpacing: "0.05em",
+      }}
+    >
+      Prizes
+    </p>
+
+    <div style={{ marginTop: "12px" }}>
+      <div className="event-detail__side-row">
+        <span>🥇 1st Prize</span>
+        <strong>{event.firstPrize || "TBA"}</strong>
+      </div>
+
+      <div className="event-detail__side-row">
+        <span>🥈 2nd Prize</span>
+        <strong>{event.secondPrize || "TBA"}</strong>
+      </div>
+
+      <div className="event-detail__side-row">
+        <span>🥉 3rd Prize</span>
+        <strong>{event.thirdPrize || "TBA"}</strong>
+      </div>
+    </div>
+  </div>
+)}
+  
             {(() => {
               const hostNameToShow =
                 hostProfile?.institutionName ||
@@ -1344,8 +1442,12 @@ export default function EventDetail() {
               </strong>
             </div>
             <div className="event-detail__side-row">
-              <span>Entry Fee</span>
-              <strong>{event.fee && event.fee.trim() !== '' ? event.fee : 'Free'}</strong>
+              <span>Registration Fee</span>
+              <strong>
+                {event.paymentConfig?.type === "paid"
+                  ? `${event.paymentConfig.currency} ${event.paymentConfig.amount}`
+                  : "Free"}
+              </strong>
             </div>
             {(organizerContactEmail || organizerContactPhone) ? (
               <div className="event-detail__side-contact">

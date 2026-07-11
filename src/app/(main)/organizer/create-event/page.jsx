@@ -65,6 +65,11 @@ export default function CreateEvent() {
     requireSocialProfiles: false,
     requireConsent: false,
     fee: '',
+    prizeType: 'pool',
+    prizePool: '',
+    firstPrize: '',
+    secondPrize: '',
+    thirdPrize: '',
     maxParticipants: 100,
     teamMin: '',
     teamMax: '',
@@ -1414,6 +1419,7 @@ export default function CreateEvent() {
                         value={form.paymentAmount}
                         onChange={(e) => update('paymentAmount', e.target.value)}
                       />
+
                       <div className="create-event__select-group">
                         <label className="input-label">Currency</label>
                         <select className="create-event__select" value={form.paymentCurrency} onChange={(e) => update('paymentCurrency', e.target.value)}>
@@ -1423,7 +1429,50 @@ export default function CreateEvent() {
                         </select>
                       </div>
                     </div>
+                    <div className="create-event__select-group">
+                          <label className="input-label">Prize Type</label>
+                          <select
+                            className="create-event__select"
+                            value={form.prizeType}
+                            onChange={(e) => update("prizeType", e.target.value)}
+                          >
+                            <option value="pool">Prize Pool</option>
+                            <option value="prizes">Individual Prizes</option>
+                          </select>
+                        </div>
+                        {form.prizeType === "pool" && (
+                          <Input
+                            label="Prize Pool"
+                            placeholder="₹1,00,000"
+                            value={form.prizePool}
+                            onChange={(e) => update("prizePool", e.target.value)}
+                          />
+                        )}
 
+                        {form.prizeType === "prizes" && (
+                          <>
+                            <Input
+                              label="1st Prize"
+                              placeholder="₹50,000"
+                              value={form.firstPrize}
+                              onChange={(e) => update("firstPrize", e.target.value)}
+                            />
+
+                            <Input
+                              label="2nd Prize"
+                              placeholder="₹30,000"
+                              value={form.secondPrize}
+                              onChange={(e) => update("secondPrize", e.target.value)}
+                            />
+
+                            <Input
+                              label="3rd Prize"
+                              placeholder="₹20,000"
+                              value={form.thirdPrize}
+                              onChange={(e) => update("thirdPrize", e.target.value)}
+                            />
+                          </>
+                        )}
                     <div style={{ marginTop: '1.5rem', marginBottom: '0.5rem', padding: '1rem', background: '#f9fcff', border: '1px solid #dce5f2', borderRadius: '12px' }}>
                       <h3 style={{ margin: '0 0 1rem 0', color: '#1f3658', fontSize: '1rem' }}>Payout Details (Bank Info)</h3>
                       <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>This information is required to process your payouts for ticket sales.</p>

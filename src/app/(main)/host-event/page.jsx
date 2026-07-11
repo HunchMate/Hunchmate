@@ -25,9 +25,7 @@ export default function HostEventRedirect() {
 
   return (
     <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8f9ff' }}>
-      <div className="animate-pulse" style={{ color: '#ea7a32', fontSize: '1.25rem', fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 600 }}>
-        Redirecting...
-      </div>
+      return <></>;
     </main>
   );
 }

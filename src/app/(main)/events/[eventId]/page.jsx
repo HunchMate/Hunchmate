@@ -95,6 +95,7 @@ export default function EventDetail() {
   const [teamMembers, setTeamMembers] = useState([]);
   const [teamMembersBaseline, setTeamMembersBaseline] = useState([]);
   const [isTeamEditMode, setIsTeamEditMode] = useState(false);
+  const [isTeamViewMode, setIsTeamViewMode] = useState(false);
   const [inviteNotice, setInviteNotice] = useState(null);
   const [regStatus, setRegStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -195,6 +196,7 @@ export default function EventDetail() {
 
   const resetRegistrationModal = () => {
     setShowRegModal(false);
+    setIsTeamViewMode(false);
     setRegStatus(null);
     setInviteNotice(null);
     setInviteRows([]);
@@ -255,6 +257,7 @@ export default function EventDetail() {
     });
 
     setIsTeamEditMode(true);
+    setIsTeamViewMode(false);
     setRegStatus(null);
     setInviteNotice(null);
     setRegForm({
@@ -272,6 +275,42 @@ export default function EventDetail() {
     setTeamMembersBaseline(editableMembers);
     setInviteRows([]);
     setInviteEmail('');
+    setShowRegModal(true);
+  };
+
+  const openTeamViewer = () => {
+    if (!currentRegistration) return;
+
+    const leadLabel = getLeadLabel();
+    const existingMembers = Array.isArray(currentRegistration.members) ? currentRegistration.members : [];
+    const editableMembers = existingMembers.filter((member, index) => {
+      const normalized = String(member || '').trim().toLowerCase();
+      if (!normalized) return false;
+      if (index === 0) return false;
+
+      const leadNormalized = String(leadLabel || '').trim().toLowerCase();
+      return normalized !== leadNormalized;
+    });
+
+    setIsTeamViewMode(true);
+    setIsTeamEditMode(false);
+    setRegStatus(null);
+    setInviteNotice(null);
+    setInviteRows([]);
+    setTeamMembers(editableMembers);
+    setTeamMembersBaseline(editableMembers);
+    setInviteEmail('');
+    setRegForm({
+      teamName: currentRegistration.teamName || '',
+      participantType: user?.profileType || 'student',
+      teamLeadName: currentRegistration.teamLeadName || leadLabel || '',
+      registrationType: 'Team',
+      linkedinUrl: currentRegistration.socials?.linkedin || '',
+      githubUrl: currentRegistration.socials?.github || '',
+      resumeUrl: currentRegistration.resumeUrl || '',
+      customField: currentRegistration.customField || '',
+      consentAgreed: true
+    });
     setShowRegModal(true);
   };
 
@@ -789,10 +828,10 @@ export default function EventDetail() {
           {hasPrizesArray && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
               {event.prizes.map((p, idx) => {
-                 let iconColor = '#94a3b8'; // Default grey
-                 if (idx === 0) iconColor = '#fbbf24'; // Gold
-                 else if (idx === 1) iconColor = '#94a3b8'; // Silver
-                 else if (idx === 2) iconColor = '#d97706'; // Bronze
+                 let iconColor = '#94a3b8';
+                 if (idx === 0) iconColor = '#fbbf24';
+                 else if (idx === 1) iconColor = '#94a3b8';
+                 else if (idx === 2) iconColor = '#d97706';
                  
                  return (
                    <div key={idx} className="flex flex-col items-center justify-center p-8 rounded-2xl border hover:scale-105 transition-transform duration-300" style={{ background: '#f8fafc', borderColor: '#e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
@@ -876,6 +915,7 @@ export default function EventDetail() {
         return;
       }
 
+      openTeamViewer();
       return;
     }
 
@@ -992,7 +1032,6 @@ export default function EventDetail() {
       return;
     }
 
-    // Profile verification — ensure user has complete profile
     if (!user?.name?.trim() && !user?.displayName?.trim()) {
       setRegStatus({ success: false, error: 'Please complete your profile (name is required) before registering.' });
       return;
@@ -1006,7 +1045,6 @@ export default function EventDetail() {
       return;
     }
 
-    // Custom validations
     if (event.requireSocialProfiles) {
       if (!regForm.linkedinUrl?.trim() || !regForm.githubUrl?.trim()) {
         setRegStatus({ success: false, error: 'LinkedIn and GitHub profiles are required for registration.' });
@@ -1038,7 +1076,6 @@ export default function EventDetail() {
       ...(isTeamEditMode ? teamMembers : inviteRows.map((entry) => entry.email)),
     ].filter(Boolean);
 
-    // Build base teamData
     const teamData = isTeamReg
       ? {
           participantType: regForm.participantType,
@@ -1054,7 +1091,6 @@ export default function EventDetail() {
           registrationType: 'Individual',
         };
 
-    // Inject waitlisted or pending approval status
     if (isWaitlistActive) {
       teamData.status = 'waitlisted';
     } else if (event.accessType === 'Invite' && event.inviteApprovals) {
@@ -1063,7 +1099,6 @@ export default function EventDetail() {
       teamData.status = 'approved';
     }
 
-    // Inject custom form fields
     if (event.requireSocialProfiles) {
       teamData.linkedinUrl = regForm.linkedinUrl;
       teamData.githubUrl = regForm.githubUrl;
@@ -1097,7 +1132,6 @@ export default function EventDetail() {
       }
     }
 
-    // All validations passed — directly register (no payment step)
     setSubmitting(true);
     try {
       const registrationPromise = isTeamEditMode && currentRegistration && canManageTeam
@@ -1386,15 +1420,8 @@ export default function EventDetail() {
 
       <Modal
         isOpen={showRegModal}
-        onClose={() => {
-          setShowRegModal(false);
-          setRegStatus(null);
-          setInviteNotice(null);
-          setInviteRows([]);
-          setInviteEmail('');
-          setRegForm({ teamName: '', participantType: 'student', teamLeadName: '' });
-        }}
-        title="Claim Your Spot"
+        onClose={resetRegistrationModal}
+        title={isTeamViewMode ? "Team Details" : (isTeamEditMode ? "Edit Your Team" : "Claim Your Spot")}
         size="md"
       >
         {regStatus?.success ? (
@@ -1462,240 +1489,225 @@ export default function EventDetail() {
               </div>
             ) : null}
 
-            {(event.participationType === 'Both' || event.participationType === 'Team') && (
-              <div className="reg-form__section">
-                <p className="reg-form__section-title">Registration Mode</p>
-                <div className="reg-form__button-group">
-                  {['Individual', 'Team'].map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      className={`reg-form__type-btn ${regForm.registrationType === mode ? 'reg-form__type-btn--active' : ''}`}
-                      onClick={() => setRegForm({ ...regForm, registrationType: mode })}
-                    >
-                      {mode === 'Individual' ? 'Register as Individual' : 'Register as Team'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {!user?.profileType && (
-              <div className="reg-form__section">
-                <p className="reg-form__section-title">What is your participation type?</p>
-                <div className="reg-form__button-group">
-                  {['student', 'developer', 'working_professional'].map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      className={`reg-form__type-btn ${regForm.participantType === type ? 'reg-form__type-btn--active' : ''}`}
-                      onClick={() => setRegForm({ ...regForm, participantType: type })}
-                    >
-                      {type === 'student' ? 'Student' : type === 'developer' ? 'Developer' : 'Working Professional'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {isTeamReg ? (
-              <>
-                <div className="reg-form__section">
-                  <p className="reg-form__section-title">Team Details</p>
-                  
-                  <Input
-                    label="Team Name"
-                    placeholder="e.g. Neural Knights"
-                    value={regForm.teamName}
-                    onChange={(e) => setRegForm({ ...regForm, teamName: e.target.value })}
-                  />
-
-                  <Input
-                    label="Team Lead Name"
-                    placeholder="Enter team lead name"
-                    value={regForm.teamLeadName}
-                    onChange={(e) => setRegForm({ ...regForm, teamLeadName: e.target.value })}
-                  />
-
-                  <div className="reg-form__hint">
-                    Team size is auto-calculated from the lead plus invited members.
+            <form className="reg-form__fields">
+              {event.participationType === 'Both' && !isTeamEditMode && !isTeamViewMode ? (
+                <div>
+                  <label className="input-label">Participation Type</label>
+                  <div className="reg-form__radio-group">
+                    <label className={`reg-form__radio ${regForm.registrationType === 'Individual' ? 'reg-form__radio--active' : ''}`}>
+                      <input
+                        type="radio"
+                        name="registrationType"
+                        value="Individual"
+                        checked={regForm.registrationType === 'Individual'}
+                        onChange={(e) => setRegForm({ ...regForm, registrationType: e.target.value })}
+                      />
+                      <span>Individual</span>
+                    </label>
+                    <label className={`reg-form__radio ${regForm.registrationType === 'Team' ? 'reg-form__radio--active' : ''}`}>
+                      <input
+                        type="radio"
+                        name="registrationType"
+                        value="Team"
+                        checked={regForm.registrationType === 'Team'}
+                        onChange={(e) => setRegForm({ ...regForm, registrationType: e.target.value })}
+                      />
+                      <span>Team</span>
+                    </label>
                   </div>
                 </div>
+              ) : null}
 
-                <div className="reg-form__invite-box">
-                  <p className="reg-form__invite-title">Team Members</p>
-                  <p className="reg-form__invite-hint">
-                    Only the team lead can add or remove teammates.
-                  </p>
+              {regForm.registrationType === 'Team' ? (
+                <div className="reg-form__team-section">
+                  <div className="reg-form__team-head">
+                    <p className="reg-form__section-title">Team Configuration</p>
+                    <span className="reg-form__team-size-badge">
+                      {event.teamSize?.min || 1}-{event.teamSize?.max || 4} Members Max
+                    </span>
+                  </div>
 
-                  {teamMembers.length > 0 ? (
-                    <div className="reg-form__invite-list">
-                      {teamMembers.map((member, index) => (
-                        <article key={`${member}-${index}`} className="reg-form__invite-row">
-                          <div>
-                            <strong>{member}</strong>
-                            <p>Team member</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {isTeamViewMode ? (
+                      <>
+                        <div>
+                          <label className="input-label">Team Name</label>
+                          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-gray-700 font-medium">
+                            {regForm.teamName || 'N/A'}
                           </div>
-                          <div className="reg-form__invite-actions">
-                            <button type="button" className="reg-form__invite-remove" onClick={() => removeTeamMember(index)}>
-                              Remove
-                            </button>
+                        </div>
+                        <div>
+                          <label className="input-label">Team Leader Name</label>
+                          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-gray-700 font-medium">
+                            {regForm.teamLeadName || 'N/A'}
                           </div>
-                        </article>
-                      ))}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Input
+                          label="Team Name *"
+                          placeholder="Awesome Team"
+                          value={regForm.teamName}
+                          onChange={(e) => setRegForm({ ...regForm, teamName: e.target.value })}
+                        />
+                        <Input
+                          label="Team Leader Name *"
+                          placeholder="Jane Doe"
+                          value={regForm.teamLeadName}
+                          onChange={(e) => setRegForm({ ...regForm, teamLeadName: e.target.value })}
+                        />
+                      </>
+                    )}
+                  </div>
+
+                  <div className="reg-form__invite-box">
+                    <p className="reg-form__invite-title">Team Members</p>
+                    <p className="reg-form__invite-hint">
+                      Only the team lead can add or remove teammates.
+                    </p>
+
+                    {teamMembers.length > 0 ? (
+                      <div className="reg-form__invite-list" style={{ marginTop: '0.75rem' }}>
+                        {teamMembers.map((member, index) => (
+                          <article key={index} className="reg-form__invite-row">
+                            <div>
+                              <strong>{member}</strong>
+                              <p>Team Member</p>
+                            </div>
+                            {!isTeamViewMode && (
+                              <div className="reg-form__invite-actions">
+                                <button type="button" className="reg-form__invite-remove" onClick={() => removeTeamMember(index)}>
+                                  Remove
+                                </button>
+                              </div>
+                            )}
+                          </article>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {!isTeamViewMode && (
+                      <>
+                        <p className="reg-form__invite-title" style={{ marginTop: '1.25rem' }}>Add Team Members by Email</p>
+                        <p className="reg-form__invite-hint">
+                          Add teammate emails. Registered members can accept immediately.
+                        </p>
+
+                        <div className="reg-form__invite-input-row">
+                          <Input
+                            label="Member Email"
+                            placeholder="member@example.com"
+                            value={inviteEmail}
+                            onChange={(e) => setInviteEmail(e.target.value)}
+                          />
+                          <Button type="button" variant="secondary" icon={UserPlus} onClick={addInviteEmail}>Add</Button>
+                        </div>
+
+                        {inviteRows.length > 0 ? (
+                          <div className="reg-form__invite-list">
+                            {inviteRows.map((row, index) => (
+                              <article key={row.email} className="reg-form__invite-row">
+                                <div>
+                                  <strong>{row.email}</strong>
+                                  <p>{row.isRegistered ? 'Registered on Hunchmate' : 'Not registered yet'}</p>
+                                </div>
+                                <div className="reg-form__invite-actions">
+                                  {!row.inviteSent ? (
+                                    <Button type="button" size="sm" variant="primary" onClick={() => sendInvite(index)}>
+                                      Invite
+                                    </Button>
+                                  ) : (
+                                    <span className="reg-form__invite-sent"><CheckCircle2 size={14} /> Sent</span>
+                                  )}
+                                  <button type="button" className="reg-form__invite-remove" onClick={() => removeInvite(index)}>
+                                    Remove
+                                  </button>
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {(event.requireSocialProfiles || event.enableDocUploads || event.enableCustomFields || event.requireConsent) && !isTeamViewMode && (
+                <div style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <p className="reg-form__section-title" style={{ marginBottom: '0.25rem' }}>Additional Information</p>
+                  
+                  {event.requireSocialProfiles && (
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      <div style={{ flex: 1 }}>
+                        <Input
+                          label="LinkedIn Profile URL *"
+                          placeholder="https://linkedin.com/in/username"
+                          value={regForm.linkedinUrl || ''}
+                          onChange={(e) => setRegForm({ ...regForm, linkedinUrl: e.target.value })}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <Input
+                          label="GitHub Profile URL *"
+                          placeholder="https://github.com/username"
+                          value={regForm.githubUrl || ''}
+                          onChange={(e) => setRegForm({ ...regForm, githubUrl: e.target.value })}
+                        />
+                      </div>
                     </div>
-                  ) : (
-                    <p className="reg-form__invite-hint">No teammates added yet.</p>
                   )}
 
-                  <p className="reg-form__invite-title">Add Team Members by Email</p>
-                  <p className="reg-form__invite-hint">
-                    Add teammate emails. Registered members can accept immediately. Others will be sent to login/signup from the invite link.
-                  </p>
-
-                  <div className="reg-form__invite-input-row">
-                    <Input
-                      label="Member Email"
-                      placeholder="member@example.com"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                    />
-                    <Button type="button" variant="secondary" icon={UserPlus} onClick={addInviteEmail}>Add</Button>
-                  </div>
-
-                  {inviteRows.length > 0 ? (
-                    <div className="reg-form__invite-list">
-                      {inviteRows.map((row, index) => (
-                        <article key={row.email} className="reg-form__invite-row">
-                          <div>
-                            <strong>{row.email}</strong>
-                            <p>{row.isRegistered ? 'Registered on Hunchmate' : 'Not registered yet'}</p>
-                          </div>
-
-                          <div className="reg-form__invite-actions">
-                            {!row.inviteSent ? (
-                              <Button type="button" size="sm" variant="primary" onClick={() => sendInvite(index)}>
-                                Invite
-                              </Button>
-                            ) : (
-                              <span className="reg-form__invite-sent"><CheckCircle2 size={14} /> Sent</span>
-                            )}
-                            {row.mailtoUrl ? (
-                              <a className="reg-form__invite-link" href={row.mailtoUrl}>Open Email</a>
-                            ) : null}
-                            {row.joinUrl ? (
-                              <button type="button" className="reg-form__invite-copy" onClick={() => copyInviteLink(row.joinUrl)}>
-                                <Copy size={14} /> Copy Link
-                              </button>
-                            ) : null}
-                            <button type="button" className="reg-form__invite-remove" onClick={() => removeInvite(index)}>
-                              Remove
-                            </button>
-                          </div>
-                        </article>
-                      ))}
+                  {event.enableDocUploads && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.36rem' }}>
+                      <label className="input-label">Resume / Document URL *</label>
+                      <Input
+                        placeholder="https://example.com/resume.pdf"
+                        value={regForm.resumeUrl || ''}
+                        onChange={(e) => setRegForm({ ...regForm, resumeUrl: e.target.value })}
+                      />
                     </div>
-                  ) : null}
+                  )}
+
+                  {event.enableCustomFields && (
+                    <div>
+                      <label className="input-label">Tell us why you want to join this program *</label>
+                      <textarea
+                        placeholder="Share your interest, background or expectations..."
+                        value={regForm.customField || ''}
+                        onChange={(e) => setRegForm({ ...regForm, customField: e.target.value })}
+                        rows={3}
+                        className="reg-form__textarea"
+                      />
+                    </div>
+                  )}
+
+                  {event.requireConsent && (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <Checkbox
+                        id="eventdetail-consent"
+                        checked={regForm.consentAgreed || false}
+                        onChange={(e) => setRegForm({ ...regForm, consentAgreed: e.target.checked })}
+                        label={<span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)' }}>I agree to the code of conduct, rules, and privacy policy of this program *</span>}
+                      />
+                    </div>
+                  )}
                 </div>
-              </>
-            ) : null}
+              )}
+            </form>
 
-            {/* Custom Registration Fields */}
-            {(event.requireSocialProfiles || event.enableDocUploads || event.enableCustomFields || event.requireConsent) && (
-              <div style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-                <p className="reg-form__section-title" style={{ marginBottom: '0.25rem' }}>Additional Information</p>
-                
-                {event.requireSocialProfiles && (
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <div style={{ flex: 1 }}>
-                      <Input
-                        label="LinkedIn Profile URL *"
-                        placeholder="https://linkedin.com/in/username"
-                        value={regForm.linkedinUrl || ''}
-                        onChange={(e) => setRegForm({ ...regForm, linkedinUrl: e.target.value })}
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <Input
-                        label="GitHub Profile URL *"
-                        placeholder="https://github.com/username"
-                        value={regForm.githubUrl || ''}
-                        onChange={(e) => setRegForm({ ...regForm, githubUrl: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {event.enableDocUploads && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.36rem' }}>
-                    <label className="input-label">Resume / Document URL *</label>
-                    <Input
-                      placeholder="https://example.com/resume.pdf"
-                      value={regForm.resumeUrl || ''}
-                      onChange={(e) => setRegForm({ ...regForm, resumeUrl: e.target.value })}
-                    />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <label className="create-event__upload-field" style={{ margin: 0, padding: '0.4rem 1rem', fontSize: '0.8rem', flex: 1 }}>
-                        <span>Or upload PDF/Image</span>
-                        <input
-                          type="file"
-                          accept=".pdf,image/*"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              if (file.size > 1 * 1024 * 1024) {
-                                alert('File must be 1MB or smaller.');
-                                return;
-                              }
-                              const reader = new FileReader();
-                              reader.onload = () => {
-                                setRegForm({ ...regForm, resumeUrl: String(reader.result || '') });
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                        />
-                      </label>
-                      {regForm.resumeUrl && regForm.resumeUrl.startsWith('data:') && (
-                        <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600 }}>Uploaded successfully</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {event.enableCustomFields && (
-                  <div>
-                    <label className="input-label">Tell us why you want to join this program *</label>
-                    <textarea
-                      placeholder="Share your interest, background or expectations..."
-                      value={regForm.customField || ''}
-                      onChange={(e) => setRegForm({ ...regForm, customField: e.target.value })}
-                      rows={3}
-                      className="reg-form__textarea"
-                    />
-                  </div>
-                )}
-
-                {event.requireConsent && (
-                  <div style={{ marginTop: '0.5rem' }}>
-                    <Checkbox
-                      id="eventdetail-consent"
-                      checked={regForm.consentAgreed || false}
-                      onChange={(e) => setRegForm({ ...regForm, consentAgreed: e.target.checked })}
-                      label={<span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)' }}>I agree to the code of conduct, rules, and privacy policy of this program *</span>}
-                    />
-                  </div>
-                )}
-              </div>
+            {!isTeamViewMode && (
+              <Button variant="primary" size="lg" fullWidth onClick={submitRegistration} icon={Zap} disabled={submitting}>
+                {submitting ? 'Processing...' : isTeamEditMode ? 'Update Team' : 'Confirm Registration'}
+              </Button>
             )}
 
-            <Button variant="primary" size="lg" fullWidth onClick={submitRegistration} icon={Zap} disabled={submitting}>
-              {submitting ? 'Processing...' : isTeamEditMode ? 'Update Team' : 'Confirm Registration'}
-            </Button>
-
-            <p className="reg-form__footnote">
-              By registering, you agree to event rules and organizer policies.
-            </p>
+            {!isTeamViewMode && (
+              <p className="reg-form__footnote">
+                By registering, you agree to event rules and organizer policies.
+              </p>
+            )}
           </div>
         )}
       </Modal>

@@ -13,7 +13,7 @@ export default function InviteJoin() {
   const { inviteId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getEventById } = useEvents();
+  const { getEventById, eventsLoading } = useEvents();
   const [state, setState] = useState({ loading: false, message: '', error: '' });
   const [invite, setInvite] = useState(null);
   const [inviteLoading, setInviteLoading] = useState(true);
@@ -124,12 +124,12 @@ export default function InviteJoin() {
   };
 
   // Loading state
-  if (inviteLoading) {
+  if (inviteLoading || (invite && eventsLoading && !event)) {
     return (
       <section className="invite-join invite-join--centered">
         <article className="invite-join__card" style={{ textAlign: 'center' }}>
           <Loader2 size={32} className="invite-join__spinner" style={{ animation: 'spin 1s linear infinite' }} />
-          <p style={{ marginTop: 12, color: '#64748b' }}>Loading invitation...</p>
+          <p style={{ marginTop: 12, color: '#64748b' }}>{inviteLoading ? 'Loading invitation...' : 'Loading event details...'}</p>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </article>
       </section>

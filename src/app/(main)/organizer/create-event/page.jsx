@@ -1029,7 +1029,7 @@ export default function CreateEvent() {
 
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                         <div>
-                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: '0.3rem' }}>Event Name *</label>
+                          <label style={{ color: '#1f2937',background: '#ffffff',display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: '0.3rem' }}>Event Name *</label>
                           <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #d1d5db', borderRadius: '8px', overflow: 'hidden' }}>
                             <span style={{ padding: '0.5rem', background: '#f9fafb', display: 'flex' }}><Type size={16} style={{ color: '#6b7280' }} /></span>
                             <input
@@ -1037,7 +1037,7 @@ export default function CreateEvent() {
                               placeholder="e.g. AI Sprint"
                               value={sub.title}
                               onChange={e => updateSubEvent(idx, 'title', e.target.value)}
-                              style={{ border: 'none', outline: 'none', padding: '0.5rem', width: '100%', fontSize: '0.9rem' }}
+                              style={{ border: 'none', outline: 'none', padding: '0.5rem', width: '100%', fontSize: '0.9rem', color: '#1f2937', background: '#ffffff' }}
                             />
                           </div>
                         </div>
@@ -1049,7 +1049,7 @@ export default function CreateEvent() {
                               type="date"
                               value={sub.startDate}
                               onChange={e => updateSubEvent(idx, 'startDate', e.target.value)}
-                              style={{ border: 'none', outline: 'none', padding: '0.5rem', width: '100%', fontSize: '0.9rem' }}
+                              style={{ border: 'none', outline: 'none', padding: '0.5rem', width: '100%', fontSize: '0.9rem',color: '#1f2937',background: '#ffffff' }}
                             />
                           </div>
                         </div>
@@ -1064,7 +1064,7 @@ export default function CreateEvent() {
                               type="time"
                               value={sub.time || ''}
                               onChange={e => updateSubEvent(idx, 'time', e.target.value)}
-                              style={{ border: 'none', outline: 'none', padding: '0.5rem', width: '100%', fontSize: '0.9rem' }}
+                              style={{ border: 'none', outline: 'none', padding: '0.5rem', width: '100%', fontSize: '0.9rem',color: '#1f2937',background: '#ffffff' }}
                             />
                           </div>
                         </div>
@@ -1077,7 +1077,7 @@ export default function CreateEvent() {
                               placeholder="e.g. Free / ₹500"
                               value={sub.entryFee || ''}
                               onChange={e => updateSubEvent(idx, 'entryFee', e.target.value)}
-                              style={{ border: 'none', outline: 'none', padding: '0.5rem', width: '100%', fontSize: '0.9rem' }}
+                              style={{ border: 'none', outline: 'none', padding: '0.5rem', width: '100%', fontSize: '0.9rem',color: '#1f2937',background: '#ffffff', }}
                             />
                           </div>
                         </div>
@@ -1090,7 +1090,7 @@ export default function CreateEvent() {
                               placeholder="e.g. ₹50,000"
                               value={sub.prizeMoney || ''}
                               onChange={e => updateSubEvent(idx, 'prizeMoney', e.target.value)}
-                              style={{ border: 'none', outline: 'none', padding: '0.5rem', width: '100%', fontSize: '0.9rem' }}
+                              style={{ border: 'none', outline: 'none', padding: '0.5rem', width: '100%', fontSize: '0.9rem',color: '#1f2937',background: '#ffffff', }}
                             />
                           </div>
                         </div>
@@ -1105,8 +1105,8 @@ export default function CreateEvent() {
                           rows={2}
                           style={{
                             width: '100%', border: '1px solid #d1d5db', borderRadius: '8px',
-                            padding: '0.5rem 0.75rem', fontSize: '0.9rem', resize: 'vertical',
-                            outline: 'none', fontFamily: 'inherit'
+                            padding: '0.5rem 0.75rem', fontSize: '0.9rem', fontSize: '0.9rem',color: '#1f2937',background: '#ffffff', resize: 'vertical',
+                            outline: 'none', fontFamily: 'inherit',color: '#1f2937',background: '#ffffff'
                           }}
                         />
                       </div>

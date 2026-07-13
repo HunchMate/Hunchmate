@@ -472,7 +472,7 @@ export default function Profile() {
                         <button
                           type="button"
                           style={{ flex: 1, minWidth: 0, textAlign: 'left', background: 'none', border: 'none', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                          onClick={() => { setSelectedEventItem(item); setShowQr(false); }}
+                          onClick={() => navigate(buildEventDetailPath(item.event))}
                         >
                           <div className="profile-page__activity-details" style={{ flex: 1, minWidth: 0, paddingRight: '1rem' }}>
                             <strong>{item.event.title}</strong>

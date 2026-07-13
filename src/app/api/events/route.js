@@ -78,6 +78,15 @@ export async function GET(request) {
     // unless a specific status filter was applied
     if (!status) {
       query = query.neq('status', 'draft');
+
+      // Filter out events that have been closed for more than 1 day.
+      // E.g., if today is July 13th, yesterdayStr is July 12th.
+      // If registrationEnd is July 9th, it will be excluded.
+      // If registrationEnd is July 11th, it will be excluded.
+      // If registrationEnd is July 12th or later, it will be included.
+      // If registrationEnd is null, we also include it to be safe.
+      const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      query = query.or(`timeline->>registrationEnd.gte.${yesterdayStr},timeline->>registrationEnd.is.null`);
     }
 
     query = query

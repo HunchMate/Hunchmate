@@ -34,7 +34,15 @@ export default function Home() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  const featuredEvents = events.slice(0, 3);
+  const publicEvents = events.filter(e => {
+    if (e.status === 'draft') return false;
+    const regEndRaw = e.timeline?.registrationEnd || e.endDate || e.timeline?.eventStart;
+    const regEnd = regEndRaw ? new Date(regEndRaw).getTime() : Infinity;
+    const yesterday = Date.now() - 86400000;
+    return regEnd >= yesterday;
+  });
+
+  const featuredEvents = publicEvents.slice(0, 3);
 
   const trustedOrganizations = [
     'NASSCOM', 'Google', 'Microsoft', 'Amazon', 'Meta',

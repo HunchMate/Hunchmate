@@ -229,10 +229,12 @@ export default function EventCard({
               e.stopPropagation();
               onRegister();
             }}
-            className="group relative inline-flex items-center justify-center gap-1.5 rounded-lg bg-orange-500 hover:bg-black text-white font-bold py-1.5 px-3 transition-colors duration-300 flex-[1.5]"
+            className={`group relative inline-flex items-center justify-center gap-1.5 rounded-lg ${daysLeftToRegister > 0 ? 'bg-orange-500 hover:bg-black' : 'bg-gray-800 hover:bg-black'} text-white font-bold py-1.5 px-3 transition-colors duration-300 flex-[1.5]`}
           >
-            <span className="whitespace-nowrap text-xs">Register Now</span>
-            <span className="relative flex h-[20px] w-[20px] flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-orange-500 group-hover:text-black transition-colors duration-300 ml-0.5">
+            <span className="whitespace-nowrap text-xs">
+              {daysLeftToRegister > 0 ? 'Register Now' : 'View Details'}
+            </span>
+            <span className={`relative flex h-[20px] w-[20px] flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ${daysLeftToRegister > 0 ? 'text-orange-500' : 'text-gray-800'} group-hover:text-black transition-colors duration-300 ml-0.5`}>
               <svg viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[8px] transition-transform duration-300 ease-in-out group-hover:translate-x-[150%] group-hover:-translate-y-[150%]">
                 <path d="M13.376 11.552l-.264-10.44-10.44-.24.024 2.28 6.96-.048L.2 12.56l1.488 1.488 9.432-9.432-.048 6.912 2.304.024z" fill="currentColor"></path>
               </svg>

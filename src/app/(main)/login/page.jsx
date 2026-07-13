@@ -23,7 +23,7 @@ export default function Login() {
     }
 
     if (!nextUser?.onboardingCompleted) {
-      return nextUser?.role === 'organizer' ? '/host-onboarding' : '/events';
+      return nextUser?.role === 'organizer' ? '/host-onboarding' : '/onboarding';
     }
     return nextUser.role === 'admin'
       ? '/admin/dashboard'

@@ -21,7 +21,7 @@ export default function Signup() {
   const getPostAuthPath = useCallback((nextUser) => {
     if (nextUser?.role === 'admin') return '/admin/dashboard';
     if (!nextUser?.onboardingCompleted) {
-      return nextUser?.role === 'organizer' ? '/host-onboarding' : '/events';
+      return nextUser?.role === 'organizer' ? '/host-onboarding' : '/onboarding';
     }
     return nextUser.role === 'organizer' ? '/organizer/dashboard' : '/events';
   }, []);

@@ -9,7 +9,8 @@ import {
   Search,
   Star,
   Globe,
-  Code
+  Code,
+  ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from '@/utils/router';
@@ -24,24 +25,28 @@ import { listEventsPaginated } from '@/lib/supabase-data';
 import { DottedGlowBackground } from '@/components/ui/DottedGlowBackground';
 import '@/vite-pages/Events.css';
 
-const CATEGORY_MAP = {
-  'All Programs': null,
-  'Hackathons': 'Hackathon',
-  'Innovation Challenges': 'Competition',
-  'Startup Challenges': 'Bootcamp',
-};
+const CATEGORY_FILTERS = [
+  { label: 'All Events', value: '' },
+  { label: 'Hackathon', value: 'Hackathon' },
+  { label: 'Innovation Challenge', value: 'Innovation Challenge' },
+  { label: 'Hiring Challenge', value: 'Hiring Challenge' },
+  { label: 'Startup Challenge', value: 'Startup Challenge' },
+  { label: 'Competition', value: 'Competition' },
+  { label: 'Workshop', value: 'Workshop' },
+  { label: 'Other', value: 'Other' },
+];
 
-const boardTabs = [
-  { label: 'All Programs', match: () => true },
-  { label: 'Hackathons', match: (event) => event.category === 'Hackathon' },
-  {
-    label: 'Innovation Challenges',
-    match: (event) => event.category === 'Competition' || event.category === 'Conference',
-  },
-  {
-    label: 'Startup Challenges',
-    match: (event) => event.category === 'Bootcamp' || event.category === 'Meetup',
-  },
+const MODE_FILTERS = [
+  { label: 'All Modes', value: '' },
+  { label: 'Online', value: 'Online' },
+  { label: 'Offline', value: 'Offline' },
+  { label: 'Hybrid', value: 'Hybrid' },
+];
+
+const REG_TYPE_FILTERS = [
+  { label: 'All', value: '' },
+  { label: 'Free', value: 'free' },
+  { label: 'Paid', value: 'paid' },
 ];
 
 function resolveEventId(event) {
@@ -118,7 +123,9 @@ export default function Events() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [tab, setTab] = useState('All Programs');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [modeFilter, setModeFilter] = useState('');
+  const [regTypeFilter, setRegTypeFilter] = useState('');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortMode, setSortMode] = useState('newest');
@@ -170,14 +177,14 @@ export default function Events() {
     else setIsLoadingMore(true);
 
     try {
-      const category = CATEGORY_MAP[tab] || '';
       const status = statusFilter === 'all' ? '' : (statusFilter === 'live' ? 'ongoing' : statusFilter);
 
       const result = await listEventsPaginated({
         page,
         limit: PAGE_SIZE,
         search: debouncedSearch,
-        category,
+        category: categoryFilter,
+        mode: modeFilter,
         status,
       });
 
@@ -199,7 +206,7 @@ export default function Events() {
         setIsLoadingMore(false);
       }
     }
-  }, [tab, debouncedSearch, statusFilter]);
+  }, [categoryFilter, modeFilter, debouncedSearch, statusFilter]);
 
   // Reset and fetch when filters change
   useEffect(() => {
@@ -213,17 +220,25 @@ export default function Events() {
   };
 
   const resetFilters = () => {
-    setTab('All Programs');
+    setCategoryFilter('');
+    setModeFilter('');
+    setRegTypeFilter('');
     setSearch('');
     setDebouncedSearch('');
     setSortMode('newest');
     setStatusFilter('all');
   };
 
-  // Sort paginated events client-side
+  // Sort + filter registration type client-side (entryFee is a string field, not filterable server-side)
   const sortedEvents = useMemo(() => {
-    return sortByTimeline(paginatedEvents, sortMode);
-  }, [paginatedEvents, sortMode]);
+    let events = paginatedEvents;
+    if (regTypeFilter === 'free') {
+      events = events.filter((e) => !e.entryFee || String(e.entryFee).trim() === '' || String(e.entryFee).toLowerCase() === 'free');
+    } else if (regTypeFilter === 'paid') {
+      events = events.filter((e) => e.entryFee && String(e.entryFee).trim() !== '' && String(e.entryFee).toLowerCase() !== 'free');
+    }
+    return sortByTimeline(events, sortMode);
+  }, [paginatedEvents, sortMode, regTypeFilter]);
 
 
 
@@ -268,48 +283,69 @@ export default function Events() {
       {/* ── Sticky Controls Bar ── */}
       <div className="explore-controls-bar">
         <div className="container explore-controls__inner">
-          <div className="explore-tabs">
-            {boardTabs.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                className={`explore-tab ${tab === item.label ? 'is-active' : ''}`}
-                onClick={() => setTab(item.label)}
-              >
-                {tab === item.label && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="explore-tab-bg"
-                    initial={false}
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-                <span style={{ position: 'relative', zIndex: 2 }}>{item.label}</span>
-              </button>
-            ))}
+          {/* Search */}
+          <div className="explore-search-wrap">
+            <Search size={18} />
+            <input
+              type="text"
+              className="explore-search-input"
+              placeholder="Search amazing events..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
 
-          <div className="explore-actions">
-            <div className="explore-search-wrap">
-              <Search size={18} />
-              <input
-                type="text"
-                className="explore-search-input"
-                placeholder="Search amazing events..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+          {/* Filter dropdowns */}
+          <div className="explore-dropdowns">
+            <div className="explore-select-wrap">
+              <select
+                className="explore-select"
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                {CATEGORY_FILTERS.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+              <ChevronDown size={15} className="explore-select-icon" />
             </div>
-            
-            <button
-              type="button"
-              className={`explore-sort-btn ${sortMode === 'newest' ? 'is-active' : ''}`}
-              onClick={() => setSortMode(sortMode === 'newest' ? 'soonest' : 'newest')}
-              title={sortMode === 'newest' ? "Sort by soonest timeline" : "Sort by most recent"}
-            >
-              <ArrowUpDown size={18} />
-            </button>
+
+            <div className="explore-select-wrap">
+              <select
+                className="explore-select"
+                value={modeFilter}
+                onChange={(e) => setModeFilter(e.target.value)}
+              >
+                {MODE_FILTERS.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+              <ChevronDown size={15} className="explore-select-icon" />
+            </div>
+
+            <div className="explore-select-wrap">
+              <select
+                className="explore-select"
+                value={regTypeFilter}
+                onChange={(e) => setRegTypeFilter(e.target.value)}
+              >
+                {REG_TYPE_FILTERS.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+              <ChevronDown size={15} className="explore-select-icon" />
+            </div>
           </div>
+
+          {/* Sort */}
+          <button
+            type="button"
+            className={`explore-sort-btn ${sortMode === 'newest' ? 'is-active' : ''}`}
+            onClick={() => setSortMode(sortMode === 'newest' ? 'soonest' : 'newest')}
+            title={sortMode === 'newest' ? 'Sort by soonest timeline' : 'Sort by most recent'}
+          >
+            <ArrowUpDown size={18} />
+          </button>
         </div>
       </div>
 

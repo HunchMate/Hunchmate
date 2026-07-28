@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from '@/utils/router';
 import { Mail, Lock, User, Phone, AlertCircle, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -27,6 +27,21 @@ export default function HostSignup() {
       : nextUser.role === 'organizer'
         ? '/organizer/dashboard'
         : '/events';
+  }, []);
+
+  // Force fresh reload on bfcache restore or back navigation after OAuth redirect
+  useEffect(() => {
+    const checkAndReload = () => {
+      if (sessionStorage.getItem('hm_oauth_redirect')) {
+        sessionStorage.removeItem('hm_oauth_redirect');
+        window.location.reload();
+      }
+    };
+    // Check on mount (for normal back navigation)
+    checkAndReload();
+    // Check on pageshow (for bfcache restore)
+    window.addEventListener('pageshow', checkAndReload);
+    return () => window.removeEventListener('pageshow', checkAndReload);
   }, []);
 
   if (user?.role === 'organizer') {
@@ -103,20 +118,32 @@ export default function HostSignup() {
       return;
     }
     setLoading(true);
-    const termsAcceptedAt = new Date().toISOString();
-    const result = await googleAuth({
-      name: form.name.trim() || undefined,
-      role: 'organizer',
-      termsAccepted: true,
-      termsAcceptedAt,
-    });
-    if (result.success) {
-      const pendingInvite = localStorage.getItem('hm_pending_invite');
-      navigate(pendingInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user));
-    } else {
-      setError(result.error);
+    try {
+      const termsAcceptedAt = new Date().toISOString();
+      sessionStorage.setItem('hm_oauth_redirect', '1'); // for bfcache detection on back button
+      localStorage.setItem('hm_google_signup_role', 'organizer');
+      document.cookie = `hm_google_signup_role=organizer; path=/; max-age=600; SameSite=Lax`;
+      const result = await googleAuth({
+        name: form.name.trim() || undefined,
+        role: 'organizer',
+        termsAccepted: true,
+        termsAcceptedAt,
+      });
+      if (result.success) {
+        if (result.user) {
+          const pendingInvite = localStorage.getItem('hm_pending_invite');
+          navigate(pendingInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user));
+          return;
+        }
+        return; // OAuth in progress — Google redirect is handling it
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError(err?.message || 'Google sign-up failed. Please try again.');
+    } finally {
+      setLoading(false); // Always reset so form stays usable on back-button or failure
     }
-    setLoading(false);
   };
 
   return (
@@ -213,7 +240,13 @@ export default function HostSignup() {
 
           <div className="auth-modern__divider">or continue with</div>
           <div className="auth-modern__socials">
-            <button type="button" onClick={handleGoogleSignup} disabled={loading}>
+            <button type="button" onClick={handleGoogleSignup} disabled={loading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+              <svg width="18" height="18" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
+                <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.6 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.6 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
+                <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.5 18.9 12 24 12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.6 29.4 4 24 4 16.3 4 9.7 8.4 6.3 14.7z"/>
+                <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.3 35.3 26.8 36 24 36c-5.3 0-9.7-3.2-11.4-7.7l-6.5 5C9.5 39.4 16.2 44 24 44z"/>
+                <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.4 4.3-4.4 5.7l6.2 5.2C42 35.2 44 30 44 24c0-1.3-.1-2.6-.4-3.9z"/>
+              </svg>
               Continue with Google
             </button>
           </div>

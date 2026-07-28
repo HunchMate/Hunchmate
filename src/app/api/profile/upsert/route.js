@@ -29,12 +29,15 @@ export async function POST(request) {
     const name = String(body.name || user.user_metadata?.name || email.split('@')[0] || 'User').trim();
     const role = body.role || user.user_metadata?.role || 'participant';
     const provider = body.provider || user.app_metadata?.provider || 'email';
+    // Pick up Google profile picture from the body or directly from user_metadata
+    const avatar = body.avatar || user.user_metadata?.avatar_url || user.user_metadata?.picture || undefined;
 
     const updates = {
       email,
       name,
       role,
       provider,
+      ...(avatar !== undefined && { avatar }),
       ...(body.phoneNumber !== undefined && { phone_number: String(body.phoneNumber || '').trim() }),
       ...(body.termsAccepted !== undefined && { terms_accepted: Boolean(body.termsAccepted) }),
       ...(body.termsAcceptedAt !== undefined && { terms_accepted_at: body.termsAcceptedAt }),

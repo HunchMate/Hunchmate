@@ -88,19 +88,23 @@ export default function Login() {
         ),
       ]);
       if (result.success) {
-        const pendingInvite = String(localStorage.getItem('hm_pending_invite') || '').trim();
-        const hasValidInvite = /^[a-zA-Z0-9_-]+$/.test(pendingInvite);
-        const path = hasValidInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user);
-        if (pendingInvite) localStorage.removeItem('hm_pending_invite');
-        window.location.replace(path);
-        return;
+        if (result.user) {
+          const pendingInvite = String(localStorage.getItem('hm_pending_invite') || '').trim();
+          const hasValidInvite = /^[a-zA-Z0-9_-]+$/.test(pendingInvite);
+          const path = hasValidInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user);
+          if (pendingInvite) localStorage.removeItem('hm_pending_invite');
+          window.location.replace(path);
+          return;
+        }
+        return; // OAuth in progress
       } else {
         setError(result.error);
       }
     } catch (err) {
       setError(err?.message || 'Google sign-in failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleGoogleLoginPromise = () => new Promise(async (resolve) => {

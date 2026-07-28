@@ -97,28 +97,49 @@ export function AuthProvider({ children }) {
 
         try {
           let profile = await getUserProfile(session.user.id);
-          if (profile && !profile.email) {
-            profile.email = session.user.email;
-          }
-          const intendedRole = session.user.user_metadata?.role;
 
-          if (profile && intendedRole && profile.role !== intendedRole) {
-            profile = await upsertUserProfileFromAuthUser(session.user, {
-              ...profile,
-              role: intendedRole,
-              provider: session.user.app_metadata?.provider || 'supabase',
-              accessToken: session.access_token,
-              refreshToken: session.refresh_token,
-            });
-          } else if (!profile) {
-            // Use the intended role from user metadata for new profiles
-            const pendingRole = intendedRole || 'participant';
+          const metaRole = session.user.user_metadata?.role;
+          const storedSignupRole = typeof window !== 'undefined'
+            ? localStorage.getItem('hm_google_signup_role')
+            : null;
+          const storedTermsAt = typeof window !== 'undefined'
+            ? localStorage.getItem('hm_google_terms_accepted_at')
+            : null;
+
+          if (profile) {
+            if (!profile.email && session.user.email) {
+              profile.email = session.user.email;
+            }
+            const targetRole = storedSignupRole || metaRole;
+            if (targetRole && profile.role !== targetRole) {
+              profile = await upsertUserProfileFromAuthUser(session.user, {
+                ...profile,
+                role: targetRole,
+                provider: session.user.app_metadata?.provider || 'supabase',
+                accessToken: session.access_token,
+                refreshToken: session.refresh_token,
+              });
+              if (typeof window !== 'undefined' && storedSignupRole) {
+                localStorage.removeItem('hm_google_signup_role');
+                localStorage.removeItem('hm_google_terms_accepted_at');
+              }
+            }
+          } else {
+            // Brand-new user — read role from the signup-specific localStorage hint or metadata
+            const pendingRole = storedSignupRole || metaRole || 'participant';
             profile = await upsertUserProfileFromAuthUser(session.user, {
               role: pendingRole,
+              termsAccepted: !!storedTermsAt,
+              termsAcceptedAt: storedTermsAt || null,
               provider: session.user.app_metadata?.provider || 'supabase',
               accessToken: session.access_token,
               refreshToken: session.refresh_token,
             });
+            // Clean up one-time signup hints
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('hm_google_signup_role');
+              localStorage.removeItem('hm_google_terms_accepted_at');
+            }
           }
 
           if (profile?.status === 'suspended') {
@@ -160,6 +181,17 @@ export function AuthProvider({ children }) {
       const password = String(userData?.password || '');
       const name = String(userData?.name || '').trim();
 
+      // Pre-check if an account with this email already exists in profiles table
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (existingProfile) {
+        throw new Error('An account with this email already exists. Please sign in instead.');
+      }
+
       const { data, error: signupError } = await supabase.auth.signUp({
         email,
         password,
@@ -171,7 +203,12 @@ export function AuthProvider({ children }) {
         },
       });
 
-      if (signupError) throw signupError;
+      if (signupError) {
+        if (signupError.message?.toLowerCase().includes('already registered') || signupError.message?.toLowerCase().includes('already exists')) {
+          throw new Error('An account with this email already exists. Please sign in instead.');
+        }
+        throw signupError;
+      }
 
       if (!data.user) {
         throw new Error('Signup failed: No user details returned.');
@@ -308,10 +345,26 @@ export function AuthProvider({ children }) {
         }
         return { success: true, user: profile };
       } else {
+        // OAuth redirect flow — persist signup hints so onAuthStateChange can use them after redirect
+        const role = options?.role || 'participant';
+        const isSignup = !!(options?.termsAccepted || options?.termsAcceptedAt);
+
+        if (typeof window !== 'undefined' && isSignup) {
+          localStorage.setItem('hm_google_signup_role', role);
+          document.cookie = `hm_google_signup_role=${encodeURIComponent(role)}; path=/; max-age=600; SameSite=Lax`;
+          if (options?.termsAcceptedAt) {
+            localStorage.setItem('hm_google_terms_accepted_at', options.termsAcceptedAt);
+          }
+        }
+
+        const callbackUrl = typeof window !== 'undefined'
+          ? `${window.location.origin}/api/auth/callback`
+          : undefined;
+
         const { data, error: googleError } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/events` : undefined,
+            redirectTo: callbackUrl,
             queryParams: {
               prompt: 'select_account',
             },

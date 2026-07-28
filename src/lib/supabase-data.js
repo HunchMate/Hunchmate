@@ -298,6 +298,8 @@ export async function upsertUserProfileFromAuthUser(authUser, options = {}) {
   const resolvedRole = autoAdmin ? 'admin' : (options.role || 'participant');
   const resolvedName = options.name || authUser.user_metadata?.name || normalizedEmail.split('@')[0] || 'User';
   const resolvedProvider = options.provider || authUser.app_metadata?.provider || 'supabase';
+  // Persist Google profile picture if available
+  const resolvedAvatar = options.avatar || authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '';
 
   const fallbackProfile = {
     id: uid,
@@ -320,6 +322,7 @@ export async function upsertUserProfileFromAuthUser(authUser, options = {}) {
           name: resolvedName,
           role: resolvedRole,
           provider: resolvedProvider,
+          ...(resolvedAvatar && { avatar: resolvedAvatar }),
           ...(options.phoneNumber !== undefined && { phoneNumber: options.phoneNumber }),
           termsAccepted: options.termsAccepted,
           termsAcceptedAt: options.termsAcceptedAt,
@@ -487,8 +490,17 @@ export async function listEvents() {
     });
 
     if (!res.ok) {
-      console.error('listEvents fetch error:', res.statusText);
-      return [];
+      console.warn('listEvents fetch non-OK status:', res.status, res.statusText, '— falling back to Supabase client');
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('listEvents fallback error:', error.message);
+        return [];
+      }
+      return (data || []).map(mapEventToApp);
     }
 
     const json = await res.json();
@@ -532,8 +544,22 @@ export async function listEventsPaginated(params = {}) {
     });
 
     if (!res.ok) {
-      console.error('listEventsPaginated fetch error:', res.statusText);
-      return { events: [], pagination: { page: 1, limit: 16, total: 0, totalPages: 0, hasMore: false } };
+      console.warn('listEventsPaginated fetch non-OK status:', res.status, res.statusText, '— falling back to Supabase client');
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('listEventsPaginated fallback error:', error.message);
+        return { events: [], pagination: { page: 1, limit: 16, total: 0, totalPages: 0, hasMore: false } };
+      }
+
+      const events = (data || []).map(mapEventToApp);
+      return {
+        events,
+        pagination: { page: 1, limit: events.length || 16, total: events.length, totalPages: 1, hasMore: false },
+      };
     }
 
     const json = await res.json();
@@ -635,8 +661,17 @@ export async function listRegistrations() {
     });
 
     if (!res.ok) {
-      console.error('listRegistrations fetch error:', res.statusText);
-      return [];
+      console.warn('listRegistrations fetch non-OK status:', res.status, res.statusText, '— falling back to Supabase client');
+      const { data, error } = await supabase
+        .from('registrations')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('listRegistrations fallback error:', error.message);
+        return [];
+      }
+      return (data || []).map(mapRegistrationToApp);
     }
 
     const json = await res.json();

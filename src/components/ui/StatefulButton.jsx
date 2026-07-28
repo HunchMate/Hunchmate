@@ -73,7 +73,7 @@ export default function StatefulButton({ onClick, children, disabled, className 
           )}
         </AnimatePresence>
 
-        <span>{children}</span>
+        {children}
       </div>
     </motion.button>
   );

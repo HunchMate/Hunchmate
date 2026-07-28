@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from '@/utils/router';
 import { Mail, Lock, User, AlertCircle, X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -24,6 +24,22 @@ export default function Signup() {
       return nextUser?.role === 'organizer' ? '/host-onboarding' : '/onboarding';
     }
     return nextUser.role === 'organizer' ? '/organizer/dashboard' : '/events';
+  }, []);
+
+  // When the user presses back from Google OAuth, the browser restores this page
+  // from bfcache or disk cache. Force a fresh reload so the form is clean.
+  useEffect(() => {
+    const checkAndReload = () => {
+      if (sessionStorage.getItem('hm_oauth_redirect')) {
+        sessionStorage.removeItem('hm_oauth_redirect');
+        window.location.reload();
+      }
+    };
+    // Check on mount (for normal back navigation)
+    checkAndReload();
+    // Check on pageshow (for bfcache restore)
+    window.addEventListener('pageshow', checkAndReload);
+    return () => window.removeEventListener('pageshow', checkAndReload);
   }, []);
 
   const handleSubmit = async (e) => {
@@ -91,6 +107,13 @@ export default function Signup() {
     setLoading(true);
     try {
       const termsAcceptedAt = new Date().toISOString();
+      // Mark that OAuth is in progress so pageshow can detect bfcache restore
+      sessionStorage.setItem('hm_oauth_redirect', '1');
+      // Store the intended role so the OAuth callback can assign it correctly
+      localStorage.setItem('hm_google_signup_role', form.role);
+      document.cookie = `hm_google_signup_role=${encodeURIComponent(form.role)}; path=/; max-age=600; SameSite=Lax`;
+      localStorage.setItem('hm_google_terms_accepted_at', termsAcceptedAt);
+
       const result = await Promise.race([
         googleAuth({
           role: form.role,
@@ -102,16 +125,23 @@ export default function Signup() {
         ),
       ]);
       if (result.success) {
-        const pendingInvite = localStorage.getItem('hm_pending_invite');
-        window.location.replace(pendingInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user));
+        // OAuth redirect flow: signInWithOAuth redirects to Google automatically.
+        // result.user is only present in the token flow — don't override the redirect.
+        if (result.user) {
+          const pendingInvite = localStorage.getItem('hm_pending_invite');
+          window.location.replace(pendingInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user));
+          return;
+        }
+        // OAuth initiated — Google redirect is in progress, just return
         return;
       } else {
         setError(result.error);
       }
     } catch (err) {
       setError(err?.message || 'Google sign-up failed. Please try again.');
+    } finally {
+      setLoading(false); // Always reset — if page stays (back button / failure), form is usable again
     }
-    setLoading(false);
   };
 
   const handleGoogleSignupPromise = () => new Promise(async (resolve) => {
@@ -193,25 +223,29 @@ export default function Signup() {
             </div>
           </label>
 
-          <label>
+          <div className="auth-modern__role-label">
             Account type
             <div className="auth-modern__roles">
               <button
                 type="button"
                 className={form.role === 'participant' ? 'active--participant' : ''}
                 onClick={() => setForm({ ...form, role: 'participant' })}
+                style={{ pointerEvents: 'auto', zIndex: 50, position: 'relative' }}
               >
                 Participant
               </button>
               <button
                 type="button"
                 className={form.role === 'organizer' ? 'active--host' : ''}
-                onClick={() => setForm({ ...form, role: 'organizer' })}
+                onClick={() => {
+                  setForm({ ...form, role: 'organizer' });
+                }}
+                style={{ pointerEvents: 'auto', zIndex: 50, position: 'relative' }}
               >
                 Host
               </button>
             </div>
-          </label>
+          </div>
 
           <div className="auth-modern__consent">
             <Checkbox
@@ -239,15 +273,6 @@ export default function Signup() {
 
         <div className="auth-modern__socials">
           <StatefulButton onClick={handleGoogleSignupPromise} disabled={loading} className="sb-btn--google">
-            <span
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "10px",
-                width: "100%",
-              }}
-            ></span>
             <svg width="18" height="18" viewBox="0 0 48 48" style={{flexShrink:0}}>
               <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.6 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.6 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
               <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.5 18.9 12 24 12c3.1 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.6 29.4 4 24 4 16.3 4 9.7 8.4 6.3 14.7z"/>

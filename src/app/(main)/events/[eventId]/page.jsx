@@ -20,6 +20,9 @@ import {
   Users,
   Zap,
   Download,
+  Calendar,
+  Clock,
+  DollarSign,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useEvents } from '@/context/EventContext';
@@ -823,34 +826,87 @@ export default function EventDetail() {
   ];
 
   const hasPrizesArray = Array.isArray(event.prizes) && event.prizes.length > 0;
-  if (event.prize || hasPrizesArray) {
+  const hasPrizePool = event.prizeType === 'pool' && event.prizePool;
+  const hasIndividualPrizes = event.prizeType === 'prizes' && (event.firstPrize || event.secondPrize || event.thirdPrize);
+  
+  if (event.prize || hasPrizesArray || hasPrizePool || hasIndividualPrizes) {
     animatedTabs.splice(2, 0, {
       title: 'Prizes & Rewards',
       value: 'prizes',
       content: (
         <section className="event-detail__panel event-detail__tab-content-scroll">
-          <h2>Prize Pool</h2>
-          {event.prize && !hasPrizesArray && <p>{event.prize}</p>}
-          
-          {hasPrizesArray && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-              {event.prizes.map((p, idx) => {
-                 let iconColor = '#94a3b8';
-                 if (idx === 0) iconColor = '#fbbf24';
-                 else if (idx === 1) iconColor = '#94a3b8';
-                 else if (idx === 2) iconColor = '#d97706';
-                 
-                 return (
-                   <div key={idx} className="flex flex-col items-center justify-center p-8 rounded-2xl border hover:scale-105 transition-transform duration-300" style={{ background: '#f8fafc', borderColor: '#e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                      <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: 'white', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}>
-                        <Trophy size={28} style={{ color: iconColor }} />
-                      </div>
-                      <h3 className="text-xs uppercase tracking-widest font-bold text-slate-500 mb-2">{p.rank}</h3>
-                      <p className="text-xl font-extrabold text-slate-800 text-center">{p.reward}</p>
-                   </div>
-                 );
-              })}
-            </div>
+          {event.prizeType === 'pool' ? (
+            <>
+              <h2>Prize Pool</h2>
+              {event.prizePool ? (
+                <div style={{ fontSize: '2rem', fontWeight: '700', color: '#ff6b00', marginTop: '1rem' }}>
+                  {event.prizePool}
+                </div>
+              ) : event.prize ? (
+                <p>{event.prize}</p>
+              ) : (
+                <p style={{ color: 'var(--color-text-muted)' }}>Prize pool to be announced</p>
+              )}
+            </>
+          ) : event.prizeType === 'prizes' ? (
+            <>
+              <h2>Cash Prizes</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                {event.firstPrize && (
+                  <div className="flex flex-col items-center justify-center p-8 rounded-2xl border hover:scale-105 transition-transform duration-300" style={{ background: '#f8fafc', borderColor: '#e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: 'white', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}>
+                      <Trophy size={28} style={{ color: '#fbbf24' }} />
+                    </div>
+                    <h3 className="text-xs uppercase tracking-widest font-bold text-slate-500 mb-2">1st Prize</h3>
+                    <p className="text-xl font-extrabold text-slate-800 text-center">{event.firstPrize}</p>
+                  </div>
+                )}
+                {event.secondPrize && (
+                  <div className="flex flex-col items-center justify-center p-8 rounded-2xl border hover:scale-105 transition-transform duration-300" style={{ background: '#f8fafc', borderColor: '#e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: 'white', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}>
+                      <Trophy size={28} style={{ color: '#94a3b8' }} />
+                    </div>
+                    <h3 className="text-xs uppercase tracking-widest font-bold text-slate-500 mb-2">2nd Prize</h3>
+                    <p className="text-xl font-extrabold text-slate-800 text-center">{event.secondPrize}</p>
+                  </div>
+                )}
+                {event.thirdPrize && (
+                  <div className="flex flex-col items-center justify-center p-8 rounded-2xl border hover:scale-105 transition-transform duration-300" style={{ background: '#f8fafc', borderColor: '#e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: 'white', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}>
+                      <Trophy size={28} style={{ color: '#d97706' }} />
+                    </div>
+                    <h3 className="text-xs uppercase tracking-widest font-bold text-slate-500 mb-2">3rd Prize</h3>
+                    <p className="text-xl font-extrabold text-slate-800 text-center">{event.thirdPrize}</p>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <h2>Prize Pool</h2>
+              {event.prize && !hasPrizesArray && <p>{event.prize}</p>}
+              
+              {hasPrizesArray && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                  {event.prizes.map((p, idx) => {
+                     let iconColor = '#94a3b8';
+                     if (idx === 0) iconColor = '#fbbf24';
+                     else if (idx === 1) iconColor = '#94a3b8';
+                     else if (idx === 2) iconColor = '#d97706';
+                     
+                     return (
+                       <div key={idx} className="flex flex-col items-center justify-center p-8 rounded-2xl border hover:scale-105 transition-transform duration-300" style={{ background: '#f8fafc', borderColor: '#e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                          <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: 'white', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}>
+                            <Trophy size={28} style={{ color: iconColor }} />
+                          </div>
+                          <h3 className="text-xs uppercase tracking-widest font-bold text-slate-500 mb-2">{p.rank}</h3>
+                          <p className="text-xl font-extrabold text-slate-800 text-center">{p.reward}</p>
+                       </div>
+                     );
+                  })}
+                </div>
+              )}
+            </>
           )}
         </section>
       ),
@@ -898,6 +954,105 @@ export default function EventDetail() {
                   {mentor.bio ? <small>{mentor.bio}</small> : null}
                 </div>
               </article>
+            ))}
+          </div>
+        </section>
+      ),
+    });
+  }
+
+  if (subEvents.length > 0) {
+    animatedTabs.push({
+      title: 'Mini Events',
+      value: 'subevents',
+      content: (
+        <section className="event-detail__panel animate-fade-in event-detail__tab-content-scroll">
+          <h2>Mini Events</h2>
+          <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>
+            Explore the individual sub-events running under this program.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {subEvents.map((subEvent, index) => (
+              <div 
+                key={index} 
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600', color: '#1a1f36' }}>
+                    {subEvent.title || `Mini Event ${index + 1}`}
+                  </h3>
+                  {subEvent.prizeMoney && (
+                    <span style={{ 
+                      background: 'rgba(255,107,0,0.1)', 
+                      color: '#ff6b00', 
+                      padding: '0.25rem 0.75rem', 
+                      borderRadius: '20px', 
+                      fontSize: '0.8rem', 
+                      fontWeight: '600' 
+                    }}>
+                      {subEvent.prizeMoney}
+                    </span>
+                  )}
+                </div>
+                
+                {subEvent.description && (
+                  <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '1rem' }}>
+                    {subEvent.description}
+                  </p>
+                )}
+                
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
+                  {subEvent.startDate && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: '#475569' }}>
+                      <Calendar size={14} style={{ color: '#ff6b00' }} />
+                      <span>{formatDate(subEvent.startDate)}</span>
+                    </div>
+                  )}
+                  {subEvent.time && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: '#475569' }}>
+                      <Clock size={14} style={{ color: '#ff6b00' }} />
+                      <span>{subEvent.time}</span>
+                    </div>
+                  )}
+                  {subEvent.entryFee && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: '#475569' }}>
+                      <DollarSign size={14} style={{ color: '#ff6b00' }} />
+                      <span>{subEvent.entryFee}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {Array.isArray(subEvent.milestones) && subEvent.milestones.length > 0 && (
+                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+                    <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', fontWeight: '600', color: '#475569' }}>
+                      Milestones
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {subEvent.milestones.map((milestone, mIndex) => (
+                        <div 
+                          key={mIndex}
+                          style={{ 
+                            fontSize: '0.85rem', 
+                            color: '#64748b',
+                            paddingLeft: '0.75rem',
+                            borderLeft: '2px solid #e2e8f0'
+                          }}
+                        >
+                          {milestone.title && <strong>{milestone.title}</strong>}
+                          {milestone.date && <span style={{ marginLeft: '0.5rem' }}>{formatDate(milestone.date)}</span>}
+                          {milestone.description && <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem' }}>{milestone.description}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </section>
@@ -1311,7 +1466,7 @@ export default function EventDetail() {
                 </button>
               ) : null}
             </div>
-            {event.prizeType === "pool" ? (
+            {event.prizeType === "pool" && event.prizePool ? (
   <div
     style={{
       marginBottom: "1rem",
@@ -1340,10 +1495,10 @@ export default function EventDetail() {
         fontWeight: "700",
       }}
     >
-      {event.prizePool || "TBA"}
+      {event.prizePool}
     </h2>
   </div>
-) : (
+) : event.prizeType === "prizes" && (event.firstPrize || event.secondPrize || event.thirdPrize) ? (
   <div
     style={{
       marginBottom: "1rem",
@@ -1362,27 +1517,33 @@ export default function EventDetail() {
         letterSpacing: "0.05em",
       }}
     >
-      Prizes
+      Cash Prizes
     </p>
 
     <div style={{ marginTop: "12px" }}>
-      <div className="event-detail__side-row">
-        <span>🥇 1st Prize</span>
-        <strong>{event.firstPrize || "TBA"}</strong>
-      </div>
+      {event.firstPrize && (
+        <div className="event-detail__side-row">
+          <span>🥇 1st Prize</span>
+          <strong>{event.firstPrize}</strong>
+        </div>
+      )}
 
-      <div className="event-detail__side-row">
-        <span>🥈 2nd Prize</span>
-        <strong>{event.secondPrize || "TBA"}</strong>
-      </div>
+      {event.secondPrize && (
+        <div className="event-detail__side-row">
+          <span>🥈 2nd Prize</span>
+          <strong>{event.secondPrize}</strong>
+        </div>
+      )}
 
-      <div className="event-detail__side-row">
-        <span>🥉 3rd Prize</span>
-        <strong>{event.thirdPrize || "TBA"}</strong>
-      </div>
+      {event.thirdPrize && (
+        <div className="event-detail__side-row">
+          <span>🥉 3rd Prize</span>
+          <strong>{event.thirdPrize}</strong>
+        </div>
+      )}
     </div>
   </div>
-)}
+) : null}
   
             {(() => {
               const hostNameToShow =

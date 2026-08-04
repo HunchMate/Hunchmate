@@ -26,13 +26,35 @@ export async function GET(request) {
 
     const eventId = (searchParams.get('event_id') || '').trim();
     const userId = (searchParams.get('user_id') || '').trim();
+    const organizerId = (searchParams.get('organizer_id') || '').trim();
 
     let query = adminClient
       .from('registrations')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (eventId) {
+    if (organizerId) {
+      // Organizer filter: find all events owned by this organizer, then filter
+      // registrations to only those events — avoids downloading unrelated rows.
+      const { data: orgEvents, error: orgEventsError } = await adminClient
+        .from('events')
+        .select('id')
+        .eq('organizer->>id', organizerId);
+
+      if (orgEventsError) {
+        console.error('[/api/registrations] Error fetching organizer events:', orgEventsError);
+        return NextResponse.json({ error: orgEventsError.message }, { status: 500 });
+      }
+
+      const orgEventIds = (orgEvents || []).map((e) => e.id);
+
+      if (orgEventIds.length === 0) {
+        // Organizer has no events yet — return empty immediately
+        return NextResponse.json({ registrations: [] });
+      }
+
+      query = query.in('event_id', orgEventIds);
+    } else if (eventId) {
       query = query.eq('event_id', eventId);
     }
     if (userId) {

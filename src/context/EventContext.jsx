@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { useAuth } from './AuthContext';
 import { createClient as createSupabaseClient } from '../utils/supabase/client';
 import { sampleEvents, sampleRegistrations, sampleCredentials } from '../utils/sampleData';
 import {
@@ -179,8 +180,13 @@ function buildCertificateImage({ event, recipients, type, config }) {
 }
 
 export function EventProvider({ children }) {
+  const { user } = useAuth();
   const syncWarnRef = useRef(0);
   const [eventsLoading, setEventsLoading] = useState(true);
+  // Keep a ref so the sync functions inside useEffect always read the latest user
+  // without needing to be in the dependency array (which would re-mount on every login).
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; }, [user]);
 
   const [events, setEvents] = useState(() => {
     const cached = safeReadJson('hm_events', null);
@@ -284,15 +290,64 @@ export function EventProvider({ children }) {
   };
 
   // Intentionally mounted once; internal polling, focus handlers and Realtime drive re-sync.
+  // Egress optimisation: events and registrations are synced independently so that
+  // high-frequency triggers (tab focus, realtime changes) only re-fetch the small
+  // registrations table instead of dumping both tables every time.
   useEffect(() => {
     let active = true;
     let firstSync = true;
+    let lastFocusSyncTime = 0; // cooldown tracker for focus/visibility handlers
 
+    // Sync registrations only (small, changes frequently)
+    // Passes user id + role so participants only download their own rows.
+    const syncRegistrationsOnly = async () => {
+      try {
+        const currentUser = userRef.current;
+        const remoteRegistrations = await listFirebaseRegistrations({
+          userId: currentUser?.id || currentUser?.uid,
+          role: currentUser?.role,
+        });
+        if (!active) return;
+        saveRegistrations(Array.isArray(remoteRegistrations) ? remoteRegistrations : []);
+      } catch (error) {
+        const now = Date.now();
+        if (now - syncWarnRef.current > 30000) {
+          syncWarnRef.current = now;
+          console.warn('Registrations sync failed, using local cache.', error);
+        }
+      }
+    };
+
+    // Sync events only (larger, changes rarely — called every 5 minutes)
+    const syncEventsOnly = async () => {
+      try {
+        const remoteEvents = await listFirebaseEvents();
+        if (!active) return;
+        const normalizedEvents = (Array.isArray(remoteEvents) ? remoteEvents : []).map((item) => ({
+          ...item,
+          organiser: item.organiser || item.organizer || {},
+          organizer: item.organizer || item.organiser || {},
+        }));
+        saveEvents(normalizedEvents);
+      } catch (error) {
+        const now = Date.now();
+        if (now - syncWarnRef.current > 30000) {
+          syncWarnRef.current = now;
+          console.warn('Events sync failed, using local cache.', error);
+        }
+      }
+    };
+
+    // Full sync: both events + registrations (used only on initial mount)
     const syncFromFirebase = async () => {
       try {
+        const currentUser = userRef.current;
         const [remoteEvents, remoteRegistrations] = await Promise.all([
           listFirebaseEvents(),
-          listFirebaseRegistrations(),
+          listFirebaseRegistrations({
+            userId: currentUser?.id || currentUser?.uid,
+            role: currentUser?.role,
+          }),
         ]);
 
         if (!active) return;
@@ -323,17 +378,31 @@ export function EventProvider({ children }) {
     // before the first request fires, avoiding 404s during cold start.
     const initialTimer = window.setTimeout(() => void syncFromFirebase(), 2000);
 
-    const pollId = window.setInterval(() => {
-      void syncFromFirebase();
+    // Registrations: re-sync every 30 seconds (need reasonably fresh data)
+    const regsPollId = window.setInterval(() => {
+      void syncRegistrationsOnly();
     }, 30000);
 
+    // Events: re-sync every 5 minutes (events change rarely)
+    const eventsPollId = window.setInterval(() => {
+      void syncEventsOnly();
+    }, 300000);
+
+    // Focus / visibility: only re-fetch registrations, with a 60-second cooldown
+    // to prevent spamming Supabase when the user rapidly switches tabs.
     const onFocus = () => {
-      void syncFromFirebase();
+      if (Date.now() - lastFocusSyncTime > 60000) {
+        lastFocusSyncTime = Date.now();
+        void syncRegistrationsOnly();
+      }
     };
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        void syncFromFirebase();
+        if (Date.now() - lastFocusSyncTime > 60000) {
+          lastFocusSyncTime = Date.now();
+          void syncRegistrationsOnly();
+        }
       }
     };
 
@@ -344,6 +413,7 @@ export function EventProvider({ children }) {
     // Subscribe to any INSERT, UPDATE, or DELETE on the registrations table.
     // When a participant registers, the organizer's dashboard refreshes immediately
     // without waiting for the 30-second polling interval.
+    // Only registrations are re-fetched (not events) to avoid unnecessary egress.
     const supabaseRealtime = createSupabaseClient();
     const realtimeChannel = supabaseRealtime
       .channel('hunchmate-registrations-realtime')
@@ -351,7 +421,7 @@ export function EventProvider({ children }) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'registrations' },
         () => {
-          if (active) void syncFromFirebase();
+          if (active) void syncRegistrationsOnly();
         }
       )
       .subscribe();
@@ -359,7 +429,8 @@ export function EventProvider({ children }) {
     return () => {
       active = false;
       window.clearTimeout(initialTimer);
-      window.clearInterval(pollId);
+      window.clearInterval(regsPollId);
+      window.clearInterval(eventsPollId);
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       supabaseRealtime.removeChannel(realtimeChannel);

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '../../../../utils/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 
 /**
  * POST /api/profile/upsert
@@ -21,6 +22,10 @@ export async function POST(request) {
     if (authError || !user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
+
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const dbClient = serviceKey && supabaseUrl ? createServiceClient(supabaseUrl, serviceKey) : supabase;
 
     const body = await request.json().catch(() => ({}));
 
@@ -56,7 +61,7 @@ export async function POST(request) {
     };
 
     // Step 1: Try UPDATE (trigger likely already created the row on signup)
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await dbClient
       .from('profiles')
       .update(updates)
       .eq('id', uid)
@@ -68,7 +73,7 @@ export async function POST(request) {
     }
 
     // Step 2: Row doesn't exist yet — INSERT it
-    const { data: inserted, error: insertError } = await supabase
+    const { data: inserted, error: insertError } = await dbClient
       .from('profiles')
       .insert({ id: uid, ...updates })
       .select()
@@ -79,7 +84,7 @@ export async function POST(request) {
     }
 
     // Step 3: Read whatever the trigger may have created
-    const { data: existing } = await supabase
+    const { data: existing } = await dbClient
       .from('profiles')
       .select('*')
       .eq('id', uid)

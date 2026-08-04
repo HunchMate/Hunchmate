@@ -483,8 +483,7 @@ export async function updateUserProfile(uid, updates = {}) {
 export async function listEvents() {
   try {
     // Fetch ALL events for EventContext bulk sync (backwards compat)
-    const cacheBuster = Date.now();
-    const res = await fetch(`/api/events?all=true&cb=${cacheBuster}`, {
+    const res = await fetch('/api/events?all=true', {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -648,13 +647,32 @@ export async function deleteEventRecord(eventId) {
 // ==========================================
 // REGISTRATIONS
 // ==========================================
-export async function listRegistrations() {
+/**
+ * Fetch registrations from the server.
+ * - Participants: pass { userId, role: 'participant' } → only their own rows (~2-3 rows)
+ * - Organizers/Admins: no filter → all rows (needed to manage event attendees)
+ */
+export async function listRegistrations({ userId, role } = {}) {
   try {
     // Use the server-side API route which uses the service role key to bypass
     // RLS — this ensures organizers can see ALL registrations for their events,
     // not just their own rows (which the anon client restricts via RLS policies).
-    const cacheBuster = Date.now();
-    const res = await fetch(`/api/registrations?cb=${cacheBuster}`, {
+
+    // Build URL with role-based filter to minimise egress:
+    //  - participant  → ?user_id=...       (only their own 2-3 rows)
+    //  - organizer    → ?organizer_id=...  (only registrations for their events)
+    //  - admin / null → no filter          (all rows)
+    const isParticipant = role === 'participant';
+    const isOrganizer = role === 'organizer';
+
+    let url = '/api/registrations';
+    if (isParticipant && userId) {
+      url = `/api/registrations?user_id=${encodeURIComponent(userId)}`;
+    } else if (isOrganizer && userId) {
+      url = `/api/registrations?organizer_id=${encodeURIComponent(userId)}`;
+    }
+
+    const res = await fetch(url, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -662,10 +680,19 @@ export async function listRegistrations() {
 
     if (!res.ok) {
       console.warn('listRegistrations fetch non-OK status:', res.status, res.statusText, '— falling back to Supabase client');
-      const { data, error } = await supabase
+      // Apply same role-based filter in fallback
+      let fallbackQuery = supabase
         .from('registrations')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (isParticipant && userId) {
+        fallbackQuery = fallbackQuery.eq('user_id', userId);
+      }
+      // Note: organizer fallback without server-side join — fetch all and filter client-side
+      // (fallback path is rare; full egress savings rely on the API route above)
+
+      const { data, error } = await fallbackQuery;
 
       if (error) {
         console.error('listRegistrations fallback error:', error.message);
@@ -686,6 +713,7 @@ export async function listRegistrations() {
     return [];
   }
 }
+
 
 export async function createRegistrationRecord(eventId, registration) {
   const res = await fetch('/api/registrations/create', {
@@ -894,8 +922,7 @@ export async function appendAdminAuditLog({ action, actorId, targetType, targetI
 
 export async function getAdminOverview() {
   try {
-    const cacheBuster = Date.now();
-    const res = await fetch(`/api/admin/overview?cb=${cacheBuster}`, {
+    const res = await fetch('/api/admin/overview', {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -931,7 +958,6 @@ export async function listUsers(params = {}) {
     if (params.status) searchParams.set('status', params.status);
     if (params.search) searchParams.set('search', params.search);
     searchParams.set('limit', String(params.limit || 40));
-    searchParams.set('cb', Date.now());
 
     const res = await fetch(`/api/admin/users?${searchParams.toString()}`, {
       method: 'GET',
@@ -966,7 +992,6 @@ export async function listAdminEvents(params = {}) {
     if (params.status) searchParams.set('status', params.status);
     if (params.search) searchParams.set('search', params.search);
     searchParams.set('limit', String(params.limit || 40));
-    searchParams.set('cb', Date.now());
 
     const res = await fetch(`/api/admin/events?${searchParams.toString()}`, {
       method: 'GET',
@@ -1062,7 +1087,7 @@ export async function listAdminAuditLogs(limitCount = 50) {
   // Audit logs are fetched as part of the overview API call.
   // This function is kept for backwards compatibility but now uses the server API.
   try {
-    const res = await fetch(`/api/admin/overview?cb=${Date.now()}`, {
+    const res = await fetch('/api/admin/overview', {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -1082,7 +1107,7 @@ export async function listAdminAuditLogs(limitCount = 50) {
 }
 
 export async function listAdminComplaints(params = {}) {
-  let query = supabase.from('complaints').select('*');
+  let query = supabase.from('complaints').select('*').limit(200);
 
   if (params.status) query = query.eq('status', params.status);
   if (params.search) query = query.or(`name.ilike.%${params.search}%,email.ilike.%${params.search}%,message.ilike.%${params.search}%`);

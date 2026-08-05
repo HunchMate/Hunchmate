@@ -32,7 +32,11 @@ export async function POST(request) {
     const uid = user.id;
     const email = String(user.email || body.email || '').trim().toLowerCase();
     const name = String(body.name || user.user_metadata?.name || email.split('@')[0] || 'User').trim();
-    const role = body.role || user.user_metadata?.role || 'participant';
+    // Only write role when explicitly provided — never fall back to 'participant' here,
+    // because that would silently overwrite 'organizer' during host-onboarding submit.
+    const explicitRole = body.role || undefined;
+    // Fallback role is ONLY used for the INSERT path (new user row creation).
+    const insertRole = explicitRole || user.user_metadata?.role || 'participant';
     const provider = body.provider || user.app_metadata?.provider || 'email';
     // Pick up Google profile picture from the body or directly from user_metadata
     const avatar = body.avatar || user.user_metadata?.avatar_url || user.user_metadata?.picture || undefined;
@@ -40,12 +44,41 @@ export async function POST(request) {
     const updates = {
       email,
       name,
-      role,
+      ...(explicitRole !== undefined && { role: explicitRole }),
       provider,
       ...(avatar !== undefined && { avatar }),
       ...(body.phoneNumber !== undefined && { phone_number: String(body.phoneNumber || '').trim() }),
       ...(body.termsAccepted !== undefined && { terms_accepted: Boolean(body.termsAccepted) }),
       ...(body.termsAcceptedAt !== undefined && { terms_accepted_at: body.termsAcceptedAt }),
+      ...(body.bio !== undefined && { bio: String(body.bio || '').trim() }),
+      ...(body.skills !== undefined && { skills: body.skills }),
+      ...(body.state !== undefined && { state: String(body.state || '').trim() }),
+      ...(body.city !== undefined && { city: String(body.city || '').trim() }),
+      ...(body.profileType !== undefined && { profile_type: String(body.profileType || '') }),
+      ...(body.onboardingCompleted !== undefined && { onboarding_completed: Boolean(body.onboardingCompleted) }),
+      ...(body.socials !== undefined && { socials: body.socials }),
+      // Participant — student fields
+      ...(body.institutionName !== undefined && { institution_name: String(body.institutionName || '').trim() }),
+      ...(body.institution !== undefined && { institution: String(body.institution || '').trim() }),
+      ...(body.degree !== undefined && { degree: String(body.degree || '') }),
+      ...(body.branch !== undefined && { branch: String(body.branch || '') }),
+      ...(body.stream !== undefined && { stream: String(body.stream || '') }),
+      ...(body.graduationYear !== undefined && { graduation_year: String(body.graduationYear || '') }),
+      ...(body.githubUrl !== undefined && { github_url: String(body.githubUrl || '').trim() }),
+      ...(body.resumeUrl !== undefined && { resume_url: String(body.resumeUrl || '').trim() }),
+      ...(body.linkedinUrl !== undefined && { linkedin_url: String(body.linkedinUrl || '').trim() }),
+      // Participant — startup founder fields
+      ...(body.startupName !== undefined && { startup_name: String(body.startupName || '').trim() }),
+      ...(body.industry !== undefined && { industry: String(body.industry || '') }),
+      ...(body.startupStage !== undefined && { startup_stage: String(body.startupStage || '') }),
+      ...(body.startupWebsite !== undefined && { startup_website: String(body.startupWebsite || '').trim() }),
+      ...(body.startupDescription !== undefined && { startup_description: String(body.startupDescription || '').trim() }),
+      // Participant — professional fields
+      ...(body.company !== undefined && { company: String(body.company || '').trim() }),
+      ...(body.currentDesignation !== undefined && { current_designation: String(body.currentDesignation || '') }),
+      ...(body.experience !== undefined && { experience: String(body.experience || '') }),
+      ...(body.portfolioUrl !== undefined && { portfolio_url: String(body.portfolioUrl || '').trim() }),
+      ...(body.headline !== undefined && { headline: String(body.headline || '') }),
       // Host onboarding fields
       ...(body.organisationName !== undefined && { organisation_name: String(body.organisationName || '').trim() }),
       ...(body.hostCategory !== undefined && { host_category: String(body.hostCategory || '').trim() }),
@@ -54,11 +87,16 @@ export async function POST(request) {
       ...(body.website !== undefined && { website: String(body.website || '').trim() }),
       ...(body.linkedin !== undefined && { linkedin: String(body.linkedin || '').trim() }),
       ...(body.country !== undefined && { country: String(body.country || '').trim() }),
-      ...(body.state !== undefined && { state: String(body.state || '').trim() }),
-      ...(body.city !== undefined && { city: String(body.city || '').trim() }),
       ...(body.hostOnboardingCompleted !== undefined && { host_onboarding_completed: Boolean(body.hostOnboardingCompleted) }),
       updated_at: new Date().toISOString(),
     };
+
+    // Safety net: completing host onboarding implicitly means the user is an organizer.
+    // This handles the case where the OAuth callback's DB role update failed silently
+    // but the in-memory redirect to /host-onboarding still worked.
+    if (body.hostOnboardingCompleted === true) {
+      updates.role = 'organizer';
+    }
 
     // Step 1: Try UPDATE (trigger likely already created the row on signup)
     const { data: updated, error: updateError } = await dbClient
@@ -72,10 +110,10 @@ export async function POST(request) {
       return NextResponse.json({ profile: updated });
     }
 
-    // Step 2: Row doesn't exist yet — INSERT it
+    // Step 2: Row doesn't exist yet — INSERT it (always include role for new rows)
     const { data: inserted, error: insertError } = await dbClient
       .from('profiles')
-      .insert({ id: uid, ...updates })
+      .insert({ id: uid, role: insertRole, ...updates })
       .select()
       .single();
 

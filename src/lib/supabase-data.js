@@ -443,38 +443,22 @@ export async function getUserProfile(uid) {
 export async function updateUserProfile(uid, updates = {}) {
   if (!uid) throw new Error('User id is required.');
 
-  const dbPayload = mapProfileToDb(updates);
+  // Route through the server-side API so service role key bypasses RLS.
+  // This avoids client-side RLS timing issues and key format incompatibilities.
+  const res = await fetch('/api/profile/upsert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
 
-  // Use the authenticated client so RLS auth.uid() = id check passes.
-  const client = await getAuthClient();
-
-  const { data, error } = await client
-    .from('profiles')
-    .update(dbPayload)
-    .eq('id', uid)
-    .select()
-    .maybeSingle();
-
-  if (error) {
-    console.error('updateUserProfile error:', error.message);
-    throw error;
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Profile update failed (${res.status})`);
   }
 
-  if (data) {
-    return mapProfileToApp(data);
-  }
-
-  // Row exists but RLS filtered it out or update touched 0 rows — read it back
-  const { data: readData, error: readError } = await client
-    .from('profiles')
-    .select('*')
-    .eq('id', uid)
-    .maybeSingle();
-
-  if (readError) throw readError;
-  if (readData) return mapProfileToApp(readData);
-
-  throw new Error('Profile update failed: no data returned.');
+  const { profile } = await res.json();
+  if (!profile) throw new Error('Profile update failed: no data returned.');
+  return mapProfileToApp(profile);
 }
 
 // ==========================================

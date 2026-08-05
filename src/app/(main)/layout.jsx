@@ -23,9 +23,9 @@ export default function MainLayout({ children }) {
     const isOrganizer = user.role === 'organizer';
     const isParticipant = user.role !== 'admin' && user.role !== 'organizer';
 
-    if (isOrganizer && user.hostOnboardingCompleted === false) {
+    if (isOrganizer && !user.hostOnboardingCompleted) {
       router.replace('/host-onboarding');
-    } else if (isParticipant && user.onboardingCompleted === false) {
+    } else if (isParticipant && !user.onboardingCompleted) {
       router.replace('/onboarding');
     }
   }, [user, loading, pathname, router]);

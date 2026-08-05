@@ -245,6 +245,7 @@ export default function HostOnboarding() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
+          role: 'organizer',        // always re-affirm role — prevents corruption if DB had wrong value
           organisationName: orgName.trim(),
           hostCategory: orgType,
           hostType: role,

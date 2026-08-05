@@ -20,10 +20,10 @@ export default function Signup() {
 
   const getPostAuthPath = useCallback((nextUser) => {
     if (nextUser?.role === 'admin') return '/admin/dashboard';
-    if (!nextUser?.onboardingCompleted) {
-      return nextUser?.role === 'organizer' ? '/host-onboarding' : '/onboarding';
+    if (nextUser?.role === 'organizer') {
+      return nextUser?.hostOnboardingCompleted ? '/organizer/dashboard' : '/host-onboarding';
     }
-    return nextUser.role === 'organizer' ? '/organizer/dashboard' : '/events';
+    return !nextUser?.onboardingCompleted ? '/onboarding' : '/events';
   }, []);
 
   // When the user presses back from Google OAuth, the browser restores this page

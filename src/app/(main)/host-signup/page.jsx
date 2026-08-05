@@ -19,14 +19,11 @@ export default function HostSignup() {
 
   const getPostAuthPath = useCallback((nextUser) => {
     if (nextUser?.role === 'admin') return '/admin/dashboard';
-    if (!nextUser?.onboardingCompleted) {
-      return nextUser?.role === 'organizer' ? '/host-onboarding' : '/onboarding';
+    if (nextUser?.role === 'organizer') {
+      // For organizers, check hostOnboardingCompleted (not participant onboardingCompleted)
+      return nextUser?.hostOnboardingCompleted ? '/organizer/dashboard' : '/host-onboarding';
     }
-    return nextUser.role === 'admin'
-      ? '/admin/dashboard'
-      : nextUser.role === 'organizer'
-        ? '/organizer/dashboard'
-        : '/events';
+    return !nextUser?.onboardingCompleted ? '/onboarding' : '/events';
   }, []);
 
   // Force fresh reload on bfcache restore or back navigation after OAuth redirect
@@ -104,7 +101,10 @@ export default function HostSignup() {
 
     if (result.success) {
       const pendingInvite = localStorage.getItem('hm_pending_invite');
-      navigate(pendingInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user));
+      // Use hard redirect (full reload) to avoid race conditions with onAuthStateChange
+      // reading a stale DB profile and overwriting the user state mid-navigation.
+      window.location.replace(pendingInvite ? `/invites/${pendingInvite}` : getPostAuthPath(result.user));
+      return;
     } else {
       setError(result.error);
     }

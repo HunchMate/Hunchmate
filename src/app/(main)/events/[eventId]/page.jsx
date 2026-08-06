@@ -267,7 +267,9 @@ export default function EventDetail() {
       teamName: currentRegistration.teamName || '',
       participantType: currentRegistration.participantType || user?.profileType || 'student',
       teamLeadName: leadLabel,
-      registrationType: currentRegistration.teamName ? 'Team' : 'Individual',
+      // Always 'Team' here — this function is ONLY called for team registrations,
+      // regardless of whether teamName was previously saved.
+      registrationType: 'Team',
       linkedinUrl: currentRegistration.linkedinUrl || user?.socials?.linkedin || user?.linkedinUrl || '',
       githubUrl: currentRegistration.githubUrl || user?.socials?.github || user?.githubUrl || '',
       resumeUrl: currentRegistration.resumeUrl || user?.resumeUrl || '',

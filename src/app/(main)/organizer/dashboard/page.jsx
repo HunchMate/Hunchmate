@@ -13,6 +13,7 @@ import {
   FileText,
   Globe,
   LayoutDashboard,
+  LoaderCircle,
   Pencil,
   Plus,
   QrCode,
@@ -26,6 +27,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { useEvents } from '@/context/EventContext';
 import { downloadCSV, formatDate } from '@/utils/helpers';
+import { issueCertificate } from '@/lib/supabase-data';
 import { toast } from '@/utils/toast';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -111,6 +113,7 @@ function EventRegistrations({ regs, onExport }) {
 function EventScanner({ event, onCheckIn }) {
   const [scanInput, setScanInput] = useState('');
   const [scanResult, setScanResult] = useState(null);
+  const [isValidating, setIsValidating] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scannerError, setScannerError] = useState('');
   const [scannerStarting, setScannerStarting] = useState(false);
@@ -120,10 +123,33 @@ function EventScanner({ event, onCheckIn }) {
   const applyScanToken = useCallback(async (token) => {
     const t = String(token || '').trim();
     if (!t) return;
-    const result = await onCheckIn(t, event.id);
-    setScanResult(result);
-    setTimeout(() => setScanResult(null), 7000);
-  }, [event.id, onCheckIn]);
+
+    setIsValidating(true);
+    setScanResult(null);
+
+    try {
+      const result = await onCheckIn(t, event.id);
+      setScanResult(result);
+
+      // Fire UI Toast Notifications
+      if (result.status === 'valid' || result.success) {
+        toast.success(result.message || 'Check-in Successful! Participant verified.', event.title);
+      } else if (result.status === 'already-checked-in') {
+        toast.info(result.message || 'This participant has already been checked in.', event.title);
+      } else if (result.status === 'wrong-event') {
+        toast(result.message || 'QR code belongs to a different event.', 'info', event.title);
+      } else {
+        toast(result.message || 'Validation Failed: QR code not found.', 'info', event.title);
+      }
+
+      setTimeout(() => setScanResult(null), 10000);
+    } catch (err) {
+      console.error('Scan validation error:', err);
+      toast.info('Validation Error: Unable to complete check-in request', event.title);
+    } finally {
+      setIsValidating(false);
+    }
+  }, [event.id, event.title, onCheckIn]);
 
   const stopCamera = useCallback(async () => {
     const s = scannerRef.current;
@@ -146,6 +172,7 @@ function EventScanner({ event, onCheckIn }) {
           (decoded) => { void applyScanToken(decoded); setIsScannerOpen(false); void stopCamera(); },
           () => { }
         );
+        setScannerStarting(false);
       } catch { setScannerError('Unable to access camera. Use manual entry.'); setScannerStarting(false); }
     }, 60);
   };
@@ -160,22 +187,68 @@ function EventScanner({ event, onCheckIn }) {
       <div className="orgx-scanner__row">
         <input type="text" placeholder="Paste QR token..." value={scanInput}
           onChange={(e) => setScanInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && applyScanToken(scanInput)} />
-        <Button variant="primary" icon={Camera} onClick={openCamera}>Scan QR</Button>
-        <Button variant="secondary" icon={QrCode} disabled={!scanInput.trim()} onClick={() => applyScanToken(scanInput)}>Validate</Button>
+          onKeyDown={(e) => e.key === 'Enter' && !isValidating && applyScanToken(scanInput)} />
+        <Button variant="primary" icon={Camera} onClick={openCamera} disabled={isValidating}>Scan QR</Button>
+        <Button variant="secondary" icon={QrCode} disabled={!scanInput.trim() || isValidating} onClick={() => applyScanToken(scanInput)}>
+          {isValidating ? 'Validating...' : 'Validate'}
+        </Button>
       </div>
-      {scanResult && (
+
+      {/* Validation Progress Bar */}
+      {isValidating && (
+        <div className="orgx-scanner-progress">
+          <LoaderCircle size={20} className="animate-spin text-indigo-500" style={{ color: '#2559bd' }} />
+          <div style={{ flex: 1 }}>
+            <strong style={{ fontSize: '0.88rem', color: 'var(--color-text-primary)' }}>Validating QR Code Authenticity...</strong>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-secondary)' }}>Verifying participant registration record on server ledger...</p>
+            <div className="orgx-scanner-progress__bar">
+              <div className="orgx-scanner-progress__bar-fill" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {scanResult && !isValidating && (
         <div className={`orgx-scan-result orgx-scan-result--${scanResult.status}`}>
-          {scanResult.status === 'valid' ? <CheckCircle size={28} /> : <XCircle size={28} />}
+          {scanResult.status === 'valid' || scanResult.success ? <CheckCircle size={28} /> : <XCircle size={28} />}
           <div className="orgx-scan-result__head">
-            <strong>{scanResult.status === 'valid' ? 'Check-in Successful' : 'Validation Failed'}</strong>
+            <strong>
+              {scanResult.status === 'valid' || scanResult.success
+                ? '✓ Check-in Successful'
+                : scanResult.status === 'already-checked-in'
+                ? 'ℹ Already Checked In'
+                : '✕ Validation Failed'}
+            </strong>
             <p>{scanResult.message}</p>
+
+            {scanResult.participant?.name && (
+              <div className="orgx-scan-team-details" style={{ marginTop: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <div className="orgx-scan-team-details__row">
+                  <span>Participant:</span>
+                  <strong>{scanResult.participant.name}</strong>
+                </div>
+                {scanResult.team?.teamName && (
+                  <div className="orgx-scan-team-details__row">
+                    <span>Team:</span>
+                    <strong>{scanResult.team.teamName}</strong>
+                  </div>
+                )}
+                {scanResult.checkedInAt && (
+                  <div className="orgx-scan-team-details__row">
+                    <span>Checked-in at:</span>
+                    <strong>{new Date(scanResult.checkedInAt).toLocaleTimeString()}</strong>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
       <Modal isOpen={isScannerOpen} onClose={() => { setIsScannerOpen(false); void stopCamera(); }} title="Scan QR Code" size="sm">
         <div className="orgx-scanner-modal">
-          <div id={scannerRegionId} className="orgx-scanner-modal__viewport" />
+          <div id={scannerRegionId} className="orgx-scanner-modal__viewport">
+            <div className="orgx-scanner-modal__laser" />
+          </div>
           {scannerStarting && <p className="orgx-scanner-modal__hint">Starting camera…</p>}
           {scannerError && <p className="orgx-scanner-modal__error">{scannerError}</p>}
           <p className="orgx-scanner-modal__hint">Point camera at participant QR code.</p>
@@ -188,7 +261,7 @@ function EventScanner({ event, onCheckIn }) {
   );
 }
 
-function EventCredentials({ event, regs, onIssue }) {
+function EventCredentials({ event, regs, onIssue, issuing }) {
   const eligible = regs.filter((r) => r.checkedIn).length;
   return (
     <div className="orgx-event-detail__credentials">
@@ -197,11 +270,11 @@ function EventCredentials({ event, regs, onIssue }) {
         <h3>{event.title}</h3>
         <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', margin: '0.5rem 0 1rem' }}>
           {event.credentialEnabled
-            ? `${eligible} checked-in participant${eligible !== 1 ? 's' : ''} eligible for credential issuance.`
+            ? `${eligible} checked-in participant${eligible !== 1 ? 's' : ''} eligible for verified certificate issuance.`
             : 'Credentials are disabled. Enable from event settings.'}
         </p>
-        <Button variant="primary" icon={Award} disabled={!event.credentialEnabled || eligible === 0} onClick={onIssue}>
-          Issue Credentials
+        <Button variant="primary" icon={issuing ? LoaderCircle : Award} disabled={!event.credentialEnabled || eligible === 0 || issuing} onClick={onIssue}>
+          {issuing ? 'Issuing…' : 'Issue Credentials'}
         </Button>
       </div>
     </div>
@@ -215,7 +288,7 @@ const EVENT_TABS = [
   { id: 'credentials', label: 'E-Credentials', Icon: Award },
 ];
 
-function EventDetailPanel({ event, regs, onBack, onEdit, onDelete, onCheckIn, onIssueCredentials, onExport }) {
+function EventDetailPanel({ event, regs, onBack, onEdit, onDelete, onCheckIn, onIssueCredentials, onExport, issuingCredentials }) {
   const [tab, setTab] = useState('overview');
   return (
     <div className="orgx-event-detail">
@@ -244,7 +317,7 @@ function EventDetailPanel({ event, regs, onBack, onEdit, onDelete, onCheckIn, on
         {tab === 'overview' && <EventOverview event={event} regs={regs} onEdit={onEdit} onDelete={() => onDelete(event)} />}
         {tab === 'registrations' && <EventRegistrations regs={regs} onExport={() => onExport(event.id)} />}
         {tab === 'scanner' && <EventScanner event={event} onCheckIn={onCheckIn} />}
-        {tab === 'credentials' && <EventCredentials event={event} regs={regs} onIssue={() => onIssueCredentials(event)} />}
+        {tab === 'credentials' && <EventCredentials event={event} regs={regs} issuing={issuingCredentials} onIssue={() => onIssueCredentials(event)} />}
       </div>
     </div>
   );
@@ -252,7 +325,7 @@ function EventDetailPanel({ event, regs, onBack, onEdit, onDelete, onCheckIn, on
 
 export default function OrganizerDashboard() {
   const { user } = useAuth();
-  const { events, getEventRegistrations, getOrganizerNotifications, markAllOrganizerNotificationsRead, markOrganizerNotificationRead, checkInParticipant, bulkIssueCredentials, deleteEvent } = useEvents();
+  const { events, getEventRegistrations, getOrganizerNotifications, markAllOrganizerNotificationsRead, markOrganizerNotificationRead, checkInParticipant, deleteEvent } = useEvents();
 
   const [section, setSection] = useState('overview');
   const [eventFilter, setEventFilter] = useState('all');
@@ -261,6 +334,7 @@ export default function OrganizerDashboard() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [issuingCredentials, setIssuingCredentials] = useState(false);
 
   const organizerNotifications = useMemo(() => getOrganizerNotifications(user?.id), [getOrganizerNotifications, user?.id]);
   const unreadCount = organizerNotifications.filter((n) => !n.read).length;
@@ -301,13 +375,77 @@ export default function OrganizerDashboard() {
     downloadCSV(regs.map((reg) => ({ 'Registration ID': reg.id, Team: reg.teamName || 'Individual', Members: reg.members?.join('; ') || '', 'QR Token': reg.qrToken, 'Checked In': reg.checkedIn ? 'Yes' : 'No', 'Registered At': reg.createdAt })), `${ev?.title || 'event'}-registrations.csv`);
   };
 
-  const handleIssueCredentials = (ev) => {
+  const getRegistrationParticipantName = (registration) =>
+    registration?.participant?.name
+    || registration?.teamLeadName
+    || registration?.members?.[0]
+    || registration?.participant?.email
+    || 'Participant';
+
+  const handleIssueCredentials = async (ev) => {
+    if (issuingCredentials) return;
     if (!ev.credentialEnabled) { toast.error('Credentials disabled for this event.'); return; }
-    const regs = getEventRegistrations(ev.id);
-    const eligible = regs.filter((r) => r.checkedIn).map((r) => r.userId);
-    if (!eligible.length) { toast.error('No checked-in participants.'); return; }
-    bulkIssueCredentials(ev.id, eligible, 'participation');
-    toast.success(`Issued ${eligible.length} credentials.`, ev.title);
+
+    const checkedInRegs = getEventRegistrations(ev.id).filter((r) => r.checkedIn && r.userId);
+    if (!checkedInRegs.length) { toast.error('No checked-in participants.'); return; }
+
+    console.log('[handleIssueCredentials] Starting credential issuance for event:', ev.id, 'participants:', checkedInRegs.length);
+    setIssuingCredentials(true);
+    try {
+      const results = await Promise.allSettled(
+        checkedInRegs.map((reg) => issueCertificate({
+          eventId: ev.id,
+          userId: reg.userId,
+          participantName: getRegistrationParticipantName(reg),
+          eventTitle: ev.title,
+          templateType: ev.credentialTemplate || 'Classic',
+          templateData: {
+            recipientRole: 'Participant',
+            title: ev.credentialConfig?.title || 'Certificate of Achievement',
+            subtitle: ev.credentialConfig?.subtitle || 'This certificate is proudly presented to',
+            description: ev.credentialConfig?.description || 'for successfully completing',
+            signatoryName: ev.credentialConfig?.signatoryName || ev.organizer?.name || 'Event Host',
+            signatoryRole: ev.credentialConfig?.signatoryRole || 'Event Host',
+            logoUrl: ev.credentialConfig?.logoUrl || '',
+            sponsorLogoUrl: ev.credentialConfig?.sponsorLogoUrl || '',
+          },
+        }))
+      );
+
+      let issued = 0;
+      let skipped = 0;
+      let failed = 0;
+
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.error('[handleIssueCredentials] Promise rejected for participant:', index, result.reason);
+          failed += 1;
+          return;
+        }
+        const payload = result.value;
+        console.log('[handleIssueCredentials] Result for participant:', index, payload);
+        if (payload.ok && payload.success) issued += 1;
+        else if (payload.status === 409) skipped += 1;
+        else {
+          console.error('[handleIssueCredentials] Failed payload for participant:', index, payload);
+          failed += 1;
+        }
+      });
+
+      if (issued > 0) {
+        toast.success(`Issued ${issued} verified certificate${issued !== 1 ? 's' : ''}.`, ev.title);
+      }
+      if (skipped > 0 && issued === 0 && failed === 0) {
+        toast.info(`All ${skipped} participant${skipped !== 1 ? 's' : ''} already have certificates.`, ev.title);
+      } else if (skipped > 0) {
+        toast.info(`${skipped} participant${skipped !== 1 ? 's were' : ' was'} already issued.`, ev.title);
+      }
+      if (failed > 0) {
+        toast.error(`Failed to issue ${failed} certificate${failed !== 1 ? 's' : ''}. Check console for details.`);
+      }
+    } finally {
+      setIssuingCredentials(false);
+    }
   };
 
   const openDeleteModal = (ev) => { setDeleteCandidate(ev); setDeleteConfirmText(''); setDeleteError(''); };
@@ -461,6 +599,7 @@ export default function OrganizerDashboard() {
                   onDelete={openDeleteModal}
                   onCheckIn={checkInParticipant}
                   onIssueCredentials={handleIssueCredentials}
+                  issuingCredentials={issuingCredentials}
                   onExport={handleExportCSV}
                 />
               </section>

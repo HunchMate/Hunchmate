@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bookmark, X, CheckCircle, Info } from 'lucide-react';
+import { Bookmark, X, CheckCircle, Info, AlertCircle } from 'lucide-react';
 import './ToastContainer.css';
 
 export default function ToastContainer() {
@@ -44,6 +44,8 @@ export default function ToastContainer() {
               <Bookmark size={18} className="toast-icon toast-icon--remove" color="#4c69a4" />
             ) : toast.type === 'success' ? (
               <CheckCircle size={18} className="toast-icon toast-icon--success" color="#16a34a" />
+            ) : toast.type === 'error' ? (
+              <AlertCircle size={18} className="toast-icon toast-icon--error" color="#dc2626" />
             ) : (
               <Info size={18} className="toast-icon toast-icon--info" color="#2559bd" />
             )}

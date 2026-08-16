@@ -766,85 +766,25 @@ export async function deleteRegistrationRecord(registrationId) {
 }
 
 export async function checkInByQrToken(qrToken, eventId = null) {
-  // First, look up the registration by qr_token (without event filter)
-  const { data: regData, error: regError } = await supabase
-    .from('registrations')
-    .select('*, events(*)')
-    .eq('qr_token', qrToken)
-    .maybeSingle();
+  try {
+    const res = await fetch('/api/registrations/check-in', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ qrToken, eventId }),
+    });
 
-  if (regError || !regData) {
-    return {
-      success: false,
-      status: 'invalid',
-      message: 'QR code not found or invalid.',
-      team: null,
-      event: null,
-    };
-  }
-
-  // Event-scoped validation: if organizer is scanning for a specific event,
-  // verify this QR belongs to THAT event
-  if (eventId && regData.event_id !== eventId) {
-    return {
-      success: false,
-      status: 'wrong-event',
-      message: 'Not registered for this event. This QR belongs to a different event.',
-      team: null,
-      event: regData.events ? mapEventToApp(regData.events) : null,
-    };
-  }
-
-  // Already checked in
-  if (regData.checked_in) {
-    return {
-      success: false,
-      status: 'already-checked-in',
-      message: 'This participant has already been checked in.',
-      checkedInAt: regData.checked_in_at,
-      team: {
-        registrationIds: [regData.id],
-        teamName: regData.team_name,
-        members: regData.members || [],
-        participant: regData.participant || null,
-      },
-      event: regData.events ? mapEventToApp(regData.events) : null,
-    };
-  }
-
-  // Mark as checked in
-  const checkedInAt = nowIso();
-  const { error: updateError } = await supabase
-    .from('registrations')
-    .update({
-      checked_in: true,
-      checked_in_at: checkedInAt,
-    })
-    .eq('id', regData.id);
-
-  if (updateError) {
+    const json = await res.json();
+    return json;
+  } catch (err) {
+    console.error('checkInByQrToken error:', err);
     return {
       success: false,
       status: 'error',
-      message: 'Failed to update check-in status.',
+      message: 'Network connection failed during check-in.',
       team: null,
       event: null,
     };
   }
-
-  return {
-    success: true,
-    status: 'valid',
-    message: 'Checked in successfully!',
-    checkedInAt,
-    team: {
-      registrationIds: [regData.id],
-      teamName: regData.team_name,
-      members: regData.members || [],
-      participant: regData.participant || null,
-    },
-    event: mapEventToApp(regData.events),
-  };
 }
 
 // ==========================================
@@ -1149,3 +1089,97 @@ export async function updateComplaintStatus(complaintId, status, note, actorId =
 
   return mapComplaintToApp(data);
 }
+
+/* ==========================================
+ * CERTIFICATES & ANALYTICS & MODERATION API HELPERS
+ * ========================================== */
+
+export async function verifyCertificate(certificateId) {
+  try {
+    const res = await fetch(`/api/certificates/verify/${encodeURIComponent(certificateId)}`);
+    return await res.json();
+  } catch (err) {
+    console.error('verifyCertificate error:', err);
+    return { isValid: false, message: 'Network connection failed' };
+  }
+}
+
+export async function issueCertificate(payload) {
+  try {
+    console.log('[issueCertificate] Sending payload:', payload);
+    const res = await fetch('/api/certificates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    console.log('[issueCertificate] Response status:', res.status, 'data:', data);
+    return { ok: res.ok, status: res.status, ...data };
+  } catch (err) {
+    console.error('[issueCertificate] Network error:', err);
+    return { ok: false, status: 0, error: 'Network request failed' };
+  }
+}
+
+export async function revokeCertificate(certificateId, status = 'revoked', reason = '') {
+  try {
+    const res = await fetch(`/api/certificates/${encodeURIComponent(certificateId)}/revoke`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, reason }),
+    });
+    return await res.json();
+  } catch (err) {
+    console.error('revokeCertificate error:', err);
+    return { error: 'Network request failed' };
+  }
+}
+
+export async function getProgramAnalytics(eventId) {
+  try {
+    const url = eventId ? `/api/analytics?eventId=${encodeURIComponent(eventId)}` : '/api/analytics';
+    const res = await fetch(url);
+    return await res.json();
+  } catch (err) {
+    console.error('getProgramAnalytics error:', err);
+    return null;
+  }
+}
+
+export async function trackAnalyticsEvent(eventType, eventId, metadata = {}) {
+  try {
+    await fetch('/api/analytics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventType, eventId, metadata }),
+    });
+  } catch (e) {
+    console.warn('trackAnalyticsEvent error:', e);
+  }
+}
+
+export async function getModerationQueue(type = 'submissions', status = 'all') {
+  try {
+    const res = await fetch(`/api/admin/moderation?type=${type}&status=${status}`);
+    return await res.json();
+  } catch (err) {
+    console.error('getModerationQueue error:', err);
+    return { items: [] };
+  }
+}
+
+export async function bulkModerationAction(type, action, ids, moderationNote = '') {
+  try {
+    const res = await fetch('/api/admin/moderation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, action, ids, moderationNote }),
+    });
+    return await res.json();
+  } catch (err) {
+    console.error('bulkModerationAction error:', err);
+    return { error: 'Network error during bulk action' };
+  }
+}
+

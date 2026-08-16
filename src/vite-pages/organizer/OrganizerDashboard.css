@@ -564,10 +564,53 @@
 .orgx-credential-issue__actions { margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: center; }
 
 /* ═══════════════════════════════════════════
-   SCANNER MODAL
+   SCANNER MODAL & PROGRESS
    ═══════════════════════════════════════════ */
-.orgx-scanner-modal { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
-.orgx-scanner-modal__viewport { width: 100%; max-width: 320px; border-radius: 12px; overflow: hidden; border: 1px solid var(--color-border, #e2bfb0); }
+.orgx-scanner-modal { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; position: relative; }
+.orgx-scanner-modal__viewport { width: 100%; max-width: 320px; border-radius: 12px; overflow: hidden; border: 2px solid var(--color-primary, #2559bd); position: relative; min-height: 250px; background: #0b1c30; }
+.orgx-scanner-modal__laser {
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, transparent, #2559bd, #ff6b00, transparent);
+  box-shadow: 0 0 12px #2559bd, 0 0 6px #ff6b00;
+  animation: scanLaser 2s ease-in-out infinite alternate;
+  z-index: 10;
+}
+@keyframes scanLaser {
+  0% { top: 5%; }
+  100% { top: 90%; }
+}
+
+.orgx-scanner-progress {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 12px;
+  background: rgba(37, 89, 189, 0.08);
+  border: 1px border var(--color-primary, #2559bd);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.orgx-scanner-progress__bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(37, 89, 189, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+  margin-top: 0.5rem;
+}
+.orgx-scanner-progress__bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2559bd, #ff6b00);
+  width: 50%;
+  animation: progressPulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes progressPulse {
+  0% { transform: translateX(-50%); width: 30%; }
+  100% { transform: translateX(150%); width: 70%; }
+}
+
 .orgx-scanner-modal__hint { color: var(--color-text-secondary, #213145); font-size: 0.82rem; text-align: center; }
 .orgx-scanner-modal__error { color: var(--color-coral, #ba1a1a); font-size: 0.82rem; text-align: center; font-weight: 600; }
 .orgx-scanner-modal__actions { margin-top: 0.5rem; }

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from '@/utils/router';
 import {
+  Award,
   Download,
   Edit3,
   ExternalLink,
@@ -10,6 +11,7 @@ import {
   Mail,
   MapPin,
   QrCode,
+  ShieldCheck,
   X,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -91,6 +93,8 @@ export default function Profile() {
   const [showQr, setShowQr] = useState(false);
   const [selectedQrRegOnly, setSelectedQrRegOnly] = useState(null);
 
+  const [userCertificates, setUserCertificates] = useState([]);
+
   useEffect(() => {
     setForm(buildForm(user));
     const linked = user?.socials?.linkedin || '';
@@ -98,6 +102,15 @@ export default function Profile() {
     const extra = Array.isArray(user?.socials?.additionalUrls) ? user.socials.additionalUrls : [];
     const nextUrls = [linked, git, ...extra];
     setUrlFields(nextUrls.length ? nextUrls : ['', '']);
+
+    if (user?.id) {
+      fetch(`/api/certificates?userId=${encodeURIComponent(user.id)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.certificates) setUserCertificates(data.certificates);
+        })
+        .catch((err) => console.warn('Failed to fetch certificates:', err));
+    }
   }, [user]);
 
   const registrations = useMemo(() => {
@@ -512,6 +525,61 @@ export default function Profile() {
                   })
                 ) : (
                   <p className="profile-page__bio-text" style={{ fontSize: '0.9rem' }}>You haven't registered for any events yet.</p>
+                )}
+              </div>
+            </motion.div>
+
+            {/* MY VERIFIED CREDENTIALS & CERTIFICATES */}
+            <motion.div className="profile-page__glass-card" variants={itemVariants} style={{ marginTop: '1.25rem' }}>
+              <div className="profile-page__card-header">
+                <div className="profile-page__card-title">
+                  <h2>My Verified Credentials</h2>
+                </div>
+              </div>
+              <div className="profile-page__activity-list">
+                {userCertificates.length > 0 ? (
+                  userCertificates.map((cert) => (
+                    <div
+                      key={cert.id}
+                      className="profile-page__activity-item"
+                      style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.15)', marginBottom: '0.5rem' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Award size={18} style={{ color: '#6366f1' }} />
+                          <strong style={{ fontSize: '0.9rem', color: '#1e293b' }}>{cert.event_title}</strong>
+                        </div>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '999px', background: cert.status === 'active' ? '#dcfce7' : '#ffe4e6', color: cert.status === 'active' ? '#15803d' : '#e11d48' }}>
+                          {cert.status?.toUpperCase()}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                        Issued: {new Date(cert.issue_date).toLocaleDateString()} · ID: {cert.id}
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <a
+                          href={`/verify/${encodeURIComponent(cert.id)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6366f1', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                        >
+                          <ShieldCheck size={13} /> Verify Credential
+                        </a>
+                        <a
+                          href={`/api/certificates/${encodeURIComponent(cert.id)}?format=pdf`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                        >
+                          <Download size={13} /> PDF
+                        </a>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="profile-page__bio-text" style={{ fontSize: '0.85rem' }}>
+                    No credentials issued yet. Participate in hackathons and check in to receive verified certificates!
+                  </p>
                 )}
               </div>
             </motion.div>

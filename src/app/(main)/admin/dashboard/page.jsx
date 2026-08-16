@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Activity,
   Award,
+  BarChart3,
   CalendarRange,
   CheckCheck,
+  CheckSquare,
   CircleAlert,
   ExternalLink,
   LoaderCircle,
@@ -20,6 +22,8 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useEvents } from '@/context/EventContext'
+import ProgramAnalyticsView from '@/components/admin/ProgramAnalyticsView'
+import ModerationQueueView from '@/components/admin/ModerationQueueView'
 import {
   getAdminOverview,
   listAdminAuditLogs,
@@ -39,6 +43,8 @@ const ALLOW_ADMIN_BYPASS = false
 
 const ADMIN_SECTIONS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'analytics', label: 'Program Analytics', icon: BarChart3 },
+  { id: 'moderation', label: 'Moderation Queue', icon: CheckSquare },
   { id: 'organizers', label: 'Organizer Accounts', icon: UserCog },
   { id: 'participants', label: 'Participant Accounts', icon: Users2 },
   { id: 'events', label: 'Events', icon: CalendarRange },
@@ -1767,6 +1773,10 @@ export default function AdminDashboard() {
                 </section>
               </section>
             ) : null}
+
+            {activeSection === 'analytics' ? <ProgramAnalyticsView /> : null}
+
+            {activeSection === 'moderation' ? <ModerationQueueView /> : null}
 
             {activeSection === 'organizers'
               ? renderUserAccountsPanel('Organizer Accounts', organizerUsers, 'No organizers found for current filters.')

@@ -69,14 +69,20 @@ export function getMailConfigIssues(provider) {
     return [`Unsupported MAIL_PROVIDER: ${provider}. Use smtp or resend.`];
   }
 
+  const allowDevSimulation = process.env.ALLOW_MOCK_MAIL === 'true' || process.env.NODE_ENV !== 'production';
+
   keys.forEach((key) => {
     const value = process.env[key];
     if (!value) {
-      issues.push(`Missing ${key}`);
+      if (!allowDevSimulation) {
+        issues.push(`Missing ${key}`);
+      }
       return;
     }
     if (hasPlaceholder(value)) {
-      issues.push(`${key} still has placeholder value`);
+      if (!allowDevSimulation) {
+        issues.push(`${key} still has placeholder value`);
+      }
     }
   });
 
@@ -250,8 +256,16 @@ export async function sendViaSmtp({ to, subject, html }) {
 }
 
 export async function sendViaResend({ to, subject, html, text }) {
-  const apiKey = requiredEnv('RESEND_API_KEY');
-  const from = requiredEnv('RESEND_FROM');
+  const apiKey = process.env.RESEND_API_KEY || '';
+  const from = process.env.RESEND_FROM || 'Hunchmate <onboarding@resend.dev>';
+
+  if (!apiKey || hasPlaceholder(apiKey)) {
+    console.log(`[Dev Mailer - Resend Simulation Mode]`);
+    console.log(`  To: ${to}`);
+    console.log(`  From: ${from}`);
+    console.log(`  Subject: ${subject}`);
+    return { messageId: `simulated-resend-${Date.now()}`, mocked: true };
+  }
 
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',

@@ -2,7 +2,7 @@
  * Trigger a custom event to show a beautiful glassmorphic pop alert / toast.
  * 
  * @param {string} message The notification message body
- * @param {string} type The toast type: 'bookmark-add', 'bookmark-remove', 'success', 'info'
+ * @param {string} type The toast type: 'bookmark-add', 'bookmark-remove', 'success', 'info', 'error'
  * @param {string} [eventTitle] Optional event title to display at the top of the toast
  */
 export const toast = (message, type = 'success', eventTitle = '') => {
@@ -16,5 +16,6 @@ export const toast = (message, type = 'success', eventTitle = '') => {
 
 toast.success = (message, eventTitle = '') => toast(message, 'success', eventTitle);
 toast.info = (message, eventTitle = '') => toast(message, 'info', eventTitle);
+toast.error = (message, eventTitle = '') => toast(message, 'error', eventTitle);
 toast.bookmarkAdd = (message, eventTitle = '') => toast(message, 'bookmark-add', eventTitle);
 toast.bookmarkRemove = (message, eventTitle = '') => toast(message, 'bookmark-remove', eventTitle);

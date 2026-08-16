@@ -37,7 +37,7 @@ export default function Navbar() {
   const location = useLocation()
   const profileMenuRef = useRef(null)
 
-  const lightThemePaths = ['/dashboard', '/organizer', '/profile', '/events', '/contact', '/host-event', '/login', '/signup', '/host-signup', '/host-onboarding'];
+  const lightThemePaths = ['/dashboard', '/organizer', '/profile', '/events', '/contact', '/host-event', '/login', '/signup', '/host-signup', '/host-onboarding', '/invites', '/bookmarks', '/privacy', '/terms', '/rules', '/onboarding'];
   const isLightPage = lightThemePaths.some(p => location.pathname.startsWith(p));
 
   const organizerNotifications = user?.role === 'organizer' ? getOrganizerNotifications(user.id) : []
@@ -129,7 +129,7 @@ export default function Navbar() {
               objectPosition: 'left center',
               transform: 'scale(2.4)',
               transformOrigin: 'left center',
-              filter: isLightPage ? 'invert(1) brightness(0.2)' : 'none',
+              filter: isLightPage ? 'brightness(0)' : 'none',
               transition: 'filter 0.3s ease'
             }}
           />

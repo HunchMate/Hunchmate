@@ -113,19 +113,32 @@ export async function POST(request) {
 
       const teamId = leaderReg?.team_id || `team-${Date.now()}`;
       const teamName = invite.team_name || leaderReg?.team_name || null;
+      const teamLeadId = leaderReg?.user_id || invite.inviter_id || null;
+      const teamLeadName = leaderReg?.team_lead_name || invite.inviter_name || null;
+
+      // Generate unique QR token for this member's ticket
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let rand = '';
+      for (let i = 0; i < 6; i++) {
+        rand += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      const memberQrToken = `EVT:${invite.event_id}|USR:${userId}|TOK:${rand}`;
 
       // Create new registration for the invitee
       const newReg = {
         event_id: invite.event_id,
         user_id: userId,
+        team_id: teamId,
         team_name: teamName,
+        team_lead_id: teamLeadId,
+        team_lead_name: teamLeadName,
         members: [userProfile.name || userProfile.email],
         participant: {
           id: userId,
           name: userProfile.name || '',
           email: userProfile.email || '',
         },
-        qr_token: leaderReg?.qr_token || `qr-${Date.now()}`,
+        qr_token: memberQrToken,
         checked_in: false,
         checked_in_at: null,
         created_at: new Date().toISOString(),
